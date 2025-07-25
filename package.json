@@ -1,0 +1,13 @@
+{
+  "name": "pos-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build:admin": "cd admin-dashboard && npm run build",
+    "build:pos": "cd pos-client && npm run build",
+    "build:online": "cd online-ordering && npm run build",
+    "dev:admin": "cd admin-dashboard && npm run dev",
+    "dev:pos": "cd pos-client && npm run dev",
+    "dev:online": "cd online-ordering && npm run dev"
+  }
+} 

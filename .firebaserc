@@ -1,0 +1,19 @@
+{
+  "projects": {
+    "default": "right-wingers"
+  },
+  "targets": {
+    "right-wingers": {
+      "hosting": {
+        "online": [
+          "right-wingers",
+          "right-wingers-online right-wingers"
+        ],
+        "admin": [
+          "right-wingers-admin right-wingers"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
