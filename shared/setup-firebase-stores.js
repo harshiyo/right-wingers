@@ -1,0 +1,133 @@
+const admin = require('firebase-admin');
+
+// Initialize Firebase Admin SDK for EMULATOR use
+admin.initializeApp({
+  projectId: "right-wingers"
+});
+
+// Connect to emulators
+process.env.FIRESTORE_EMULATOR_HOST = "localhost:8080";
+
+const db = admin.firestore();
+
+const stores = [
+  {
+    id: 'store_001',
+    name: 'Right Wingers - Hamilton',
+    address: '1846 Main St W',
+    city: 'Hamilton',
+    province: 'ON',
+    postalCode: 'L8S 4P7',
+    phone: '(905) 777-9464',
+    email: 'hamilton@rightwingers.com',
+    timezone: 'America/Toronto',
+    isActive: true,
+    taxRate: 13,
+    operatingHours: {
+      monday: '3:30pm - 8:30pm',
+      tuesday: '3:30pm - 10:30pm',
+      wednesday: '3:30pm - 10:30pm',
+      thursday: '3:30pm - 10:30pm',
+      friday: '3:00pm - 11:30pm',
+      saturday: '3:00pm - 10:30pm',
+      sunday: '1:00pm - 8:30pm'
+    }
+  },
+  {
+    id: 'store_002',
+    name: 'Right Wingers - Burlington',
+    address: '2184 Mountain Grove Ave',
+    city: 'Burlington',
+    province: 'ON',
+    postalCode: 'L7P 2J3',
+    phone: '(905) 331-1944',
+    email: 'burlington@rightwingers.com',
+    timezone: 'America/Toronto',
+    isActive: true,
+    taxRate: 13,
+    operatingHours: {
+      monday: '11:00am - 10:00pm',
+      tuesday: '11:00am - 11:00pm',
+      wednesday: '11:00am - 11:00pm',
+      thursday: '11:00am - 11:00pm',
+      friday: '11:00am - 12:00am',
+      saturday: '11:00am - 12:00am',
+      sunday: '11:00am - 11:00pm'
+    }
+  },
+  {
+    id: 'store_003',
+    name: 'Right Wingers - St. Catharines',
+    address: '486 Grantham Ave',
+    city: 'St. Catharines',
+    province: 'ON',
+    postalCode: 'L2M 6W2',
+    phone: '(905) 397-9090',
+    email: 'stcatharines@rightwingers.com',
+    timezone: 'America/Toronto',
+    isActive: true,
+    taxRate: 13,
+    operatingHours: {
+      monday: '11:00am - 9:00pm',
+      tuesday: '11:00am - 10:00pm',
+      wednesday: '11:00am - 10:00pm',
+      thursday: '11:00am - 10:00pm',
+      friday: '11:00am - 11:00pm',
+      saturday: '11:00am - 11:00pm',
+      sunday: '12:00pm - 10:00pm'
+    }
+  },
+  {
+    id: 'store_004',
+    name: 'Right Wingers - Oakville',
+    address: '601 Ford Dr',
+    city: 'Oakville',
+    province: 'ON',
+    postalCode: 'L6J 7Z6',
+    phone: '(905) 337-9596',
+    email: 'oakville@rightwingers.com',
+    timezone: 'America/Toronto',
+    isActive: true,
+    taxRate: 13,
+    operatingHours: {
+      monday: '11:00am - 10:00pm',
+      tuesday: '11:00am - 11:00pm',
+      wednesday: '11:00am - 11:00pm',
+      thursday: '11:00am - 11:00pm',
+      friday: '11:00am - 12:00am',
+      saturday: '11:00am - 12:00am',
+      sunday: '12:00pm - 11:00pm'
+    }
+  }
+];
+
+async function createStores() {
+  console.log('🚀 Setting up Firebase stores in EMULATOR...');
+  console.log('📡 Connecting to Firestore Emulator: localhost:8080');
+  
+  for (const storeData of stores) {
+    try {
+      // Create/update store in Firestore (emulator)
+      await db.collection('stores').doc(storeData.id).set({
+        ...storeData,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      console.log(`✅ Created/Updated store: ${storeData.name}`);
+
+    } catch (error) {
+      console.error(`❌ Error creating store ${storeData.name}:`, error);
+    }
+  }
+
+  console.log('🎉 Firebase stores setup complete in EMULATOR!');
+  console.log('\n📋 Stores Created:');
+  stores.forEach(store => {
+    console.log(`${store.name} (${store.id}) - ${store.city}, ${store.province}`);
+  });
+
+  process.exit(0);
+}
+
+createStores().catch(console.error); 
