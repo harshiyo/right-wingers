@@ -21,13 +21,15 @@ import { UserManagement } from './pages/UserManagement';
 import KitchenDisplay from './pages/KitchenDisplay';
 import LiveLogs from './pages/LiveLogs';
 import { SelectedStoreProvider } from './context/SelectedStoreContext';
+import { AuthProvider } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   return (
     <ErrorBoundary>
-      <SelectedStoreProvider>
-        <Router>
+      <AuthProvider>
+        <SelectedStoreProvider>
+          <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route
@@ -57,7 +59,8 @@ function App() {
             </Route>
           </Routes>
         </Router>
-      </SelectedStoreProvider>
+        </SelectedStoreProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

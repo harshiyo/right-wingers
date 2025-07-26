@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Search, Bell, Settings, User, LogOut, Moon, Sun, Wifi, WifiOff } from 'lucide-react';
 import { Button } from './ui/Button';
 import { useNavigate } from 'react-router-dom';
-import { db } from '../services/firebase';
+import { db, auth } from '../services/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
 import { navLinks } from './Sidebar';
+import { useAuth } from '../context/AuthContext';
 
 type SearchResult = {
   type: string;
@@ -23,6 +25,18 @@ export const TopBar = () => {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      // Clear selected store from localStorage
+      localStorage.removeItem('selectedStore');
+      await signOut(auth);
+      navigate('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -311,19 +325,19 @@ export const TopBar = () => {
             className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"
           >
             <div className="text-right hidden sm:block">
-              <div className="text-sm font-semibold text-gray-900">Admin User</div>
-              <div className="text-xs text-gray-500">Administrator</div>
+              <div className="text-sm font-semibold text-gray-900">{user?.name || 'Admin User'}</div>
+              <div className="text-xs text-gray-500">{user?.role === 'master_admin' ? 'Master Administrator' : 'Store Administrator'}</div>
             </div>
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-              A
+              {user?.name?.charAt(0)?.toUpperCase() || 'A'}
             </div>
           </button>
 
           {showUserMenu && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
               <div className="px-4 py-2 border-b border-gray-100">
-                <p className="font-semibold text-gray-900">Admin User</p>
-                <p className="text-xs text-gray-500">admin@rightwings.com</p>
+                <p className="font-semibold text-gray-900">{user?.name || 'Admin User'}</p>
+                <p className="text-xs text-gray-500">{user?.email || 'admin@rightwingers.com'}</p>
               </div>
               <div className="py-1">
                 <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
@@ -335,7 +349,10 @@ export const TopBar = () => {
                   System Settings
                 </button>
                 <hr className="my-1" />
-                <button className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                <button 
+                  onClick={handleLogout}
+                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                >
                   <LogOut className="h-4 w-4" />
                   Sign Out
                 </button>
