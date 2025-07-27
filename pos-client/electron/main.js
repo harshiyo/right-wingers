@@ -344,6 +344,20 @@ function renderReceipt(order, type) {
   });
   lines.push('-----------------------------');
   if (order.subtotal !== undefined) lines.push(`Subtotal: $${order.subtotal.toFixed(2)}`);
+  
+  // Add discount information
+  if (order.discount && order.discount > 0) {
+    if (order.discounts && order.discounts.length > 0) {
+      // Show discount code information
+      order.discounts.forEach(discount => {
+        lines.push(`Discount (${discount.name}): -$${discount.amount.toFixed(2)}`);
+      });
+    } else {
+      // Show generic discount
+      lines.push(`Discount: -$${order.discount.toFixed(2)}`);
+    }
+  }
+  
   if (order.tax !== undefined) lines.push(`Tax: $${order.tax.toFixed(2)}`);
   if (order.total !== undefined) lines.push(`Total: $${order.total.toFixed(2)}`);
   lines.push('Thank you for your order!');

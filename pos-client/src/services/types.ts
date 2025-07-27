@@ -24,7 +24,16 @@ export interface Order {
   deliveryAddress?: string;
   subtotal?: number;
   tax?: number;
+  discount?: number;
   paymentMethod?: string;
+  // Discount code information
+  discounts?: Array<{
+    id: string;
+    name: string;
+    amount: number;
+    type: 'percentage' | 'fixed';
+  }>;
+  discountTotal?: number;
   // Scheduled order information - using correct Firebase structure
   pickupDetails?: {
     estimatedTime?: string;

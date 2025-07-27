@@ -552,7 +552,6 @@ const CheckoutPage = () => {
   const [cardAmount, setCardAmount] = useState('');
   const [mobileAmount, setMobileAmount] = useState('');
   const [discount, setDiscount] = useState(0);
-  const [discountPercent, setDiscountPercent] = useState('');
   const [discountCode, setDiscountCode] = useState('');
   const [appliedDiscountCode, setAppliedDiscountCode] = useState<DiscountCode | null>(null);
   const [discountCodeError, setDiscountCodeError] = useState('');
@@ -592,10 +591,7 @@ const CheckoutPage = () => {
     ), [cartItems]
   );
   
-  const discountAmount = useMemo(() => 
-    discountPercent ? (subtotal * parseFloat(discountPercent)) / 100 : discount,
-    [subtotal, discountPercent, discount]
-  );
+    const discountAmount = useMemo(() => discount, [discount]);
   
   const discountedSubtotal = subtotal - discountAmount;
   const tax = discountedSubtotal * taxRate;
@@ -635,17 +631,7 @@ const CheckoutPage = () => {
     navigate('/menu', { state: { customer, phone, orderType } });
   }, [navigate, customer, phone, orderType]);
   
-  const handleDiscountChange = useCallback((value: string) => {
-    setDiscountPercent(value);
-    if (value) {
-      const percent = parseFloat(value);
-      if (!isNaN(percent) && percent >= 0 && percent <= 100) {
-        setDiscount((subtotal * percent) / 100);
-      }
-    } else {
-      setDiscount(0);
-    }
-  }, [subtotal]);
+
 
   const handleDiscountCodeChange = useCallback((value: string) => {
     setDiscountCode(value);
@@ -1418,7 +1404,16 @@ const CheckoutPage = () => {
       orderType: orderType,
       subtotal: subtotal,
       tax: tax,
+      discount: discountAmount,
       paymentMethod: paymentMethod,
+      // Include discount code information
+      discounts: appliedDiscountCode ? [{
+        id: appliedDiscountCode.id,
+        name: appliedDiscountCode.name,
+        amount: discountAmount,
+        type: appliedDiscountCode.type
+      }] : [],
+      discountTotal: discountAmount,
       // Include scheduled order information - using correct Firebase structure
       pickupDetails: orderType === 'pickup' ? {
         estimatedTime: '15-25 minutes',
@@ -1436,7 +1431,7 @@ const CheckoutPage = () => {
     // Use 'modified-full' for modified orders, 'new' for new orders
     const receiptType = editingOrderId ? 'modified-full' : 'new';
     await printReceiptIfLocal(orderForPrint, currentStore?.id ?? '', receiptType);
-  }, [savedOrderId, savedOrderNumber, currentStore, customer, phone, cartItems, total, subtotal, tax, paymentMethod, orderType, editingOrderId, pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime]);
+  }, [savedOrderId, savedOrderNumber, currentStore, customer, phone, cartItems, total, subtotal, tax, discountAmount, appliedDiscountCode, paymentMethod, orderType, editingOrderId, pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime]);
 
   // --- Print Modified Receipt (only changed items) ---
   const printModifiedReceipt = useCallback(async () => {
@@ -1470,7 +1465,16 @@ const CheckoutPage = () => {
       orderType: orderType,
       subtotal: subtotal,
       tax: tax,
+      discount: discountAmount,
       paymentMethod: paymentMethod,
+      // Include discount code information
+      discounts: appliedDiscountCode ? [{
+        id: appliedDiscountCode.id,
+        name: appliedDiscountCode.name,
+        amount: discountAmount,
+        type: appliedDiscountCode.type
+      }] : [],
+      discountTotal: discountAmount,
       // Include scheduled order information - using correct Firebase structure
       pickupDetails: orderType === 'pickup' ? {
         estimatedTime: '15-25 minutes',
@@ -1486,7 +1490,7 @@ const CheckoutPage = () => {
       } : undefined,
     };
     await printReceiptIfLocal(orderForPrint, currentStore?.id ?? '', 'modified-partial');
-  }, [savedOrderId, savedOrderNumber, cartItems, currentStore, customer, phone, orderType, subtotal, tax, paymentMethod, total, pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime]);
+  }, [savedOrderId, savedOrderNumber, cartItems, currentStore, customer, phone, orderType, subtotal, tax, discountAmount, appliedDiscountCode, paymentMethod, total, pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime]);
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-red-50 via-white to-orange-50">
@@ -1645,20 +1649,6 @@ const CheckoutPage = () => {
                     )}
                   </div>
                   
-                  {/* Manual Discount Percentage */}
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      placeholder="Discount %"
-                      value={discountPercent}
-                      onChange={(e) => handleDiscountChange(e.target.value)}
-                      className="flex-1"
-                      min="0"
-                      max="100"
-                      disabled={!!appliedDiscountCode}
-                    />
-                    <span className="flex items-center text-gray-600 text-sm">%</span>
-                  </div>
                   {discountAmount > 0 && (
                     <p className="text-red-600 text-xs mt-1">
                       Discount applied: -${discountAmount.toFixed(2)}
