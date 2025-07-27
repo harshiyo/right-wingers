@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, orderBy, getDocs, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import { Package, Truck, Clock, Calendar, ShoppingCart, ChevronLeft, User, X } from 'lucide-react';
+import { Package, Truck, Clock, Calendar, ShoppingCart, ChevronLeft, User, X, Star, Flame, Zap, Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useCustomer } from '../context/CustomerContext';
 import PizzaToppingDialog from '../components/PizzaToppingDialog';
@@ -256,46 +256,73 @@ export default function MenuPage() {
     <div
       key={item.id}
       onClick={() => handleAddToCart(item)}
-      className="card-ux p-5 mb-6 overflow-hidden transition-all duration-200 hover:shadow-xl hover:scale-[1.02] cursor-pointer"
+      className="group relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer overflow-hidden border border-gray-100 h-full flex flex-col"
     >
-      <div className="relative">
+      {/* Image Container */}
+      <div className="relative h-32 sm:h-40 overflow-hidden">
         {item.imageUrl ? (
           <img
             src={item.imageUrl}
             alt={item.name}
-            className="w-full h-40 sm:h-48 object-cover"
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
           />
         ) : (
-          <div className="w-full h-40 sm:h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-            <span className="text-4xl">🍕</span>
+          <div className="w-full h-full bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
+            <span className="text-4xl sm:text-5xl opacity-60">🍕</span>
           </div>
         )}
         
-        {/* Badges */}
-        <div className="absolute top-3 right-3 flex flex-col gap-2">
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+        
+        {/* Badges - Mobile optimized */}
+        <div className="absolute top-2 right-2 flex flex-col gap-1">
           {item.isCustomizable && (
-            <span className="bg-gradient-to-r from-red-600 to-red-700 text-white text-xs px-3 py-1 rounded-full font-medium shadow-lg">
-              Customizable
-            </span>
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-lg flex items-center gap-1">
+              <Zap className="w-2.5 h-2.5" />
+              <span className="hidden sm:inline">Custom</span>
+            </div>
           )}
           {item.sizePricing && (
-            <span className="bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs px-3 py-1 rounded-full font-medium shadow-lg">
-              Multiple Sizes
-            </span>
+            <div className="bg-gradient-to-r from-green-600 to-green-700 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-lg flex items-center gap-1">
+              <Package className="w-2.5 h-2.5" />
+              <span className="hidden sm:inline">Sizes</span>
+            </div>
           )}
+          {item.isSpecialtyPizza && (
+            <div className="bg-gradient-to-r from-red-600 to-red-700 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-lg flex items-center gap-1">
+              <Star className="w-2.5 h-2.5" />
+              <span className="hidden sm:inline">Specialty</span>
+            </div>
+          )}
+        </div>
+
+        {/* Category indicator */}
+        <div className="absolute bottom-2 left-2">
+          <div className={cn(
+            "px-2 py-1 rounded-full text-xs font-semibold text-white shadow-lg",
+            item.category === "Pizza" ? "bg-gradient-to-r from-red-600 to-red-700" :
+            item.category === "Wings" ? "bg-gradient-to-r from-orange-600 to-orange-700" :
+            item.category === "Sides" ? "bg-gradient-to-r from-yellow-600 to-yellow-700" :
+            item.category === "Drinks" ? "bg-gradient-to-r from-blue-600 to-blue-700" :
+            "bg-gradient-to-r from-gray-600 to-gray-700"
+          )}>
+            {item.category}
+          </div>
         </div>
       </div>
 
-      <div className="p-4">
-        <h3 className="font-bold text-gray-900 mb-1 text-sm sm:text-base line-clamp-2">{item.name}</h3>
+      {/* Content */}
+      <div className="p-3 sm:p-4 flex-1 flex flex-col">
+        <h3 className="font-bold text-gray-900 mb-1 sm:mb-2 text-sm sm:text-base leading-tight line-clamp-2 flex-1">{item.name}</h3>
         
         {item.description && (
-          <p className="text-xs sm:text-sm text-gray-600 mb-3 line-clamp-2">{item.description}</p>
+          <p className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 line-clamp-2 leading-relaxed flex-1">{item.description}</p>
         )}
         
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-red-600">
+        <div className="flex items-center justify-between mt-auto">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <span className="text-lg sm:text-xl font-bold text-red-600">
               {item.sizePricing ? (
                 `$${Math.min(...Object.values(item.sizePricing)).toFixed(2)}+`
               ) : (
@@ -303,19 +330,14 @@ export default function MenuPage() {
               )}
             </span>
             {item.sizePricing && (
-              <span className="text-xs text-gray-500">starting</span>
+              <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">start</span>
             )}
           </div>
 
-          {/* Category indicator */}
-          <div className={cn(
-            "w-3 h-3 rounded-full",
-            item.category === "Pizza" ? "bg-red-500" :
-            item.category === "Wings" ? "bg-orange-500" :
-            item.category === "Sides" ? "bg-yellow-500" :
-            item.category === "Drinks" ? "bg-blue-500" :
-            "bg-gray-500"
-          )}></div>
+          {/* Add to cart button */}
+          <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-1.5 sm:p-2 rounded-full shadow-lg group-hover:scale-110 transition-transform duration-200">
+            <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </div>
         </div>
       </div>
     </div>
@@ -328,9 +350,9 @@ export default function MenuPage() {
         comboId: item.id,
         name: item.name,
         imageUrl: item.imageUrl,
-        items: item.components.map(comp => ({
+        items: item.components.map((comp, index) => ({
           type: comp.type,
-          stepIndex: 0,
+          stepIndex: index,
           quantity: comp.quantity,
           toppingLimit: comp.maxToppings,
           sauceLimit: comp.maxSauces,
@@ -481,50 +503,68 @@ export default function MenuPage() {
     <div
       key={combo.id}
       onClick={() => handleAddToCart(combo)}
-      className="card-ux p-5 mb-6 overflow-hidden transition-all duration-200 hover:shadow-xl hover:scale-[1.02] cursor-pointer"
+      className="group relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer overflow-hidden border border-gray-100 h-full flex flex-col"
     >
-      <div className="relative">
+      {/* Image Container */}
+      <div className="relative h-32 sm:h-40 overflow-hidden">
         {combo.imageUrl ? (
           <img
             src={combo.imageUrl}
             alt={combo.name}
-            className="w-full h-40 sm:h-48 object-cover"
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
           />
         ) : (
-          <div className="w-full h-40 sm:h-48 bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
-            <span className="text-4xl">🎁</span>
+          <div className="w-full h-full bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center">
+            <span className="text-4xl sm:text-5xl opacity-60">🎁</span>
           </div>
         )}
         
-        <div className="absolute top-3 right-3">
-          <span className="bg-gradient-to-r from-yellow-600 to-amber-600 text-white text-xs px-3 py-1 rounded-full font-medium shadow-lg">
-            Combo Deal
-          </span>
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+        
+        {/* Combo badge */}
+        <div className="absolute top-2 right-2">
+          <div className="bg-gradient-to-r from-yellow-600 to-amber-600 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-lg flex items-center gap-1">
+            <Flame className="w-2.5 h-2.5" />
+            <span className="hidden sm:inline">Combo</span>
+          </div>
+        </div>
+
+        {/* Category indicator */}
+        <div className="absolute bottom-2 left-2">
+          <div className="bg-gradient-to-r from-amber-600 to-orange-600 px-2 py-1 rounded-full text-xs font-semibold text-white shadow-lg">
+            Combo
+          </div>
         </div>
       </div>
 
-      <div className="p-4">
-        <h3 className="font-bold text-gray-900 mb-2 text-sm sm:text-base">{combo.name}</h3>
+      {/* Content */}
+      <div className="p-3 sm:p-4 flex-1 flex flex-col">
+        <h3 className="font-bold text-gray-900 mb-1 sm:mb-2 text-sm sm:text-base leading-tight flex-1">{combo.name}</h3>
         
-        <div className="space-y-1 mb-3">
-          {combo.components.slice(0, 3).map((comp, idx) => (
-            <div key={idx} className="text-xs text-gray-600 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
-              {comp.quantity}x {comp.itemName}
+        <div className="space-y-1 sm:space-y-2 mb-2 sm:mb-3 flex-1">
+          {combo.components.slice(0, 2).map((comp, idx) => (
+            <div key={idx} className="text-xs sm:text-sm text-gray-600 flex items-center gap-1 sm:gap-2">
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-amber-500 rounded-full flex-shrink-0"></div>
+              <span className="line-clamp-1">{comp.quantity}x {comp.itemName}</span>
             </div>
           ))}
-          {combo.components.length > 3 && (
-            <div className="text-xs text-gray-500">
-              +{combo.components.length - 3} more items
+          {combo.components.length > 2 && (
+            <div className="text-xs text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded-full inline-block">
+              +{combo.components.length - 2} more
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between">
-          <span className="text-lg font-bold text-red-600">
+        <div className="flex items-center justify-between mt-auto">
+          <span className="text-lg sm:text-xl font-bold text-red-600">
             ${combo.basePrice.toFixed(2)}
           </span>
-          <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+
+          {/* Add to cart button */}
+          <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white p-1.5 sm:p-2 rounded-full shadow-lg group-hover:scale-110 transition-transform duration-200">
+            <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </div>
         </div>
       </div>
     </div>
@@ -532,75 +572,93 @@ export default function MenuPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-red-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 font-medium">Loading delicious menu...</p>
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-red-200 border-t-red-600 mx-auto"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-2xl">🍕</span>
+            </div>
+          </div>
+          <p className="mt-6 text-gray-600 font-medium text-lg">Loading delicious menu...</p>
+          <p className="mt-2 text-gray-500 text-sm">Preparing your perfect pizza experience</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Categories */}
-      <div className="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-200">
-        <div className="max-w-md mx-auto px-4 py-3">
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-amber-50">
+      {/* Enhanced Categories Navigation - Mobile Optimized */}
+      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide">
             <button
               onClick={() => setSelectedCategory(null)}
               className={cn(
-                "px-4 py-2 rounded-xl font-medium whitespace-nowrap transition-all duration-200",
+                "px-4 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl font-semibold whitespace-nowrap transition-all duration-300 flex items-center gap-1 sm:gap-2 shadow-lg text-sm sm:text-base",
                 !selectedCategory
-                  ? "bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg"
-                  : "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
+                  ? "bg-gradient-to-r from-red-600 to-red-700 text-white shadow-red-200"
+                  : "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 hover:shadow-md"
               )}
             >
-              All
+              <span className="text-base sm:text-lg">🍽️</span>
+              <span className="hidden sm:inline">All Menu</span>
+              <span className="sm:hidden">All</span>
             </button>
             {categories.map(category => (
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
                 className={cn(
-                  "px-4 py-2 rounded-xl font-medium whitespace-nowrap transition-all duration-200 flex items-center gap-2",
+                  "px-4 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl font-semibold whitespace-nowrap transition-all duration-300 flex items-center gap-1 sm:gap-2 shadow-lg text-sm sm:text-base",
                   selectedCategory === category.id
-                    ? "bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg"
-                    : "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
+                    ? "bg-gradient-to-r from-red-600 to-red-700 text-white shadow-red-200"
+                    : "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 hover:shadow-md"
                 )}
               >
-                <span>{category.icon}</span>
-                <span>{category.name}</span>
+                <span className="text-base sm:text-lg">{category.icon}</span>
+                <span className="hidden sm:inline">{category.name}</span>
+                <span className="sm:hidden">{category.name.length > 8 ? category.name.substring(0, 8) + '...' : category.name}</span>
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Menu Grid */}
-      <div className="max-w-md mx-auto px-4 py-4">
-        <div className="grid grid-cols-2 gap-4">
-          {loading ? (
-            <div>Loading...</div>
-          ) : (
-            <>
-              {filteredItems.map(item => 
-                'components' in item ? renderComboItem(item) : renderMenuItem(item)
-              )}
-            </>
-          )}
-        </div>
+      {/* Menu Grid - Mobile Responsive */}
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        {filteredItems.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="text-6xl mb-4">🍕</div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">No items found</h3>
+            <p className="text-gray-600">Try selecting a different category or check back later.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+            {filteredItems.map(item => 
+              'components' in item ? renderComboItem(item) : renderMenuItem(item)
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Add debug display in development */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 right-4 bg-black/80 text-white p-4 rounded-lg text-xs max-w-xs overflow-auto max-h-48">
-          <p>Selected Category: {selectedCategory || 'All'}</p>
-          <p>Combos Count: {combos.length}</p>
-          <p>Menu Items Count: {menuItems.length}</p>
-          <p>Current Category: {selectedCategory}</p>
-        </div>
-      )}
+      {/* Floating Cart Button - Mobile Optimized */}
+      <div className="fixed bottom-4 right-4 z-30">
+        <button
+          onClick={() => navigate('/cart')}
+          className="bg-gradient-to-r from-red-600 to-red-700 text-white p-3 sm:p-4 rounded-full shadow-2xl hover:shadow-red-200 transition-all duration-300 hover:scale-110"
+        >
+          <div className="relative">
+            <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
+            {getCartItemCount() > 0 && (
+              <span className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 bg-white text-red-600 text-xs w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center font-bold shadow-lg">
+                {getCartItemCount()}
+              </span>
+            )}
+          </div>
+        </button>
+      </div>
 
       {/* Dialogs */}
       {selectedPizza && isToppingDialogOpen && (
@@ -612,7 +670,7 @@ export default function MenuPage() {
           }}
           onSubmit={handleToppingSelection}
           pizzaName={selectedPizza.name}
-          toppingLimit={selectedPizza.maxToppings || 4}
+          toppingLimit={selectedPizza.maxToppings || 3}
         />
       )}
 

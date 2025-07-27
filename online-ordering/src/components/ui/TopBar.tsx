@@ -53,7 +53,8 @@ export default function TopBar({ showLogo }: TopBarProps) {
     <div className="bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          {/* Left Section - Back Button & Title */}
+          <div className="flex items-center gap-3 flex-1">
             {pageConfig.showBack && (
               <button
                 onClick={handleBack}
@@ -62,10 +63,34 @@ export default function TopBar({ showLogo }: TopBarProps) {
                 <ChevronLeft className="h-5 w-5" />
               </button>
             )}
-            {pageConfig.title && <h1 className="text-lg font-semibold">{pageConfig.title}</h1>}
+            {pageConfig.title && (
+              <h1 className="text-lg font-semibold sm:hidden">{pageConfig.title}</h1>
+            )}
           </div>
 
-          <div className="flex items-center gap-4">
+          {/* Center Section - Branding */}
+          <div className="flex items-center justify-center flex-1">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <img 
+                src="/logo.png" 
+                alt="Right Wingers" 
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full shadow-sm"
+              />
+              <div className="hidden sm:block">
+                <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-red-800 to-red-600 bg-clip-text text-transparent leading-tight">
+                  Right Wingers
+                </h1>
+              </div>
+              <div className="sm:hidden">
+                <h1 className="text-base font-bold bg-gradient-to-r from-red-800 to-red-600 bg-clip-text text-transparent">
+                  Right Wingers
+                </h1>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Section - Customer Info & Cart */}
+          <div className="flex items-center gap-2 sm:gap-4 flex-1 justify-end">
             {/* Customer Info */}
             {customerInfo && (
               <div className="hidden md:flex items-center gap-2 text-sm">
@@ -87,7 +112,7 @@ export default function TopBar({ showLogo }: TopBarProps) {
               >
                 <ShoppingCart className="h-5 w-5" />
                 {cartItemCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
                     {cartItemCount}
                   </span>
                 )}
@@ -97,16 +122,16 @@ export default function TopBar({ showLogo }: TopBarProps) {
         </div>
       </div>
 
-      {/* Logo Section */}
+      {/* Full Logo Section for Home Page */}
       {showLogo && (
-        <div className="text-center py-8">
+        <div className="text-center py-8 bg-gradient-to-br from-orange-50 to-red-50">
           <img 
             src="/logo.png" 
-            alt="Right Wingers Pizza" 
-            className="w-32 h-32 mx-auto mb-4"
+            alt="Right Wingers" 
+            className="w-32 h-32 mx-auto mb-4 rounded-full shadow-lg"
           />
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-red-800 to-red-600 bg-clip-text text-transparent">
-            Right Wingers Pizza
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-red-800 to-red-600 bg-clip-text text-transparent mb-2">
+            Right Wingers
           </h1>
         </div>
       )}
