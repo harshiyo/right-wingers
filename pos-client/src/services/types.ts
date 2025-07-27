@@ -25,4 +25,21 @@ export interface Order {
   subtotal?: number;
   tax?: number;
   paymentMethod?: string;
+  // Scheduled order information - using correct Firebase structure
+  pickupDetails?: {
+    estimatedTime?: string;
+    scheduledDateTime?: string;
+  };
+  deliveryDetails?: {
+    scheduledDeliveryDateTime?: string;
+    street?: string;
+    city?: string;
+    postalCode?: string;
+  };
+  // Legacy fields for backward compatibility
+  pickupTime?: 'asap' | 'scheduled';
+  scheduledDateTime?: string;
+  deliveryTimeType?: 'asap' | 'scheduled';
+  scheduledDeliveryDateTime?: string;
+  estimatedPickupTime?: string;
 } 

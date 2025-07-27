@@ -97,6 +97,36 @@ function renderReceipt(order, type) {
   lines.push(`Order #: ${order.orderNumber || 'N/A'}`);
   lines.push(`Customer: ${order.customerInfo?.name || ''}`);
   lines.push(`Phone: ${order.customerInfo?.phone || ''}`);
+  
+  // Add scheduled order information
+  if (order.orderType === 'pickup') {
+    if (order.pickupDetails && order.pickupDetails.scheduledDateTime) {
+      const scheduledDate = new Date(order.pickupDetails.scheduledDateTime);
+      lines.push(`Scheduled Pickup: ${scheduledDate.toLocaleString()}`);
+    } else {
+      lines.push(`Pickup Time: ASAP (${order.pickupDetails?.estimatedTime || '15-25 minutes'})`);
+    }
+  } else if (order.orderType === 'delivery') {
+    if (order.deliveryDetails && order.deliveryDetails.scheduledDeliveryDateTime) {
+      const scheduledDate = new Date(order.deliveryDetails.scheduledDeliveryDateTime);
+      lines.push(`Scheduled Delivery: ${scheduledDate.toLocaleString()}`);
+    } else {
+      lines.push(`Delivery Time: ASAP`);
+    }
+    // Add delivery address for delivery orders
+    if (order.deliveryDetails) {
+      const address = order.deliveryDetails;
+      if (address.street) {
+        lines.push(`Delivery Address: ${address.street}`);
+        if (address.city && address.postalCode) {
+          lines.push(`                ${address.city}, ${address.postalCode}`);
+        } else if (address.city) {
+          lines.push(`                ${address.city}`);
+        }
+      }
+    }
+  }
+  
   lines.push('-----------------------------');
 
   // --- Receipt type handling ---

@@ -1193,7 +1193,18 @@ const CheckoutPage = () => {
           <div><strong>Phone:</strong> ${phone}</div>
           <div><strong>Order Type:</strong> ${orderType}</div>
           <div><strong>Original Order #:</strong> ${location.state?.orderNumber || 'N/A'}</div>
-          ${orderType === 'Delivery' && customer.address ? 
+          ${orderType === 'pickup' ? 
+            (pickupTime === 'scheduled' && scheduledDateTime ? 
+              `<div><strong>Scheduled Pickup:</strong> ${new Date(scheduledDateTime).toLocaleString()}</div>` : 
+              `<div><strong>Pickup Time:</strong> ASAP (15-25 minutes)</div>`
+            ) : 
+            orderType === 'delivery' ? 
+              (deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime ? 
+                `<div><strong>Scheduled Delivery:</strong> ${new Date(scheduledDeliveryDateTime).toLocaleString()}</div>` : 
+                `<div><strong>Delivery Time:</strong> ASAP</div>`
+              ) : ''
+          }
+          ${orderType === 'delivery' && customer.address ? 
             `<div><strong>Address:</strong> ${customer.address.street}, ${customer.address.city}, ${customer.address.postalCode}</div>` : 
             ''
           }
@@ -1233,7 +1244,7 @@ const CheckoutPage = () => {
       printWindow.document.close();
       printWindow.print();
     }
-  }, [cartItems, customer, phone, orderType, paymentMethod, editingOrderId, location.state, getPizzaInstructionLabels, getWingInstructionLabels]);
+  }, [cartItems, customer, phone, orderType, paymentMethod, editingOrderId, location.state, getPizzaInstructionLabels, getWingInstructionLabels, pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime]);
   
   // On Complete Order button click
   const handleCompleteOrderClick = () => {
@@ -1272,11 +1283,24 @@ const CheckoutPage = () => {
       subtotal: subtotal,
       tax: tax,
       paymentMethod: paymentMethod,
+      // Include scheduled order information - using correct Firebase structure
+      pickupDetails: orderType === 'pickup' ? {
+        estimatedTime: '15-25 minutes',
+        ...(pickupTime === 'scheduled' && scheduledDateTime ? { scheduledDateTime } : {})
+      } : undefined,
+      deliveryDetails: orderType === 'delivery' ? {
+        ...(deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime ? { scheduledDeliveryDateTime } : {}),
+        ...(customer.address ? {
+          street: customer.address.street,
+          city: customer.address.city,
+          postalCode: customer.address.postalCode
+        } : {})
+      } : undefined,
     };
     // Use 'modified-full' for modified orders, 'new' for new orders
     const receiptType = editingOrderId ? 'modified-full' : 'new';
     await printReceiptIfLocal(orderForPrint, currentStore?.id ?? '', receiptType);
-  }, [savedOrderId, savedOrderNumber, currentStore, customer, phone, cartItems, total, subtotal, tax, paymentMethod, orderType, editingOrderId]);
+  }, [savedOrderId, savedOrderNumber, currentStore, customer, phone, cartItems, total, subtotal, tax, paymentMethod, orderType, editingOrderId, pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime]);
 
   // --- Print Modified Receipt (only changed items) ---
   const printModifiedReceipt = useCallback(async () => {
@@ -1311,9 +1335,22 @@ const CheckoutPage = () => {
       subtotal: subtotal,
       tax: tax,
       paymentMethod: paymentMethod,
+      // Include scheduled order information - using correct Firebase structure
+      pickupDetails: orderType === 'pickup' ? {
+        estimatedTime: '15-25 minutes',
+        ...(pickupTime === 'scheduled' && scheduledDateTime ? { scheduledDateTime } : {})
+      } : undefined,
+      deliveryDetails: orderType === 'delivery' ? {
+        ...(deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime ? { scheduledDeliveryDateTime } : {}),
+        ...(customer.address ? {
+          street: customer.address.street,
+          city: customer.address.city,
+          postalCode: customer.address.postalCode
+        } : {})
+      } : undefined,
     };
     await printReceiptIfLocal(orderForPrint, currentStore?.id ?? '', 'modified-partial');
-  }, [savedOrderId, savedOrderNumber, cartItems, currentStore, customer, phone, orderType, subtotal, tax, paymentMethod, total]);
+  }, [savedOrderId, savedOrderNumber, cartItems, currentStore, customer, phone, orderType, subtotal, tax, paymentMethod, total, pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime]);
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-red-50 via-white to-orange-50">
@@ -1489,6 +1526,19 @@ const CheckoutPage = () => {
                                 subtotal: subtotal,
                                 tax: tax,
                                 paymentMethod: paymentMethod,
+                                // Include scheduled order information - using correct Firebase structure
+                                pickupDetails: orderType === 'pickup' ? {
+                                  estimatedTime: '15-25 minutes',
+                                  ...(pickupTime === 'scheduled' && scheduledDateTime ? { scheduledDateTime } : {})
+                                } : undefined,
+                                deliveryDetails: orderType === 'delivery' ? {
+                                  ...(deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime ? { scheduledDeliveryDateTime } : {}),
+                                  ...(customer.address ? {
+                                    street: customer.address.street,
+                                    city: customer.address.city,
+                                    postalCode: customer.address.postalCode
+                                  } : {})
+                                } : undefined,
                               };
                               await printReceiptIfLocal(orderForPrint, currentStore?.id ?? '', 'new');
                             }}

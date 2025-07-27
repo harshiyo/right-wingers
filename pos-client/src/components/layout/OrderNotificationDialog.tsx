@@ -28,6 +28,25 @@ interface Order {
   };
   items: OrderItem[];
   orderType?: string;
+  // Scheduled order information - using correct Firebase structure
+  pickupDetails?: {
+    estimatedTime?: string;
+    scheduledDateTime?: string;
+  };
+  deliveryDetails?: {
+    scheduledDeliveryDateTime?: string;
+  };
+  // Legacy fields for backward compatibility
+  pickupTime?: 'asap' | 'scheduled';
+  scheduledDateTime?: string;
+  deliveryTimeType?: 'asap' | 'scheduled';
+  scheduledDeliveryDateTime?: string;
+  estimatedPickupTime?: string;
+  // Receipt fields
+  subtotal?: number;
+  tax?: number;
+  paymentMethod?: string;
+  deliveryAddress?: string;
 }
 
 interface OrderItem {
@@ -127,6 +146,25 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
     setCartItems(normalized);
     // Store original items for modification tracking
     localStorage.setItem('originalOrderItems', JSON.stringify(normalized));
+    
+    // Extract scheduled information from the order
+    let pickupTime = 'asap';
+    let scheduledDateTime = undefined;
+    let deliveryTimeType = 'asap';
+    let scheduledDeliveryDateTime = undefined;
+    
+    if (order.orderType === 'pickup' && order.pickupDetails) {
+      if (order.pickupDetails.scheduledDateTime) {
+        pickupTime = 'scheduled';
+        scheduledDateTime = order.pickupDetails.scheduledDateTime;
+      }
+    } else if (order.orderType === 'delivery' && order.deliveryDetails) {
+      if (order.deliveryDetails.scheduledDeliveryDateTime) {
+        deliveryTimeType = 'scheduled';
+        scheduledDeliveryDateTime = order.deliveryDetails.scheduledDeliveryDateTime;
+      }
+    }
+    
     // Pass customer info and phone to /menu so it is preselected
     navigate('/menu', {
       state: {
@@ -136,6 +174,11 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
         editingOrderId: order.id, // Pass the order ID for modification mode
         orderNumber: order.orderNumber,
         originalOrder: order, // <-- Pass the full original order for receipt diff
+        // Pass scheduled information
+        pickupTime,
+        scheduledDateTime,
+        deliveryTimeType,
+        scheduledDeliveryDateTime,
       }
     });
   };
@@ -246,6 +289,14 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
                             storeAddress: currentStore?.address ?? '',
                             storePhone: currentStore?.phone ?? '',
                             orderType: order.orderType,
+                            // Include scheduled order information from the original order - using correct Firebase structure
+                            pickupDetails: order.pickupDetails,
+                            deliveryDetails: order.deliveryDetails,
+                            // Include other receipt fields
+                            subtotal: order.subtotal,
+                            tax: order.tax,
+                            paymentMethod: order.paymentMethod,
+                            deliveryAddress: order.deliveryAddress,
                           };
                           if (window.electronAPI && typeof window.electronAPI.printReceipt === 'function') {
                             await window.electronAPI.printReceipt(orderForPrint, 'reprint');

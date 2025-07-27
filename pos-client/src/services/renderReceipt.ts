@@ -73,6 +73,24 @@ export function renderReceipt(
   lines.push(`Order Type: ${order['orderType'] || 'Pickup'}`);
   lines.push(`Order #: ${order.orderNumber || order.id || ''}`);
   lines.push(`Date/Time: ${formatDateTime(order.createdAt)}`);
+  
+  // Add scheduled order information
+  if (order['orderType'] === 'pickup') {
+    if (order['pickupTime'] === 'scheduled' && order['scheduledDateTime']) {
+      const scheduledDate = new Date(order['scheduledDateTime']);
+      lines.push(`Scheduled Pickup: ${scheduledDate.toLocaleString()}`);
+    } else {
+      lines.push(`Pickup Time: ASAP (${order['estimatedPickupTime'] || '15-25 minutes'})`);
+    }
+  } else if (order['orderType'] === 'delivery') {
+    if (order['deliveryTimeType'] === 'scheduled' && order['scheduledDeliveryDateTime']) {
+      const scheduledDate = new Date(order['scheduledDeliveryDateTime']);
+      lines.push(`Scheduled Delivery: ${scheduledDate.toLocaleString()}`);
+    } else {
+      lines.push(`Delivery Time: ASAP`);
+    }
+  }
+  
   lines.push('-----------------------------');
   lines.push(`Customer: ${order.customerInfo.name}`);
   lines.push(`Phone:    ${order.customerInfo.phone}`);
