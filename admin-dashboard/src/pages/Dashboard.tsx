@@ -97,12 +97,12 @@ const Dashboard = () => {
         let filteredOrders = ordersData?.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        })) || [];
+        })) as any[] || [];
 
         let filteredCustomers = customersData?.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        })) || [];
+        })) as any[] || [];
 
         // Apply store filtering
         if (currentUser?.role === 'store_admin' && currentUser.assignedStoreId) {

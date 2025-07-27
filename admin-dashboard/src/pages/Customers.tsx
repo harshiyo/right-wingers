@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, Calendar, Filter, Download, Users, RefreshCw } from 'lucide-react';
+import { jobScheduler } from '../services/jobScheduler';
 
 interface Customer {
   id: string;
@@ -230,124 +231,21 @@ const Customers = () => {
 
   const updateCustomerStats = async () => {
     try {
-      console.log('🔄 Updating customer statistics...');
+      console.log('🔄 Running manual customer sync...');
       setLoading(true);
       
-      // Add a minimum loading time so users can see the animation
-      const startTime = Date.now();
-      const minLoadingTime = 1500; // 1.5 seconds minimum
-
-      // Fetch all orders
-      const ordersQuery = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
-      const ordersSnapshot = await getDocs(ordersQuery);
-      const orders = ordersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-
-      console.log(`📊 Found ${orders.length} total orders`);
-
-      // Group orders by customer phone number
-      const customerStats = new Map<string, { 
-        orderCount: number; 
-        totalSpent: number; 
-        lastOrderDate: string;
-        customerId?: string;
-      }>();
-
-      orders.forEach((order: any) => {
-        // Get customer phone from either format
-        const phone = order.customerInfo?.phone || order.customerPhone;
-        if (!phone) return;
-
-        const cleanPhone = phone.replace(/\D/g, '');
-        const orderTotal = order.total || 0;
-        const orderDate = order.createdAt || new Date().toISOString();
-
-        if (!customerStats.has(cleanPhone)) {
-          customerStats.set(cleanPhone, {
-            orderCount: 0,
-            totalSpent: 0,
-            lastOrderDate: orderDate
-          });
-        }
-
-        const stats = customerStats.get(cleanPhone)!;
-        stats.orderCount += 1;
-        stats.totalSpent += orderTotal;
-        
-        // Keep the most recent order date
-        if (orderDate > stats.lastOrderDate) {
-          stats.lastOrderDate = orderDate;
-        }
-      });
-
-      console.log(`📈 Calculated stats for ${customerStats.size} customers`);
-
-      // Helper function to safely format date
-      const formatDate = (dateString: string) => {
-        if (typeof dateString !== 'string') {
-          return new Date().toISOString().split('T')[0];
-        }
-        return dateString.split('T')[0];
-      };
-
-      // Update each customer's statistics
-      const updatePromises = customers.map(async (customer) => {
-        const cleanPhone = customer.phone.replace(/\D/g, '');
-        const stats = customerStats.get(cleanPhone);
-        
-        if (stats) {
-          const formattedLastOrderDate = formatDate(stats.lastOrderDate);
-          
-          if (
-            customer.orderCount !== stats.orderCount || 
-            customer.totalSpent !== stats.totalSpent ||
-            customer.lastOrderDate !== formattedLastOrderDate
-          ) {
-            console.log(`📝 Updating ${customer.name}: ${stats.orderCount} orders, $${stats.totalSpent.toFixed(2)}`);
-            
-            const customerRef = doc(db, 'customers', customer.id);
-            await updateDoc(customerRef, {
-              orderCount: stats.orderCount,
-              totalOrders: stats.orderCount, // Update both fields for compatibility
-              totalSpent: stats.totalSpent,
-              lastOrderDate: formattedLastOrderDate,
-              updatedAt: new Date().toISOString()
-            });
-            
-            return {
-              ...customer,
-              orderCount: stats.orderCount,
-              totalOrders: stats.orderCount,
-              totalSpent: stats.totalSpent,
-              lastOrderDate: formattedLastOrderDate
-            };
-          }
-        }
-        return customer;
-      });
-
-      const updatedCustomers = await Promise.all(updatePromises);
-      setCustomers(updatedCustomers);
-      
-      console.log('✅ Customer statistics updated successfully!');
+      // Use the job scheduler to run the customer sync
+      await jobScheduler.runManualJob('customer_sync');
       
       // Refresh the page data to show updated stats
       await fetchCustomers();
-      
-      // Ensure minimum loading time has passed
-      const elapsedTime = Date.now() - startTime;
-      if (elapsedTime < minLoadingTime) {
-        await new Promise(resolve => setTimeout(resolve, minLoadingTime - elapsedTime));
-      }
       
       // Show success notification
       setSyncSuccess(true);
       setTimeout(() => setSyncSuccess(false), 3000); // Hide after 3 seconds
       
     } catch (error) {
-      console.error('❌ Error updating customer stats:', error);
+      console.error('❌ Error running customer sync:', error);
       // Don't show alert, just log the error
     } finally {
       setLoading(false);
@@ -535,21 +433,21 @@ const Customers = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {(customer.address || (typeof customer.address === 'object' && customer.address.street)) && (
+                        {customer.address && (
                           <div className="flex items-center">
                             <MapPin className="h-4 w-4 text-gray-400 mr-1" />
                             <div>
                               <div>
                                 {typeof customer.address === 'string' 
                                   ? customer.address 
-                                  : customer.address?.street}
+                                  : (customer.address as any)?.street}
                               </div>
                               {((customer.city && customer.postalCode) || 
-                                (typeof customer.address === 'object' && customer.address?.city)) && (
+                                (typeof customer.address === 'object' && (customer.address as any)?.city)) && (
                                 <div className="text-gray-500">
                                   {typeof customer.address === 'string' 
                                     ? `${customer.city} ${customer.postalCode}`
-                                    : `${customer.address?.city} ${customer.address?.postalCode}`}
+                                    : `${(customer.address as any)?.city} ${(customer.address as any)?.postalCode}`}
                                 </div>
                               )}
                             </div>

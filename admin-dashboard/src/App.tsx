@@ -20,11 +20,23 @@ import { EditableStores } from './pages/EditableStores';
 import { UserManagement } from './pages/UserManagement';
 import KitchenDisplay from './pages/KitchenDisplay';
 import LiveLogs from './pages/LiveLogs';
+import JobStatus from './pages/JobStatus';
 import { SelectedStoreProvider } from './context/SelectedStoreContext';
 import { AuthProvider } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import { jobScheduler } from './services/jobScheduler';
 
 function App() {
+  // Initialize job scheduler when app starts
+  React.useEffect(() => {
+    jobScheduler.initialize();
+    
+    // Cleanup on unmount
+    return () => {
+      jobScheduler.destroy();
+    };
+  }, []);
+
   return (
     <ErrorBoundary>
       <AuthProvider>
@@ -56,6 +68,7 @@ function App() {
               <Route path="appearance" element={<Appearance />} />
               <Route path="settings" element={<Settings />} />
               <Route path="live-logs" element={<LiveLogs />} />
+              <Route path="job-status" element={<JobStatus />} />
             </Route>
           </Routes>
         </Router>
