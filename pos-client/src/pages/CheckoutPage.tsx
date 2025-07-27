@@ -91,26 +91,26 @@ const PaymentMethodCard = memo(({
   <button
     onClick={onClick}
     className={cn(
-      "p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-md text-left w-full",
+      "p-2 rounded-lg border-2 transition-all duration-200 hover:shadow-md text-left w-full",
       isSelected 
         ? "border-red-600 bg-red-50 shadow-lg" 
         : "border-gray-200 hover:border-gray-300 bg-white"
     )}
   >
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       <div className={cn(
-        "p-3 rounded-lg",
+        "p-2 rounded-lg",
         isSelected ? "bg-red-100" : "bg-gray-100"
       )}>
         <Icon className={cn(
-          "h-6 w-6",
+          "h-4 w-4",
           isSelected ? "text-red-600" : "text-gray-600"
         )} />
       </div>
-      <div>
-        <h3 className="font-semibold text-gray-900">{title}</h3>
-        <p className="text-sm text-gray-600">{description}</p>
-      </div>
+              <div>
+          <h3 className="font-semibold text-gray-900 text-sm">{title}</h3>
+          <p className="text-xs text-gray-600">{description}</p>
+        </div>
       {isSelected && (
         <div className="ml-auto">
           <Check className="h-5 w-5 text-red-600" />
@@ -277,32 +277,32 @@ const OrderSummary = memo(({
 
   console.log('CART ITEMS:', JSON.stringify(cartItems, null, 2));
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 h-fit">
-      <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-        <ShoppingCart className="h-5 w-5" />
-        Order Summary
-      </h2>
-      
-      {/* Items List - No max height, let it expand */}
-      <div className="space-y-4 mb-6">
+    <div className="flex flex-col h-full min-h-0">
+      {/* Items List - Scrollable */}
+      <div 
+        className="flex-1 overflow-y-auto space-y-2 mb-4 min-h-0 cart-items-scroll" 
+        style={{ 
+          maxHeight: 'calc(100vh - 400px)'
+        }}
+      >
         {cartItems.map((item) => {
           const customizations = formatCustomizations(item);
           return (
-            <div key={item.id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="flex items-start gap-3">
+            <div key={item.id} className="p-2 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-start gap-2">
                 <img 
                   src={item.imageUrl} 
                   alt={item.name} 
-                  className="w-16 h-16 object-cover rounded-md flex-shrink-0" 
+                  className="w-10 h-10 object-cover rounded-md flex-shrink-0" 
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-semibold text-gray-900">{item.name}</h4>
-                    <p className="font-bold text-gray-900 ml-2">
+                  <div className="flex justify-between items-start mb-1">
+                    <h4 className="font-semibold text-gray-900 text-xs">{item.name}</h4>
+                    <p className="font-bold text-gray-900 ml-2 text-xs">
                       ${((item.price + (item.extraCharges || 0)) * item.quantity).toFixed(2)}
                     </p>
                   </div>
-                  <p className="text-sm text-gray-600 mb-2">Quantity: {item.quantity}</p>
+                  <p className="text-xs text-gray-600 mb-1">Quantity: {item.quantity}</p>
                   
                   {/* Detailed customizations */}
                   {Array.isArray(customizations) && customizations.length > 0 && (
@@ -357,23 +357,23 @@ const OrderSummary = memo(({
         })}
       </div>
       
-      {/* Totals */}
-      <div className="border-t pt-4 space-y-2">
-        <div className="flex justify-between text-gray-600">
+      {/* Totals - Fixed at bottom */}
+      <div className="border-t pt-3 space-y-1 flex-shrink-0">
+        <div className="flex justify-between text-gray-600 text-sm">
           <span>Subtotal:</span>
           <span>${subtotal.toFixed(2)}</span>
         </div>
         {discount > 0 && (
-          <div className="flex justify-between text-red-600">
+          <div className="flex justify-between text-red-600 text-sm">
             <span>Discount:</span>
             <span>-${discount.toFixed(2)}</span>
           </div>
         )}
-        <div className="flex justify-between text-gray-600">
+        <div className="flex justify-between text-gray-600 text-sm">
           <span>Tax (13%):</span>
           <span>${tax.toFixed(2)}</span>
         </div>
-        <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t">
+        <div className="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t">
           <span>Total:</span>
           <span>${total.toFixed(2)}</span>
         </div>
@@ -406,46 +406,115 @@ const CustomerInfoCard = memo(({
     return null;
   }
 
-  let timingLabel = '';
-  if (orderType === 'pickup') {
-    if (pickupTime === 'scheduled' && scheduledDateTime) {
-      timingLabel = `Scheduled Pickup: ${new Date(scheduledDateTime).toLocaleString()}`;
+  // Enhanced timing and order type information
+  const getOrderTypeInfo = () => {
+    if (orderType === 'pickup') {
+      if (pickupTime === 'scheduled' && scheduledDateTime) {
+        return {
+          icon: <Clock className="h-4 w-4 text-orange-600" />,
+          label: 'Scheduled Pickup',
+          time: new Date(scheduledDateTime).toLocaleString(),
+          bgColor: 'bg-orange-50',
+          textColor: 'text-orange-800'
+        };
+      } else {
+        return {
+          icon: <Clock className="h-4 w-4 text-green-600" />,
+          label: 'Pickup ASAP',
+          time: 'Ready in 15-25 minutes',
+          bgColor: 'bg-green-50',
+          textColor: 'text-green-800'
+        };
+      }
+    } else if (orderType === 'delivery') {
+      if (deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime) {
+        return {
+          icon: <Clock className="h-4 w-4 text-purple-600" />,
+          label: 'Scheduled Delivery',
+          time: new Date(scheduledDeliveryDateTime).toLocaleString(),
+          bgColor: 'bg-purple-50',
+          textColor: 'text-purple-800'
+        };
+      } else {
+        return {
+          icon: <Clock className="h-4 w-4 text-blue-600" />,
+          label: 'Delivery ASAP',
+          time: 'Delivered in 30-45 minutes',
+          bgColor: 'bg-blue-50',
+          textColor: 'text-blue-800'
+        };
+      }
     } else {
-      timingLabel = 'Pickup ASAP: Ready in 15-25 minutes';
+      return {
+        icon: <Clock className="h-4 w-4 text-gray-600" />,
+        label: 'Dine-in',
+        time: 'Ready when prepared',
+        bgColor: 'bg-gray-50',
+        textColor: 'text-gray-800'
+      };
     }
-  } else if (orderType === 'delivery') {
-    if (deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime) {
-      timingLabel = `Scheduled Delivery: ${new Date(scheduledDeliveryDateTime).toLocaleString()}`;
-    } else {
-      timingLabel = 'Delivery ASAP: Delivered in 30-45 minutes';
-    }
-  }
+  };
+
+  const orderTypeInfo = getOrderTypeInfo();
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 h-fit">
-      <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-        <User className="h-5 w-5" />
+    <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-200 h-full flex flex-col">
+      <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2 flex-shrink-0">
+        <User className="h-4 w-4" />
         Customer Information
       </h2>
-      <div className="space-y-3">
-        <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-          <div className="p-2 rounded-lg bg-green-100">
-            <CheckCircle className="h-5 w-5 text-green-600" />
+      <div className="space-y-3 flex-1">
+        {/* Customer Name */}
+        <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+          <div className="p-1.5 rounded-lg bg-green-100">
+            <CheckCircle className="h-4 w-4 text-green-600" />
           </div>
           <div>
-            <p className="font-bold text-green-800">{customer.name}</p>
+            <p className="font-bold text-green-800 text-sm">{customer.name}</p>
             <p className="text-xs text-gray-600">Customer</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-          <Phone className="h-5 w-5 text-blue-600" />
-          <span className="font-semibold text-gray-900">{phone}</span>
+        
+        {/* Phone Number */}
+        <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+          <div className="p-1.5 rounded-lg bg-blue-100">
+            <Phone className="h-4 w-4 text-blue-600" />
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900 text-sm">{phone}</p>
+            <p className="text-xs text-gray-600">Phone Number</p>
+          </div>
         </div>
-        <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg">
-          <Clock className="h-5 w-5 text-yellow-600" />
-          <span className="font-semibold text-gray-900 lowercase">{orderType}</span>
-          <span className="text-gray-700 ml-2">{timingLabel}</span>
+        
+        {/* Order Type & Timing */}
+        <div className={`flex items-center gap-2 p-3 ${orderTypeInfo.bgColor} rounded-lg`}>
+          <div className={`p-1.5 rounded-lg ${orderTypeInfo.bgColor.replace('50', '100')}`}>
+            {orderTypeInfo.icon}
+          </div>
+          <div>
+            <p className={`font-semibold ${orderTypeInfo.textColor} text-sm capitalize`}>
+              {orderTypeInfo.label}
+            </p>
+            <p className="text-xs text-gray-600">{orderTypeInfo.time}</p>
+          </div>
         </div>
+
+        {/* Delivery Address (if delivery order) */}
+        {orderType === 'delivery' && customer.address && (
+          <div className="flex items-start gap-2 p-3 bg-gray-50 rounded-lg">
+            <div className="p-1.5 rounded-lg bg-gray-100 mt-0.5">
+              <MapPin className="h-4 w-4 text-gray-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900 text-sm">Delivery Address</p>
+              <p className="text-xs text-gray-600">
+                {customer.address.street}
+                {customer.address.city && `, ${customer.address.city}`}
+                {customer.address.postalCode && `, ${customer.address.postalCode}`}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1363,36 +1432,91 @@ const CheckoutPage = () => {
         onQuickAddClick={() => {}} // no-op to satisfy required prop
       />
       
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 bg-white px-6 py-3 rounded-full shadow-lg border border-gray-200">
-              <Receipt className="h-6 w-6 text-red-600" />
-              <h1 className="text-2xl font-bold text-gray-900">Checkout</h1>
+      <div className="flex-1 p-4">
+        <div className="max-w-7xl mx-auto h-full">
+          {/* Compact Header */}
+          <div className="text-center mb-4">
+            <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-lg border border-gray-200">
+              <Receipt className="h-5 w-5 text-red-600" />
+              <h1 className="text-xl font-bold text-gray-900">Checkout</h1>
             </div>
-            <p className="text-gray-600 mt-4">Review your order and complete the payment</p>
           </div>
 
-          {/* Main Content */}
-          <div className="grid lg:grid-cols-2 gap-8">
-            {/* Left Column - Customer Info & Payment */}
-            <div className="space-y-6">
-              <CustomerInfoCard 
-                customer={customer} 
-                orderType={orderType} 
-                phone={phone} 
-                pickupTime={pickupTime}
-                scheduledDateTime={scheduledDateTime}
-                deliveryTimeType={deliveryTimeType}
-                scheduledDeliveryDateTime={scheduledDeliveryDateTime}
-              />
+          {/* Main Content - 2 Column Layout */}
+          <div className="grid lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
+            {/* Left Column - Customer Info & Payment Method */}
+            <div className="space-y-3 h-full">
+              {/* Customer Info - Compact */}
+              <div className="bg-white rounded-xl shadow-lg p-3 border border-gray-200">
+                <h2 className="text-base font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Customer Information
+                </h2>
+                <div className="space-y-2">
+                  {/* Customer Name */}
+                  <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
+                    <div className="p-1 rounded-lg bg-green-100">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-green-800 text-xs">{customer.name}</p>
+                      <p className="text-xs text-gray-600">Customer</p>
+                    </div>
+                  </div>
+                  
+                  {/* Phone Number */}
+                  <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
+                    <div className="p-1 rounded-lg bg-blue-100">
+                      <Phone className="h-3 w-3 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 text-xs">{phone}</p>
+                      <p className="text-xs text-gray-600">Phone</p>
+                    </div>
+                  </div>
+                  
+                  {/* Order Type & Timing */}
+                  <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg">
+                    <Clock className="h-3 w-3 text-yellow-600" />
+                    <div>
+                      <p className="font-semibold text-gray-900 text-xs capitalize">{orderType}</p>
+                      <p className="text-xs text-gray-600">
+                        {orderType === 'pickup' 
+                          ? (pickupTime === 'scheduled' && scheduledDateTime 
+                              ? `Scheduled: ${new Date(scheduledDateTime).toLocaleString()}`
+                              : 'ASAP: 15-25 minutes')
+                          : orderType === 'delivery'
+                            ? (deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime
+                                ? `Scheduled: ${new Date(scheduledDeliveryDateTime).toLocaleString()}`
+                                : 'ASAP: 30-45 minutes')
+                            : 'Ready when prepared'
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Delivery Address (if delivery order) */}
+                  {orderType === 'delivery' && customer.address && (
+                    <div className="flex items-start gap-2 p-2 bg-gray-50 rounded-lg">
+                      <MapPin className="h-3 w-3 text-gray-600 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-gray-900 text-xs">Address</p>
+                        <p className="text-xs text-gray-600">
+                          {customer.address.street}
+                          {customer.address.city && `, ${customer.address.city}`}
+                          {customer.address.postalCode && `, ${customer.address.postalCode}`}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
               
-              {/* Payment Method */}
-              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">Payment Method</h2>
+              {/* Payment Method - Compact */}
+              <div className="bg-white rounded-xl shadow-lg p-3 border border-gray-200 flex-1 flex flex-col">
+                <h2 className="text-base font-bold text-gray-900 mb-3">Payment Method</h2>
                 
-                <div className="grid gap-4 mb-6">
+                <div className="grid gap-2 mb-3">
                   {paymentMethods.map(({ method, icon, title, description }) => (
                     <PaymentMethodCard
                       key={method}
@@ -1407,9 +1531,9 @@ const CheckoutPage = () => {
                 </div>
 
                 {/* Discount Section */}
-                <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <Percent className="h-5 w-5" />
+                <div className="bg-gray-50 rounded-lg p-2 mb-3">
+                  <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <Percent className="h-3 w-3" />
                     Discount
                   </h3>
                   <div className="flex gap-2">
@@ -1425,14 +1549,14 @@ const CheckoutPage = () => {
                     <span className="flex items-center text-gray-600 text-sm">%</span>
                   </div>
                   {discountAmount > 0 && (
-                    <p className="text-red-600 text-sm mt-2">
+                    <p className="text-red-600 text-xs mt-1">
                       Discount applied: -${discountAmount.toFixed(2)}
                     </p>
                   )}
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-3 mt-auto flex-shrink-0">
                   {/* Back to Menu and Pay button row */}
                   {!showReceiptOptions && (
                     <div className="flex gap-2 w-full">
@@ -1574,14 +1698,22 @@ const CheckoutPage = () => {
             </div>
 
             {/* Right Column - Order Summary */}
-            <div>
-              <OrderSummary 
-                cartItems={cartItems} 
-                subtotal={subtotal} 
-                tax={tax} 
-                discount={discountAmount} 
-                total={total} 
-              />
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-200 h-full flex flex-col">
+                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2 flex-shrink-0">
+                  <ShoppingCart className="h-5 w-5" />
+                  Order Summary
+                </h2>
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  <OrderSummary 
+                    cartItems={cartItems} 
+                    subtotal={subtotal} 
+                    tax={tax} 
+                    discount={discountAmount} 
+                    total={total} 
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

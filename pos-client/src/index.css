@@ -190,3 +190,22 @@
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
+
+/* Cart items scrollbar - always visible */
+.cart-items-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.cart-items-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.cart-items-scroll::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.cart-items-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
