@@ -17,6 +17,7 @@ import {
   UserCheck,
   Monitor,
   Activity,
+  Tag,
 } from 'lucide-react';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -52,6 +53,7 @@ export const navLinks: NavLinkItem[] = [
   { id: 'settings', to: '/settings', text: 'Settings', icon: Settings, order: 13, color: 'gray' },
   { id: 'live-logs', to: '/live-logs', text: 'Live Logs', icon: Monitor, order: 14, color: 'red' },
   { id: 'job-status', to: '/job-status', text: 'Job Status', icon: Activity, order: 15, color: 'indigo' },
+  { id: 'discount-codes', to: '/discount-codes', text: 'Discount Codes', icon: Tag, order: 16, color: 'orange' },
 ];
 
 const colorClasses: Record<ColorType, string> = {

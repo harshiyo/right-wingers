@@ -34,6 +34,7 @@ import { collection, query, orderBy } from 'firebase/firestore';
 import { getPizzaInstructionLabels, getWingInstructionLabels } from '../utils/cartHelpers';
 import { printReceiptIfLocal } from '../services/printReceiptIfLocal';
 import { Order } from '../services/types';
+import { DiscountCodeService, type DiscountCode } from '../services/discountCodes';
 
 interface CartItem {
   id: string;
@@ -552,6 +553,10 @@ const CheckoutPage = () => {
   const [mobileAmount, setMobileAmount] = useState('');
   const [discount, setDiscount] = useState(0);
   const [discountPercent, setDiscountPercent] = useState('');
+  const [discountCode, setDiscountCode] = useState('');
+  const [appliedDiscountCode, setAppliedDiscountCode] = useState<DiscountCode | null>(null);
+  const [discountCodeError, setDiscountCodeError] = useState('');
+  const [isValidatingCode, setIsValidatingCode] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showReceiptOptions, setShowReceiptOptions] = useState(false);
   const [taxRate, setTaxRate] = useState(0.13); // Default to 13%
@@ -641,6 +646,57 @@ const CheckoutPage = () => {
       setDiscount(0);
     }
   }, [subtotal]);
+
+  const handleDiscountCodeChange = useCallback((value: string) => {
+    setDiscountCode(value);
+    setDiscountCodeError('');
+    if (appliedDiscountCode) {
+      setAppliedDiscountCode(null);
+      setDiscount(0);
+    }
+  }, [appliedDiscountCode]);
+
+  const validateDiscountCode = useCallback(async () => {
+    if (!discountCode.trim()) {
+      setDiscountCodeError('Please enter a discount code');
+      return;
+    }
+
+    setIsValidatingCode(true);
+    setDiscountCodeError('');
+
+    try {
+      const result = await DiscountCodeService.validateDiscountCode(
+        discountCode,
+        subtotal,
+        orderType
+      );
+
+      if (result.isValid && result.discountCode && result.discountAmount) {
+        setAppliedDiscountCode(result.discountCode);
+        setDiscount(result.discountAmount);
+        setDiscountCodeError('');
+      } else {
+        setDiscountCodeError(result.error || 'Invalid discount code');
+        setAppliedDiscountCode(null);
+        setDiscount(0);
+      }
+    } catch (error) {
+      console.error('Error validating discount code:', error);
+      setDiscountCodeError('Error validating discount code');
+      setAppliedDiscountCode(null);
+      setDiscount(0);
+    } finally {
+      setIsValidatingCode(false);
+    }
+  }, [discountCode, subtotal, orderType]);
+
+  const removeDiscountCode = useCallback(() => {
+    setAppliedDiscountCode(null);
+    setDiscountCode('');
+    setDiscount(0);
+    setDiscountCodeError('');
+  }, []);
   
   // Update handleProcessPayment to handle both new orders and modifications with new Electron API
   const handleProcessPayment = useCallback(async () => {
@@ -775,6 +831,17 @@ const CheckoutPage = () => {
           const cleanedOrderData = deepRemoveUndefined(orderData);
           const orderId = await createOrder(cleanedOrderData);
           setSavedOrderId(orderId);
+          
+          // Apply discount code if one was used
+          if (appliedDiscountCode) {
+            try {
+              await DiscountCodeService.applyDiscountCode(appliedDiscountCode.id);
+              console.log('✅ Discount code applied successfully');
+            } catch (error) {
+              console.error('Error applying discount code:', error);
+            }
+          }
+          
           // Try to get the order number from Firestore (or use fallback)
           let orderNumber = '';
           try {
@@ -1536,6 +1603,49 @@ const CheckoutPage = () => {
                     <Percent className="h-3 w-3" />
                     Discount
                   </h3>
+                  
+                  {/* Discount Code Input */}
+                  <div className="mb-2">
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        placeholder="Enter discount code"
+                        value={discountCode}
+                        onChange={(e) => handleDiscountCodeChange(e.target.value)}
+                        className="flex-1"
+                        disabled={isValidatingCode}
+                      />
+                      <Button
+                        onClick={validateDiscountCode}
+                        disabled={!discountCode.trim() || isValidatingCode}
+                        className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        {isValidatingCode ? (
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                        ) : (
+                          'Apply'
+                        )}
+                      </Button>
+                    </div>
+                    {discountCodeError && (
+                      <p className="text-red-600 text-xs mt-1">{discountCodeError}</p>
+                    )}
+                    {appliedDiscountCode && (
+                      <div className="flex items-center justify-between mt-1 p-1 bg-green-50 rounded text-xs">
+                        <span className="text-green-800">
+                          ✓ {appliedDiscountCode.name} applied
+                        </span>
+                        <button
+                          onClick={removeDiscountCode}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Manual Discount Percentage */}
                   <div className="flex gap-2">
                     <Input
                       type="number"
@@ -1545,6 +1655,7 @@ const CheckoutPage = () => {
                       className="flex-1"
                       min="0"
                       max="100"
+                      disabled={!!appliedDiscountCode}
                     />
                     <span className="flex items-center text-gray-600 text-sm">%</span>
                   </div>

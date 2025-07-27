@@ -21,6 +21,7 @@ import { UserManagement } from './pages/UserManagement';
 import KitchenDisplay from './pages/KitchenDisplay';
 import LiveLogs from './pages/LiveLogs';
 import JobStatus from './pages/JobStatus';
+import DiscountCodes from './pages/DiscountCodes';
 import { SelectedStoreProvider } from './context/SelectedStoreContext';
 import { AuthProvider } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -69,6 +70,7 @@ function App() {
               <Route path="settings" element={<Settings />} />
               <Route path="live-logs" element={<LiveLogs />} />
               <Route path="job-status" element={<JobStatus />} />
+              <Route path="discount-codes" element={<DiscountCodes />} />
             </Route>
           </Routes>
         </Router>
