@@ -472,7 +472,7 @@ const CheckoutPage = () => {
     }
   }, [editingOrderId, location.state]);
 
-  // Modal state for modification prompt
+  // Modal state for modification prompt - DEPRECATED: Now using direct update
   const [showModificationPrompt, setShowModificationPrompt] = useState(false);
   const [pendingOrder, setPendingOrder] = useState(false); // Prevent double submit
   const [showOrderSuccess, setShowOrderSuccess] = useState(false); // New state for success modal
@@ -573,7 +573,7 @@ const CheckoutPage = () => {
     }
   }, [subtotal]);
   
-  // Update handleProcessPayment to save order immediately and prevent duplicates
+  // Update handleProcessPayment to handle both new orders and modifications with new Electron API
   const handleProcessPayment = useCallback(async () => {
     if (isProcessing || orderSaved) return; // Prevent duplicate saves
     setIsProcessing(true);
@@ -582,79 +582,149 @@ const CheckoutPage = () => {
       // Simulate payment processing (if needed)
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Save order to database
-      if (!orderSaved) {
-        // Prepare order data (same as in handleCompleteOrder, but without clearing cart or navigating)
-        if (!currentStore) {
-          alert('No store selected. Cannot place order.');
-          setIsProcessing(false);
-          return;
-        }
-        // Generate order data
-        let orderData = {
-          customerInfo: {
-            name: customer.name,
-            phone: phone,
-            ...(customer.email && { email: customer.email }),
-            address: customer.address ? `${customer.address.street}, ${customer.address.city}, ${customer.address.postalCode}` : undefined,
-          },
-          items: cartItems.map(item => {
-            const base: any = {
-              id: item.id,
-              baseId: item.baseId,
-              name: item.name,
-              price: item.price,
-              quantity: item.quantity,
-              extraCharges: item.extraCharges || 0,
-              imageUrl: item.imageUrl,
-            };
-            if (item.customizations) {
-              base.customizations = Object.fromEntries(
-                Object.entries(item.customizations).filter(([_, v]) => v !== undefined)
-              );
-            }
-            return base;
-          }),
-          subtotal: subtotal,
-          tax: tax,
-          discount: discountAmount,
-          total: total,
-          orderType: (typeof orderType === 'string' && ['pickup','delivery','dine-in'].includes(orderType.toLowerCase()) ? orderType.toLowerCase() : 'pickup'),
-          paymentMethod: paymentMethod,
-          paymentStatus: 'paid',
-          createdAt: new Date().toISOString(),
-          store: {
-            id: currentStore.id,
-            name: currentStore.name,
-            address: currentStore.address,
-          },
-          discounts: [],
-          discountTotal: 0,
-          ...(orderType === 'delivery' && customer.address ? { deliveryDetails: { ...customer.address, ...(deliveryAddress || {}), ...(deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime ? { scheduledDeliveryDateTime } : {}) } } : {}),
-          ...(orderType === 'pickup' ? { pickupDetails: { estimatedTime: '15-25 minutes', ...(pickupTime === 'scheduled' && scheduledDateTime ? { scheduledDateTime } : {}) } } : {}),
-          source: 'pos',
-        };
-        const cleanedOrderData = deepRemoveUndefined(orderData);
-        const orderId = await createOrder(cleanedOrderData);
-        setSavedOrderId(orderId);
-        // Try to get the order number from Firestore (or use fallback)
-        let orderNumber = '';
-        try {
-          const orderDoc = await getDoc(doc(db, 'orders', orderId));
-          orderNumber = orderDoc.exists() ? (orderDoc.data().orderNumber || orderId) : orderId;
-        } catch {
-          orderNumber = orderId;
-        }
-        setSavedOrderNumber(orderNumber);
-        setOrderSaved(true);
+      if (!currentStore) {
+        alert('No store selected. Cannot place order.');
+        setIsProcessing(false);
+        return;
       }
-      setShowReceiptOptions(true);
+
+      // Check if we're editing an existing order
+      if (editingOrderId) {
+        // For modifications, update the existing order directly
+        try {
+          // Generate order data for update
+          let orderData = {
+            customerInfo: {
+              name: customer.name,
+              phone: phone,
+              ...(customer.email && { email: customer.email }),
+              address: customer.address ? `${customer.address.street}, ${customer.address.city}, ${customer.address.postalCode}` : undefined,
+            },
+            items: cartItems.map(item => {
+              const base: any = {
+                id: item.id,
+                baseId: item.baseId,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                extraCharges: item.extraCharges || 0,
+                imageUrl: item.imageUrl,
+              };
+              if (item.customizations) {
+                base.customizations = Object.fromEntries(
+                  Object.entries(item.customizations).filter(([_, v]) => v !== undefined)
+                );
+              }
+              return base;
+            }),
+            subtotal: subtotal,
+            tax: tax,
+            discount: discountAmount,
+            total: total,
+            orderType: (typeof orderType === 'string' && ['pickup','delivery','dine-in'].includes(orderType.toLowerCase()) ? orderType.toLowerCase() : 'pickup'),
+            paymentMethod: paymentMethod,
+            paymentStatus: 'paid',
+            createdAt: new Date().toISOString(),
+            store: {
+              id: currentStore.id,
+              name: currentStore.name,
+              address: currentStore.address,
+            },
+            discounts: [],
+            discountTotal: 0,
+            ...(orderType === 'delivery' && customer.address ? { deliveryDetails: { ...customer.address, ...(deliveryAddress || {}), ...(deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime ? { scheduledDeliveryDateTime } : {}) } } : {}),
+            ...(orderType === 'pickup' ? { pickupDetails: { estimatedTime: '15-25 minutes', ...(pickupTime === 'scheduled' && scheduledDateTime ? { scheduledDateTime } : {}) } } : {}),
+            source: 'pos',
+          };
+
+          // Update existing order in Firestore
+          const updateData = deepRemoveUndefined(orderData);
+          const orderRef = doc(db, 'orders', editingOrderId);
+          await updateDoc(orderRef, updateData);
+
+          // Get the order number from the original order
+          const orderNumber = location.state?.orderNumber || editingOrderId;
+
+          // Set the saved order info for receipt printing
+          setSavedOrderId(editingOrderId);
+          setSavedOrderNumber(orderNumber);
+          setOrderSaved(true);
+
+          // Show receipt options instead of automatically printing
+          setShowReceiptOptions(true);
+        } catch (error) {
+          console.error('Failed to update order:', error);
+          alert('Failed to update order. Please try again.');
+        }
+      } else {
+        // For new orders, save to database
+        if (!orderSaved) {
+          // Generate order data
+          let orderData = {
+            customerInfo: {
+              name: customer.name,
+              phone: phone,
+              ...(customer.email && { email: customer.email }),
+              address: customer.address ? `${customer.address.street}, ${customer.address.city}, ${customer.address.postalCode}` : undefined,
+            },
+            items: cartItems.map(item => {
+              const base: any = {
+                id: item.id,
+                baseId: item.baseId,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                extraCharges: item.extraCharges || 0,
+                imageUrl: item.imageUrl,
+              };
+              if (item.customizations) {
+                base.customizations = Object.fromEntries(
+                  Object.entries(item.customizations).filter(([_, v]) => v !== undefined)
+                );
+              }
+              return base;
+            }),
+            subtotal: subtotal,
+            tax: tax,
+            discount: discountAmount,
+            total: total,
+            orderType: (typeof orderType === 'string' && ['pickup','delivery','dine-in'].includes(orderType.toLowerCase()) ? orderType.toLowerCase() : 'pickup'),
+            paymentMethod: paymentMethod,
+            paymentStatus: 'paid',
+            createdAt: new Date().toISOString(),
+            store: {
+              id: currentStore.id,
+              name: currentStore.name,
+              address: currentStore.address,
+            },
+            discounts: [],
+            discountTotal: 0,
+            ...(orderType === 'delivery' && customer.address ? { deliveryDetails: { ...customer.address, ...(deliveryAddress || {}), ...(deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime ? { scheduledDeliveryDateTime } : {}) } } : {}),
+            ...(orderType === 'pickup' ? { pickupDetails: { estimatedTime: '15-25 minutes', ...(pickupTime === 'scheduled' && scheduledDateTime ? { scheduledDateTime } : {}) } } : {}),
+            source: 'pos',
+          };
+          const cleanedOrderData = deepRemoveUndefined(orderData);
+          const orderId = await createOrder(cleanedOrderData);
+          setSavedOrderId(orderId);
+          // Try to get the order number from Firestore (or use fallback)
+          let orderNumber = '';
+          try {
+            const orderDoc = await getDoc(doc(db, 'orders', orderId));
+            orderNumber = orderDoc.exists() ? (orderDoc.data().orderNumber || orderId) : orderId;
+          } catch {
+            orderNumber = orderId;
+          }
+          setSavedOrderNumber(orderNumber);
+          setOrderSaved(true);
+        }
+        setShowReceiptOptions(true);
+      }
       setIsProcessing(false);
     } catch (error) {
       setIsProcessing(false);
       alert('Failed to process payment or save order. Please try again.');
     }
-  }, [isProcessing, orderSaved, currentStore, customer, phone, cartItems, subtotal, tax, discountAmount, orderType, paymentMethod, createOrder, deepRemoveUndefined, deliveryAddress, deliveryTimeType, scheduledDeliveryDateTime, pickupTime, scheduledDateTime]);
+  }, [isProcessing, orderSaved, currentStore, customer, phone, cartItems, subtotal, tax, discountAmount, orderType, paymentMethod, createOrder, deepRemoveUndefined, deliveryAddress, deliveryTimeType, scheduledDeliveryDateTime, pickupTime, scheduledDateTime, editingOrderId, clearCart, navigate]);
   
   // Utility to remove undefined fields from an object (shallow)
   function removeUndefinedFields(obj: Record<string, any>) {
@@ -930,7 +1000,7 @@ const CheckoutPage = () => {
     }
   }, [navigate, clearCart, createOrder, customer, phone, cartItems, total, subtotal, discountAmount, orderType, paymentMethod, editingOrderId, currentStore, showOrderSuccess, location.state]);
 
-  // Handler for modal choice (just sets state)
+  // Handler for modal choice (just sets state) - DEPRECATED: Now using direct update
   const handleModificationPromptChoice = (choice: 'full' | 'modified') => {
     setShowModificationPrompt(false);
     handleCompleteOrder(choice);
@@ -977,15 +1047,6 @@ const CheckoutPage = () => {
       }
     }
 
-    // Helper to get instruction labels
-    const getInstructionLabels = (type: string, instructions: string[]) => {
-      if (!instructions || instructions.length === 0) return [];
-      if (type === 'wings') {
-        return getWingInstructionLabels(wingInstructionTiles, instructions);
-      }
-      return getPizzaInstructionLabels(pizzaInstructionTiles, instructions);
-    };
-
     // Generate receipt items for modified items
     const generateReceiptItemHtml = (item: CartItem) => {
       // Typecast to allow isNew/isUpdated for rendering
@@ -1018,12 +1079,11 @@ const CheckoutPage = () => {
               details.push(`<strong>Sauces:</strong> ${sauceNames.join(', ')}`);
             }
           }
-          // Instructions (use shared label helpers)
+          // Instructions
           if (item.customizations.instructions && Array.isArray(item.customizations.instructions) && item.customizations.instructions.length > 0) {
-            const type = item.customizations.type || (item.name && item.name.toLowerCase().includes('wing') ? 'wings' : 'pizza');
-            const labels = getInstructionLabels(type, item.customizations.instructions);
-            if (labels.length > 0) {
-              details.push(`<strong>Instructions:</strong> ${labels.join(', ')}`);
+            const instructions = item.customizations.instructions.map((inst: any) => inst.name || inst).join(', ');
+            if (instructions) {
+              details.push(`<strong>Instructions:</strong> ${instructions}`);
             }
           }
         } else {
@@ -1051,11 +1111,11 @@ const CheckoutPage = () => {
                 stepDetails.push(`&nbsp;&nbsp;&nbsp;&nbsp;<strong>Sauces:</strong> ${sauceNames.join(', ')}`);
               }
             }
-            // Instructions (use shared label helpers)
+            // Instructions
             if (step.instructions && Array.isArray(step.instructions) && step.instructions.length > 0) {
-              const labels = getInstructionLabels(step.type, step.instructions);
-              if (labels.length > 0) {
-                stepDetails.push(`&nbsp;&nbsp;&nbsp;&nbsp;<strong>Instructions:</strong> ${labels.join(', ')}`);
+              const instructions = step.instructions.map((inst: any) => inst.name || inst).join(', ');
+              if (instructions) {
+                stepDetails.push(`&nbsp;&nbsp;&nbsp;&nbsp;<strong>Instructions:</strong> ${instructions}`);
               }
             }
             if (step.extraCharge && Number(step.extraCharge) > 0) {
@@ -1213,8 +1273,10 @@ const CheckoutPage = () => {
       tax: tax,
       paymentMethod: paymentMethod,
     };
-    await printReceiptIfLocal(orderForPrint, currentStore?.id ?? '', savedOrderId);
-  }, [savedOrderId, savedOrderNumber, currentStore, customer, phone, cartItems, total, subtotal, tax, paymentMethod, orderType]);
+    // Use 'modified-full' for modified orders, 'new' for new orders
+    const receiptType = editingOrderId ? 'modified-full' : 'new';
+    await printReceiptIfLocal(orderForPrint, currentStore?.id ?? '', receiptType);
+  }, [savedOrderId, savedOrderNumber, currentStore, customer, phone, cartItems, total, subtotal, tax, paymentMethod, orderType, editingOrderId]);
 
   // --- Print Modified Receipt (only changed items) ---
   const printModifiedReceipt = useCallback(async () => {
@@ -1428,7 +1490,7 @@ const CheckoutPage = () => {
                                 tax: tax,
                                 paymentMethod: paymentMethod,
                               };
-                              await printReceiptIfLocal(orderForPrint, currentStore?.id ?? '', savedOrderId);
+                              await printReceiptIfLocal(orderForPrint, currentStore?.id ?? '', 'new');
                             }}
                             variant="outline"
                             className="flex-1"
@@ -1474,8 +1536,8 @@ const CheckoutPage = () => {
           </div>
         </div>
       </div>
-      {/* Modal for modification prompt */}
-      {showModificationPrompt && (
+      {/* Modal for modification prompt - DEPRECATED: Now using direct update */}
+      {/* {showModificationPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
           <div className="bg-white rounded-xl shadow-xl p-8 max-w-md w-full text-center">
             <h2 className="text-lg font-bold mb-4">Send full order or only modified items?</h2>
@@ -1486,7 +1548,7 @@ const CheckoutPage = () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
       {/* Modal for order success */}
       {showOrderSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
