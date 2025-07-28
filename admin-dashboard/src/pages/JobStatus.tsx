@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Clock, 
   CheckCircle, 
@@ -13,7 +13,9 @@ import {
   Settings,
   Users,
   ShoppingCart,
-  Package
+  Package,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { jobScheduler, type JobStatus, type JobSchedule } from '../services/jobScheduler';
 
@@ -23,11 +25,42 @@ const JobStatus = () => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Pagination state for Recent Job Status
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+
   useEffect(() => {
     fetchData();
     // Initialize job scheduler
     jobScheduler.initialize();
   }, []);
+
+  // Pagination calculations for job statuses
+  const totalPages = Math.ceil(jobStatuses.length / itemsPerPage);
+  const paginatedJobStatuses = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return jobStatuses.slice(startIndex, startIndex + itemsPerPage);
+  }, [jobStatuses, currentPage, itemsPerPage]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    return pages;
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -305,7 +338,7 @@ const JobStatus = () => {
                 </tr>
               </thead>
               <tbody>
-                {jobStatuses.map((job) => (
+                {paginatedJobStatuses.map((job) => (
                   <tr key={job.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
@@ -341,6 +374,36 @@ const JobStatus = () => {
             {jobStatuses.length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 No job status records found
+              </div>
+            )}
+
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-4">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-full hover:bg-gray-200 disabled:opacity-50"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                {getPageNumbers().map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`p-2 rounded-full hover:bg-gray-200 ${
+                      currentPage === page ? 'bg-blue-600 text-white' : ''
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-full hover:bg-gray-200 disabled:opacity-50"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
             )}
           </div>

@@ -141,7 +141,7 @@ export const AddMenuItemDialog = ({ open, onClose, categories, menuItems }: AddM
 
   return (
             <div 
-          className="fixed inset-0 z-50 flex justify-center items-center"
+          className="fixed inset-0 z-[60] flex justify-center items-center"
           style={{
             backgroundColor: 'rgba(0, 0, 0, 0.4)',
             backdropFilter: 'blur(8px)',

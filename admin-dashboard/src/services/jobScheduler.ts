@@ -1,5 +1,6 @@
 import { collection, addDoc, getDocs, query, orderBy, where, updateDoc, doc } from 'firebase/firestore';
 import { db } from './firebase';
+import { notifyJobComplete } from './notificationService';
 
 export interface JobStatus {
   id: string;
@@ -144,6 +145,14 @@ class JobScheduler {
 
       // Update schedule last run time
       await this.updateScheduleLastRun(jobType);
+
+      // Create notification for job completion
+      await notifyJobComplete(jobType, {
+        jobId: jobStatusRef.id,
+        recordsProcessed,
+        duration,
+        type: jobType
+      });
 
       console.log(`✅ ${jobType} job completed: ${recordsProcessed} records processed in ${duration}ms`);
       

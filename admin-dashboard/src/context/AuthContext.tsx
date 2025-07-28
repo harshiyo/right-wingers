@@ -7,8 +7,9 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: 'master_admin' | 'store_admin';
+  role: 'master_admin' | 'store_admin' | 'employee';
   assignedStoreId?: string;
+  permissions?: string[];
 }
 
 interface AuthContextType {
@@ -52,6 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               email: userData.email || firebaseUser.email || '',
               role: userData.role || 'store_admin',
               assignedStoreId: userData.assignedStoreId,
+              permissions: userData.permissions || [],
             });
           } else {
             console.error('User document does not exist');

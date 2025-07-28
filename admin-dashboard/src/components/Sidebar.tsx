@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
+  BarChart3,
   ChefHat,
   Layers,
   Users,
@@ -18,6 +19,7 @@ import {
   Monitor,
   Activity,
   Tag,
+  Shield,
 } from 'lucide-react';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -37,8 +39,10 @@ interface NavLinkItem {
 
 export const navLinks: NavLinkItem[] = [
   { id: 'dashboard', to: '/', text: 'Dashboard', icon: LayoutDashboard, order: 0, color: 'blue' },
+  { id: 'analytics', to: '/analytics', text: 'Analytics', icon: BarChart3, order: 0.5, color: 'purple' },
   { id: 'stores', to: '/stores', text: 'Store Management', icon: Store, order: 1, color: 'green' },
   { id: 'users', to: '/users', text: 'User Management', icon: UserCheck, order: 2, color: 'purple' },
+  { id: 'role-management', to: '/role-management', text: 'Role Management', icon: Shield, order: 2.5, color: 'purple' },
   { id: 'menu', to: '/menu', text: 'Menu', icon: ChefHat, order: 3, color: 'green' },
   { id: 'categories', to: '/categories', text: 'Categories', icon: Layers, order: 4, color: 'purple' },
   { id: 'toppings', to: '/toppings', text: 'Toppings', icon: Pizza, order: 5, color: 'orange' },
@@ -144,14 +148,42 @@ export const Sidebar = () => {
     return () => unsubscribe();
   }, []);
 
-  // Role-based nav filtering
+  // Permission-based nav filtering
   const filteredNavLinks = navLinks.filter(link => {
+    // Master admin can see everything
     if (currentUser?.role === 'master_admin') return true;
-    // Store admin: only allow dashboard, stores, orders, kitchen, feedback, settings
-    const allowedForStoreAdmin = [
-      'dashboard', 'stores', 'orders', 'kitchen', 'feedback', 'settings'
-    ];
-    return allowedForStoreAdmin.includes(link.id);
+    
+    // Check if user has permissions for this link
+    const userPermissions = currentUser?.permissions || [];
+    
+    // Map navigation IDs to permission IDs
+    const permissionMap: Record<string, string> = {
+      'dashboard': 'dashboard',
+      'analytics': 'dashboard', // Analytics uses dashboard permission
+      'stores': 'stores',
+      'users': 'user_management',
+      'role-management': 'user_management', // Only master admin can see this
+      'menu': 'menu',
+      'categories': 'categories',
+      'toppings': 'toppings',
+      'sauces': 'sauces',
+      'combos': 'combos',
+      'customers': 'customers',
+      'orders': 'orders',
+      'kitchen': 'kitchen',
+      'feedback': 'feedback',
+      'layout': 'layout_manager',
+      'appearance': 'appearance',
+      'settings': 'settings',
+      'live-logs': 'live_logs',
+      'job-status': 'job_status',
+      'discount-codes': 'discount_codes'
+    };
+    
+    const requiredPermission = permissionMap[link.id];
+    if (!requiredPermission) return false;
+    
+    return userPermissions.includes(requiredPermission);
   });
 
   const CountBadge = ({ count }: { count: number }) => (

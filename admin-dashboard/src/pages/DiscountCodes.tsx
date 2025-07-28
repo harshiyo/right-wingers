@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { Plus, Search, Edit, Trash2, Copy, Percent, Calendar, Users, DollarSign, Tag } from 'lucide-react';
+import { notifyDiscountCodeAdded } from '../services/notificationService';
 
 interface DiscountCode {
   id: string;
@@ -130,6 +131,9 @@ const DiscountCodes = () => {
         // Create new code
         await addDoc(collection(db, 'discountCodes'), codeData);
         console.log('✅ Discount code created successfully');
+        
+        // Create notification for new discount code
+        await notifyDiscountCodeAdded(formData.code);
       }
 
       await fetchDiscountCodes();
@@ -435,9 +439,16 @@ const DiscountCodes = () => {
         </div>
       </div>
 
-      {/* Add/Edit Dialog */}
+      {/* Add/Edit Discount Code Modal */}
       {showAddDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+        <div 
+          className="fixed inset-0 z-[60] flex justify-center items-center p-4"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)'
+          }}
+        >
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-6 border-b">
               <h2 className="text-xl font-bold text-gray-900">

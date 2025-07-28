@@ -469,8 +469,15 @@ const Feedback = () => {
       </div>
 
       {/* Feedback Detail Modal */}
-      {showFeedbackDetail && selectedFeedback && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+      {selectedFeedback && (
+        <div 
+          className="fixed inset-0 z-[60] flex justify-center items-center p-4"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)'
+          }}
+        >
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-6 border-b">
               <h2 className="text-xl font-bold text-gray-900">Feedback Details</h2>

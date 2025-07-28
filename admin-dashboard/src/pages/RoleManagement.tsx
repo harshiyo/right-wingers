@@ -1,0 +1,644 @@
+import React, { useState, useEffect } from 'react';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy, where } from 'firebase/firestore';
+import { db } from '../services/firebase';
+import { useAuth } from '../services/auth';
+import { notifyPermissionChange } from '../services/notificationService';
+import { 
+  Users, 
+  Shield, 
+  Settings, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Save, 
+  X, 
+  Check,
+  Eye,
+  EyeOff,
+  UserCheck,
+  Building,
+  Store,
+  ChefHat,
+  ClipboardList,
+  BarChart3,
+  Tags,
+  FileText,
+  Bell,
+  Calendar,
+  CreditCard,
+  Package,
+  Truck,
+  Globe,
+  Monitor,
+  ChevronDown,
+  ChevronRight
+} from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: 'master_admin' | 'store_admin' | 'employee';
+  assignedStoreId?: string;
+  assignedStoreName?: string;
+  permissions?: string[];
+  isActive: boolean;
+  createdAt: string;
+  lastLogin?: string;
+}
+
+interface Store {
+  id: string;
+  name: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+}
+
+interface RolePermission {
+  id: string;
+  name: string;
+  description: string;
+  category: 'management' | 'operations' | 'reports' | 'settings';
+  icon: React.ComponentType<any>;
+  isEnabled: boolean;
+}
+
+const RoleManagement = () => {
+  const { currentUser } = useAuth();
+  const [users, setUsers] = useState<User[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showRoleDialog, setShowRoleDialog] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [storeFilter, setStoreFilter] = useState<string>('all');
+
+  // Available permissions/modules
+  const [availablePermissions, setAvailablePermissions] = useState<RolePermission[]>([
+    {
+      id: 'dashboard',
+      name: 'Dashboard',
+      description: 'View main dashboard and overview',
+      category: 'management',
+      icon: BarChart3,
+      isEnabled: true
+    },
+    {
+      id: 'stores',
+      name: 'Store Management',
+      description: 'Manage store information and settings',
+      category: 'management',
+      icon: Store,
+      isEnabled: true
+    },
+    {
+      id: 'orders',
+      name: 'Orders',
+      description: 'View and manage customer orders',
+      category: 'operations',
+      icon: ClipboardList,
+      isEnabled: true
+    },
+    {
+      id: 'kitchen',
+      name: 'Kitchen Display',
+      description: 'View kitchen orders and preparation status',
+      category: 'operations',
+      icon: ChefHat,
+      isEnabled: true
+    },
+    {
+      id: 'customers',
+      name: 'Customer Management',
+      description: 'View and manage customer information',
+      category: 'management',
+      icon: Users,
+      isEnabled: true
+    },
+    {
+      id: 'menu',
+      name: 'Menu Management',
+      description: 'Manage menu items, categories, and pricing',
+      category: 'management',
+      icon: FileText,
+      isEnabled: true
+    },
+    {
+      id: 'toppings',
+      name: 'Toppings Management',
+      description: 'Manage pizza toppings and ingredients',
+      category: 'management',
+      icon: Package,
+      isEnabled: true
+    },
+    {
+      id: 'sauces',
+      name: 'Sauces Management',
+      description: 'Manage wing sauces and dips',
+      category: 'management',
+      icon: Tags,
+      isEnabled: true
+    },
+    {
+      id: 'combos',
+      name: 'Combo Management',
+      description: 'Manage combo meals and packages',
+      category: 'management',
+      icon: Package,
+      isEnabled: true
+    },
+    {
+      id: 'categories',
+      name: 'Categories',
+      description: 'Manage menu categories and organization',
+      category: 'management',
+      icon: FileText,
+      isEnabled: true
+    },
+    {
+      id: 'feedback',
+      name: 'Customer Feedback',
+      description: 'View and respond to customer feedback',
+      category: 'management',
+      icon: Bell,
+      isEnabled: true
+    },
+    {
+      id: 'job_status',
+      name: 'Job Status',
+      description: 'Monitor automated jobs and schedules',
+      category: 'reports',
+      icon: BarChart3,
+      isEnabled: true
+    },
+    {
+      id: 'live_logs',
+      name: 'Live Logs',
+      description: 'View system logs and activity',
+      category: 'reports',
+      icon: FileText,
+      isEnabled: true
+    },
+    {
+      id: 'discount_codes',
+      name: 'Discount Codes',
+      description: 'Manage promotional codes and discounts',
+      category: 'management',
+      icon: Tags,
+      isEnabled: true
+    },
+    {
+      id: 'settings',
+      name: 'System Settings',
+      description: 'Configure system settings and preferences',
+      category: 'settings',
+      icon: Settings,
+      isEnabled: true
+    },
+    {
+      id: 'user_management',
+      name: 'User Management',
+      description: 'Manage user accounts and permissions',
+      category: 'management',
+      icon: UserCheck,
+      isEnabled: true
+    },
+    {
+      id: 'appearance',
+      name: 'Appearance',
+      description: 'Customize store appearance and branding',
+      category: 'settings',
+      icon: Eye,
+      isEnabled: true
+    },
+    {
+      id: 'layout_manager',
+      name: 'Layout Manager',
+      description: 'Manage dashboard layout and widgets',
+      category: 'settings',
+      icon: Settings,
+      isEnabled: true
+    }
+  ]);
+
+  // Permission categories
+  const permissionCategories = [
+    { id: 'management', name: 'Management', color: 'bg-blue-100 text-blue-800' },
+    { id: 'operations', name: 'Operations', color: 'bg-green-100 text-green-800' },
+    { id: 'reports', name: 'Reports', color: 'bg-purple-100 text-purple-800' },
+    { id: 'settings', name: 'Settings', color: 'bg-orange-100 text-orange-800' }
+  ];
+
+  useEffect(() => {
+    if (currentUser?.role !== 'master_admin') {
+      return;
+    }
+    fetchUsers();
+    fetchStores();
+  }, [currentUser]);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(usersQuery);
+      const usersData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as User[];
+      
+      // Set default permissions for master admins (all permissions)
+      const updatedUsersData = usersData.map(user => {
+        if (user.role === 'master_admin') {
+          return {
+            ...user,
+            permissions: availablePermissions.map(p => p.id) // All permissions for master admin
+          };
+        }
+        return user;
+      });
+      
+      setUsers(updatedUsersData);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStores = async () => {
+    try {
+      const storesQuery = query(collection(db, 'stores'), orderBy('name'));
+      const snapshot = await getDocs(storesQuery);
+      const storesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Store[];
+      setStores(storesData);
+    } catch (error) {
+      console.error('Error fetching stores:', error);
+    }
+  };
+
+  const handleUpdatePermissions = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      const enabledPermissions = availablePermissions
+        .filter(permission => permission.isEnabled)
+        .map(permission => permission.id);
+      
+      await updateDoc(doc(db, 'users', selectedUser.id), {
+        permissions: enabledPermissions
+      });
+      
+      // Create notification for permission change
+      await notifyPermissionChange(
+        selectedUser.name,
+        selectedUser.id,
+        currentUser?.assignedStoreId
+      );
+      
+      setShowRoleDialog(false);
+      setSelectedUser(null);
+      fetchUsers();
+    } catch (error) {
+      console.error('Error updating permissions:', error);
+    }
+  };
+
+  const togglePermission = (permissionId: string) => {
+    setAvailablePermissions(prev => 
+      prev.map(permission => 
+        permission.id === permissionId 
+          ? { ...permission, isEnabled: !permission.isEnabled }
+          : permission
+      )
+    );
+  };
+
+  const openRoleDialog = (user: User) => {
+    // Don't allow editing master admin permissions
+    if (user.role === 'master_admin') {
+      alert('Master administrators have all permissions by default and cannot be modified.');
+      return;
+    }
+    
+    setSelectedUser(user);
+    
+    // Set current permissions
+    const userPermissions = user.permissions || [];
+    setAvailablePermissions(prev => 
+      prev.map(permission => ({
+        ...permission,
+        isEnabled: userPermissions.includes(permission.id)
+      }))
+    );
+    
+    setShowRoleDialog(true);
+  };
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'master_admin':
+        return 'bg-purple-100 text-purple-800';
+      case 'store_admin':
+        return 'bg-blue-100 text-blue-800';
+      case 'employee':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'master_admin':
+        return 'Master Admin';
+      case 'store_admin':
+        return 'Store Admin';
+      case 'employee':
+        return 'Employee';
+      default:
+        return role;
+    }
+  };
+
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         user.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    const matchesStore = storeFilter === 'all' || user.assignedStoreId === storeFilter;
+    
+    return matchesSearch && matchesRole && matchesStore;
+  });
+
+  if (currentUser?.role !== 'master_admin') {
+    return (
+      <div className="p-8 max-w-4xl mx-auto">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <Shield className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-red-800 mb-2">Access Denied</h2>
+          <p className="text-red-600">Only master administrators can access role management.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-8 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Role Management</h1>
+          <p className="text-gray-600 mt-2">Manage user permissions and access control</p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Search Users</label>
+            <Input
+              type="text"
+              placeholder="Search by name or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+            <Select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+            >
+              <option value="all">All Roles</option>
+              <option value="master_admin">Master Admin</option>
+              <option value="store_admin">Store Admin</option>
+              <option value="employee">Employee</option>
+            </Select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Store</label>
+            <Select
+              value={storeFilter}
+              onChange={(e) => setStoreFilter(e.target.value)}
+            >
+              <option value="all">All Stores</option>
+              {stores.map(store => (
+                <option key={store.id} value={store.id}>{store.name}</option>
+              ))}
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      {/* Users Table */}
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">User Permissions ({filteredUsers.length})</h2>
+        </div>
+        
+        {loading ? (
+          <div className="p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-600 mt-2">Loading users...</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Store</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Permissions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                      No users found matching your criteria.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((user) => (
+                    <tr key={user.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                          <div className="text-sm text-gray-500">{user.email}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
+                          {getRoleLabel(user.role)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {user.assignedStoreName || stores.find(s => s.id === user.assignedStoreId)?.name || 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {user.role === 'master_admin' ? 'All Permissions' : `${user.permissions?.length || 0} permissions`}
+                        </div>
+                        {user.role !== 'master_admin' && (
+                          <div className="text-xs text-gray-500">
+                            {user.permissions?.slice(0, 3).join(', ')}
+                            {user.permissions && user.permissions.length > 3 && '...'}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {user.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        {user.role !== 'master_admin' && (
+                          <button
+                            onClick={() => openRoleDialog(user)}
+                            className="text-blue-600 hover:text-blue-900"
+                            title="Edit Permissions"
+                          >
+                            <Shield className="h-4 w-4" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Role Permissions Dialog */}
+      {showRoleDialog && selectedUser && (
+        <div 
+          className="fixed inset-0 z-[60] flex justify-center items-center p-4"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)'
+          }}
+        >
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Manage Permissions</h2>
+                <p className="text-gray-600 mt-1">
+                  {selectedUser.name} - {getRoleLabel(selectedUser.role)}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowRoleDialog(false)}
+                className="p-2 rounded-full hover:bg-gray-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Permissions</h3>
+                <p className="text-gray-600 mb-4">
+                  Choose which modules and features this user can access. Only selected permissions will be visible in their sidebar.
+                </p>
+              </div>
+              
+              <div className="space-y-6">
+                {permissionCategories.map(category => {
+                  const categoryPermissions = availablePermissions.filter(p => p.category === category.id);
+                  return (
+                    <div key={category.id} className="border border-gray-200 rounded-lg p-4">
+                      <h4 className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${category.color} mb-4`}>
+                        {category.name}
+                      </h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {categoryPermissions.map(permission => {
+                          const Icon = permission.icon;
+                          return (
+                            <div
+                              key={permission.id}
+                              className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                                permission.isEnabled
+                                  ? 'border-blue-300 bg-blue-50'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                              onClick={() => togglePermission(permission.id)}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start space-x-3">
+                                  <Icon className={`h-5 w-5 mt-0.5 ${
+                                    permission.isEnabled ? 'text-blue-600' : 'text-gray-400'
+                                  }`} />
+                                  <div>
+                                    <h5 className={`font-medium ${
+                                      permission.isEnabled ? 'text-blue-900' : 'text-gray-900'
+                                    }`}>
+                                      {permission.name}
+                                    </h5>
+                                    <p className={`text-sm ${
+                                      permission.isEnabled ? 'text-blue-700' : 'text-gray-500'
+                                    }`}>
+                                      {permission.description}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                  permission.isEnabled
+                                    ? 'border-blue-600 bg-blue-600'
+                                    : 'border-gray-300'
+                                }`}>
+                                  {permission.isEnabled && (
+                                    <Check className="h-3 w-3 text-white" />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRoleDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdatePermissions}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Permissions
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default RoleManagement; 

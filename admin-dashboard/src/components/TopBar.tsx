@@ -7,6 +7,8 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { navLinks } from './Sidebar';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
+import { NotificationDropdown } from './NotificationDropdown';
 
 type SearchResult = {
   type: string;
@@ -26,6 +28,7 @@ export const TopBar = () => {
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { unreadCount } = useNotifications();
 
   const handleLogout = async () => {
     try {
@@ -183,12 +186,6 @@ export const TopBar = () => {
     });
   };
 
-  const notifications = [
-    { id: 1, message: 'New order #1247 received', time: '2m ago', type: 'order' },
-    { id: 2, message: 'Low stock alert: Pepperoni', time: '15m ago', type: 'warning' },
-    { id: 3, message: 'Customer feedback received', time: '1h ago', type: 'info' }
-  ];
-
   return (
     <header className="h-16 bg-white shadow-lg border-b border-gray-200 flex items-center justify-between px-6 relative z-50">
       {/* Left Side - Search */}
@@ -270,42 +267,17 @@ export const TopBar = () => {
             className="hover:bg-gray-100 relative"
           >
             <Bell className="h-4 w-4" />
-            {notifications.length > 0 && (
+            {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                {notifications.length}
+                {unreadCount}
               </span>
             )}
           </Button>
 
-          {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
-              <div className="px-4 py-2 border-b border-gray-100">
-                <h3 className="font-semibold text-gray-900">Notifications</h3>
-              </div>
-              <div className="max-h-64 overflow-y-auto">
-                {notifications.map((notification) => (
-                  <div key={notification.id} className="px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-b-0">
-                    <div className="flex items-start gap-3">
-                      <div className={`w-2 h-2 rounded-full mt-2 ${
-                        notification.type === 'order' ? 'bg-green-500' :
-                        notification.type === 'warning' ? 'bg-yellow-500' :
-                        'bg-blue-500'
-                      }`}></div>
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-900">{notification.message}</p>
-                        <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="px-4 py-2 border-t border-gray-100">
-                <Button variant="ghost" size="sm" className="w-full text-blue-600 hover:bg-blue-50">
-                  View All Notifications
-                </Button>
-              </div>
-            </div>
-          )}
+          <NotificationDropdown 
+            isOpen={showNotifications}
+            onClose={() => setShowNotifications(false)}
+          />
         </div>
 
         {/* Time & Date */}
