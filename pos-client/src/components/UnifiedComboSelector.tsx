@@ -922,7 +922,7 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
     return (
       <div className="w-80 bg-gray-50 border-l border-gray-200 p-6 overflow-y-auto">
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-4">Combo Summary</h3>
+          <h3 className="text-lg font-semibold mb-4 text-red-700 bg-gradient-to-r from-red-50 to-red-100 px-4 py-2 rounded-lg border border-red-200">Combo Summary</h3>
           <div className="space-y-3">
             {steps.map((step, index) => {
               const status = getStepStatus(index);
@@ -1157,28 +1157,28 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
     >
       <div className="bg-white rounded-xl shadow-xl w-full max-w-7xl h-[90vh] flex">
         {/* Main Content */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col bg-gradient-to-br from-gray-50 to-white">
           {/* Header */}
-          <div className="p-6 border-b flex items-center justify-between">
+          <div className="p-6 border-b flex items-center justify-between bg-gradient-to-r from-red-600 to-red-700 text-white">
             <div className="flex items-center gap-3">
               {currentStep > 0 && (
                 <button
                   onClick={handleGoBack}
-                  className="p-1.5 hover:bg-gray-100 rounded-full"
+                  className="p-1.5 hover:bg-red-500 rounded-full transition-colors"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
               )}
               <div>
                 <h2 className="text-xl font-bold">Customize {combo.name}</h2>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-red-100">
                   Step {currentStep + 1} of {steps.length}: {step.type.charAt(0).toUpperCase() + step.type.slice(1)}
                 </p>
               </div>
             </div>
             <button
               onClick={handleClose}
-              className="p-2 hover:bg-gray-100 rounded-full"
+              className="p-2 hover:bg-red-500 rounded-full transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -1188,20 +1188,20 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
           {renderCurrentStepContent()}
 
           {/* Footer */}
-          <div className="p-6 border-t bg-gray-50 flex justify-between items-center">
+          <div className="p-6 border-t bg-gradient-to-r from-gray-50 to-gray-100 flex justify-between items-center">
             <div className="text-sm text-gray-600">
               {currentStep < steps.length - 1 ? 'Click Next to continue' : 'Review your selections'}
             </div>
             <div className="flex gap-4">
               <button
                 onClick={handleClose}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleStepComplete}
-                className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold"
               >
                 {currentStep < steps.length - 1 ? 'Next' : 'Add to Cart'}
               </button>
