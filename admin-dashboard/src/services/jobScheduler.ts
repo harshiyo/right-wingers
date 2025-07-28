@@ -186,7 +186,7 @@ class JobScheduler {
       const customerStats = new Map<string, { 
         orderCount: number; 
         totalSpent: number; 
-        lastOrderDate: string;
+        lastOrderDate: any; // Allow any type for flexibility
       }>();
 
       orders.forEach((order: any) => {
@@ -221,7 +221,16 @@ class JobScheduler {
         const stats = customerStats.get(cleanPhone);
         
         if (stats) {
-          const formattedLastOrderDate = stats.lastOrderDate.split('T')[0];
+          // Ensure lastOrderDate is a string and format it properly
+          let formattedLastOrderDate: string;
+          if (typeof stats.lastOrderDate === 'string') {
+            formattedLastOrderDate = stats.lastOrderDate.split('T')[0];
+          } else if (stats.lastOrderDate && typeof stats.lastOrderDate === 'object' && 'toISOString' in stats.lastOrderDate) {
+            formattedLastOrderDate = (stats.lastOrderDate as Date).toISOString().split('T')[0];
+          } else {
+            // Fallback to current date if invalid
+            formattedLastOrderDate = new Date().toISOString().split('T')[0];
+          }
           
           if (
             customer.orderCount !== stats.orderCount || 

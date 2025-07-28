@@ -628,8 +628,22 @@ const CheckoutPage = () => {
   
   // Handlers
   const handleGoBack = useCallback(() => {
-    navigate('/menu', { state: { customer, phone, orderType } });
-  }, [navigate, customer, phone, orderType]);
+    navigate('/menu', { 
+      state: { 
+        customer, 
+        phone, 
+        orderType,
+        editingOrderId,
+        pickupTime,
+        scheduledDateTime,
+        deliveryTimeType,
+        scheduledDeliveryDateTime,
+        deliveryAddress,
+        ...(location.state?.originalOrder ? { originalOrder: location.state.originalOrder } : {}),
+        ...(location.state?.orderNumber ? { orderNumber: location.state.orderNumber } : {})
+      } 
+    });
+  }, [navigate, customer, phone, orderType, editingOrderId, pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime, deliveryAddress, location.state]);
   
 
 

@@ -1128,7 +1128,8 @@ const MenuPage = () => {
         deliveryTimeType,
         scheduledDeliveryDateTime,
         deliveryAddress,
-        ...(location.state?.originalOrder ? { originalOrder: location.state.originalOrder } : {})
+        ...(location.state?.originalOrder ? { originalOrder: location.state.originalOrder } : {}),
+        ...(location.state?.orderNumber ? { orderNumber: location.state.orderNumber } : {})
       }
     });
   };

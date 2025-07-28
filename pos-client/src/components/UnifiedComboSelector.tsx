@@ -14,12 +14,13 @@ interface Topping {
   isVegan?: boolean;
   isGlutenFree?: boolean;
   isKeto?: boolean;
+  addedOrder?: number;
 }
 
 interface ToppingSide {
-  wholePizza: Topping[];
-  leftSide: Topping[];
-  rightSide: Topping[];
+  wholePizza: (Topping & { addedOrder?: number })[];
+  leftSide: (Topping & { addedOrder?: number })[];
+  rightSide: (Topping & { addedOrder?: number })[];
 }
 
 interface ComboItem {
@@ -111,19 +112,30 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
   useEffect(() => {
     if (combo?.isEditing && combo.items && combo.items.length > 0) {
       const mappedDraft = steps.map((step, idx) => {
-        const match = combo.items.find((item, i) => {
-          if (item.type !== step.type) return false;
-          if (item.type === 'pizza' && step.size && item.size) {
-            return item.size === step.size && item.itemName === step.itemName;
-          }
-          if (item.type === 'wings' && step.itemName && item.itemName) {
-            return item.itemName === step.itemName;
-          }
-          if ((item.type === 'drink' || item.type === 'side') && step.itemName && item.itemName) {
-            return item.itemName === step.itemName && item.size === step.size;
-          }
-          return true;
-        });
+        // For editing mode, we need to match items more carefully
+        // Find the corresponding item in combo.items based on step index and type
+        let match = null;
+        
+        if (combo.items[idx]) {
+          // Direct index matching for editing mode
+          match = combo.items[idx];
+        } else {
+          // Fallback to type matching if direct index doesn't work
+          match = combo.items.find((item, i) => {
+            if (item.type !== step.type) return false;
+            if (item.type === 'pizza' && step.size && item.size) {
+              return item.size === step.size && item.itemName === step.itemName;
+            }
+            if (item.type === 'wings' && step.itemName && item.itemName) {
+              return item.itemName === step.itemName;
+            }
+            if ((item.type === 'drink' || item.type === 'side') && step.itemName && item.itemName) {
+              return item.itemName === step.itemName && item.size === step.size;
+            }
+            return true;
+          });
+        }
+        
         return match ? { ...step, ...match, extraCharge: match.extraCharge || 0 } : { ...step, extraCharge: 0 };
       });
       setDraft(mappedDraft);
@@ -188,15 +200,15 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
       if (currentItem.type === 'pizza' && currentItem.toppings) {
         const { wholePizza = [], leftSide = [], rightSide = [] } = currentItem.toppings;
         setSelectedToppings({
-          wholePizza: wholePizza.map((t: Topping) => ({ ...t, addedOrder: t.addedOrder || 0 })),
-          leftSide: leftSide.map((t: Topping) => ({ ...t, addedOrder: t.addedOrder || 0 })),
-          rightSide: rightSide.map((t: Topping) => ({ ...t, addedOrder: t.addedOrder || 0 }))
+          wholePizza: wholePizza.map((t: Topping & { addedOrder?: number }) => ({ ...t, addedOrder: t.addedOrder || 0 })),
+          leftSide: leftSide.map((t: Topping & { addedOrder?: number }) => ({ ...t, addedOrder: t.addedOrder || 0 })),
+          rightSide: rightSide.map((t: Topping & { addedOrder?: number }) => ({ ...t, addedOrder: t.addedOrder || 0 }))
         });
         setActiveSelection(leftSide.length > 0 || rightSide.length > 0 ? 'left' : 'whole');
         
         // Set the toppingOrderCounter to the next available number
         const allToppings = [...wholePizza, ...leftSide, ...rightSide];
-        const maxAddedOrder = Math.max(...allToppings.map(t => t.addedOrder || 0), -1);
+        const maxAddedOrder = Math.max(...allToppings.map((t: Topping & { addedOrder?: number }) => t.addedOrder || 0), -1);
         setToppingOrderCounter(maxAddedOrder + 1);
       }
       
@@ -864,13 +876,13 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
       const { wholePizza = [], leftSide = [], rightSide = [] } = stepData.toppings;
       const allStepToppings: (Topping & { addedOrder?: number, section: string })[] = [];
       
-      wholePizza.forEach(t => {
+      wholePizza.forEach((t: Topping & { addedOrder?: number }) => {
         allStepToppings.push({ ...t, section: 'whole' });
       });
-      leftSide.forEach(t => {
+      leftSide.forEach((t: Topping & { addedOrder?: number }) => {
         allStepToppings.push({ ...t, section: 'left' });
       });
-      rightSide.forEach(t => {
+      rightSide.forEach((t: Topping & { addedOrder?: number }) => {
         allStepToppings.push({ ...t, section: 'right' });
       });
       
