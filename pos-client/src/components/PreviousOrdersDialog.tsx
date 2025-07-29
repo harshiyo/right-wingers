@@ -17,6 +17,7 @@ interface Order {
   };
   items: OrderItem[];
   orderType?: string;
+  paymentStatus?: 'paid' | 'unpaid' | 'pending';
 }
 
 interface OrderItem {
@@ -271,9 +272,26 @@ export const PreviousOrdersDialog: React.FC<PreviousOrdersDialogProps> = ({
                     #{order.orderNumber}
                   </span>
                 </div>
-                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                  {order.status === 'completed' ? 'Completed' : order.status}
-                </span>
+                <div className="flex items-center gap-2">
+                  {/* Payment Status */}
+                  {order.paymentStatus && (
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      order.paymentStatus === 'paid' 
+                        ? 'bg-green-100 text-green-800' 
+                        : order.paymentStatus === 'unpaid'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {order.paymentStatus === 'paid' ? 'Paid' : 
+                       order.paymentStatus === 'unpaid' ? 'Unpaid' : 
+                       'Pending'}
+                    </span>
+                  )}
+                  {/* Order Status */}
+                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                    {order.status === 'completed' ? 'Completed' : order.status}
+                  </span>
+                </div>
               </div>
               
               {/* Date, Time, Customer - Compact */}

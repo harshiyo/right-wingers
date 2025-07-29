@@ -19,6 +19,10 @@ interface Customer {
   createdAt?: string;
   notes?: string;
   storeId?: string;
+  isBlocked?: boolean;
+  blockedReason?: string;
+  blockedDate?: string;
+  blockedBy?: string;
 }
 
 const Customers = () => {
@@ -29,7 +33,7 @@ const Customers = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [syncSuccess, setSyncSuccess] = useState(false);
-  const [filterType, setFilterType] = useState<'all' | 'recent' | 'frequent' | 'inactive'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'recent' | 'frequent' | 'inactive' | 'blocked'>('all');
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -87,7 +91,11 @@ const Customers = () => {
     postalCode: '',
     notes: '',
     totalOrders: 0,
-    totalSpent: 0
+    totalSpent: 0,
+    isBlocked: false,
+    blockedReason: '',
+    blockedDate: '',
+    blockedBy: ''
   });
 
   const fetchCustomers = async () => {
@@ -137,6 +145,9 @@ const Customers = () => {
           const lastOrder = customer.lastOrderDate ? new Date(customer.lastOrderDate) : null;
           return !lastOrder || lastOrder <= thirtyDaysAgo;
         });
+        break;
+      case 'blocked':
+        filtered = filtered.filter(customer => customer.isBlocked);
         break;
     }
 
@@ -195,7 +206,11 @@ const Customers = () => {
       postalCode: postalCodeStr,
       notes: customer.notes || '',
       totalOrders: customer.totalOrders || customer.orderCount || 0,
-      totalSpent: customer.totalSpent || 0
+      totalSpent: customer.totalSpent || 0,
+      isBlocked: customer.isBlocked || false,
+      blockedReason: customer.blockedReason || '',
+      blockedDate: customer.blockedDate || '',
+      blockedBy: customer.blockedBy || ''
     });
     setShowAddDialog(true);
   };
@@ -222,7 +237,11 @@ const Customers = () => {
       postalCode: '',
       notes: '',
       totalOrders: 0,
-      totalSpent: 0
+      totalSpent: 0,
+      isBlocked: false,
+      blockedReason: '',
+      blockedDate: '',
+      blockedBy: ''
     });
     setEditingCustomer(null);
     setShowAddDialog(false);
@@ -262,6 +281,7 @@ const Customers = () => {
       return lastOrder && lastOrder > thirtyDaysAgo;
     }).length,
     frequent: customers.filter(c => (c.totalOrders || c.orderCount || 0) >= 5).length,
+    blocked: customers.filter(c => c.isBlocked).length,
     totalRevenue: customers.reduce((sum, c) => sum + (c.totalSpent || 0), 0)
   };
 
@@ -352,7 +372,7 @@ const Customers = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
           <div className="flex items-center">
             <Users className="h-8 w-8 text-blue-500" />
@@ -377,6 +397,15 @@ const Customers = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Frequent Customers</p>
               <p className="text-2xl font-bold text-gray-900">{stats.frequent}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow border-l-4 border-red-500">
+          <div className="flex items-center">
+            <span className="text-2xl">🚫</span>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Blocked Customers</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.blocked}</p>
             </div>
           </div>
         </div>
@@ -415,6 +444,7 @@ const Customers = () => {
               <option value="recent">Recent (30 days)</option>
               <option value="frequent">Frequent (5+ orders)</option>
               <option value="inactive">Inactive</option>
+              <option value="blocked">Blocked Customers</option>
             </select>
           </div>
         </div>
@@ -429,6 +459,7 @@ const Customers = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Orders</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Spent</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Order</th>
@@ -438,7 +469,7 @@ const Customers = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                     {searchQuery || filterType !== 'all' ? 'No customers found matching your criteria.' : 'No customers yet. Add your first customer!'}
                   </td>
                 </tr>
@@ -490,6 +521,33 @@ const Customers = () => {
                           </div>
                         )}
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {customer.isBlocked ? (
+                        <div className="flex items-center">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            <span className="w-2 h-2 bg-red-400 rounded-full mr-1"></span>
+                            Blocked
+                          </span>
+                          <div className="ml-2 text-xs text-red-600">
+                            {customer.blockedReason && (
+                              <div title={customer.blockedReason} className="truncate max-w-32">
+                                {customer.blockedReason}
+                              </div>
+                            )}
+                            {customer.blockedDate && (
+                              <div className="text-gray-500">
+                                {new Date(customer.blockedDate).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <span className="w-2 h-2 bg-green-400 rounded-full mr-1"></span>
+                          Active
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -653,6 +711,63 @@ const Customers = () => {
                   placeholder="Any additional notes about this customer..."
                 />
               </div>
+              
+              {/* Blocked Status Section */}
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between mb-4">
+                  <label className="block text-sm font-medium text-gray-700">Customer Status</label>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="isBlocked"
+                      checked={formData.isBlocked}
+                      onChange={(e) => setFormData({...formData, isBlocked: e.target.checked})}
+                      className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="isBlocked" className="ml-2 text-sm font-medium text-red-600">
+                      Block Customer
+                    </label>
+                  </div>
+                </div>
+                
+                {formData.isBlocked && (
+                  <div className="space-y-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div>
+                      <label className="block text-sm font-medium text-red-700 mb-1">Block Reason *</label>
+                      <textarea
+                        value={formData.blockedReason}
+                        onChange={(e) => setFormData({...formData, blockedReason: e.target.value})}
+                        required={formData.isBlocked}
+                        rows={2}
+                        className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        placeholder="Reason for blocking this customer..."
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-red-700 mb-1">Block Date</label>
+                        <input
+                          type="date"
+                          value={formData.blockedDate}
+                          onChange={(e) => setFormData({...formData, blockedDate: e.target.value})}
+                          className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-red-700 mb-1">Blocked By</label>
+                        <input
+                          type="text"
+                          value={formData.blockedBy}
+                          onChange={(e) => setFormData({...formData, blockedBy: e.target.value})}
+                          className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                          placeholder="Admin name"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
               <div className="flex justify-end gap-3 pt-4">
                 <button
                   type="button"

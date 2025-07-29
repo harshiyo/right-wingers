@@ -28,6 +28,7 @@ interface Order {
   };
   items: OrderItem[];
   orderType?: string;
+  paymentStatus?: 'paid' | 'unpaid' | 'pending';
   // Scheduled order information - using correct Firebase structure
   pickupDetails?: {
     estimatedTime?: string;
@@ -90,6 +91,7 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const { currentStore } = useStore();
   const [orderFilter, setOrderFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const [paymentFilter, setPaymentFilter] = useState<'all' | 'paid' | 'unpaid' | 'pending'>('all');
   const { setCartItems } = useCart();
   const navigate = useNavigate();
 
@@ -188,8 +190,13 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
     ? orders
     : orders.filter(order => order.status === orderFilter);
 
+  // Filter by payment status
+  const paymentFiltered = paymentFilter === 'all'
+    ? statusFiltered
+    : statusFiltered.filter(order => order.paymentStatus === paymentFilter);
+
   // Filter by search
-  const filtered = statusFiltered.filter(order => {
+  const filtered = paymentFiltered.filter(order => {
     const val = searchTerm.toLowerCase();
     return (
       order.customerInfo?.name?.toLowerCase().includes(val) ||
@@ -231,6 +238,35 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
               <Package className="w-4 h-4" /> Pending
             </button>
             
+            {/* Payment Status Filters */}
+            <div className="border-t pt-3 mt-3">
+              <h4 className="text-xs font-semibold text-gray-600 mb-2">Payment Status</h4>
+              <button
+                className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${paymentFilter === 'all' ? 'bg-gray-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
+                onClick={() => setPaymentFilter('all')}
+              >
+                <Package className="w-4 h-4" /> All Payments
+              </button>
+              <button
+                className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${paymentFilter === 'paid' ? 'bg-green-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
+                onClick={() => setPaymentFilter('paid')}
+              >
+                <CheckCircle className="w-4 h-4" /> Paid
+              </button>
+              <button
+                className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${paymentFilter === 'unpaid' ? 'bg-red-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
+                onClick={() => setPaymentFilter('unpaid')}
+              >
+                <Package className="w-4 h-4" /> Unpaid
+              </button>
+              <button
+                className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${paymentFilter === 'pending' ? 'bg-yellow-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
+                onClick={() => setPaymentFilter('pending')}
+              >
+                <Clock className="w-4 h-4" /> Pending
+              </button>
+            </div>
+            
             <button onClick={onClose} className="mt-auto w-full py-2 px-3 text-sm text-gray-800 hover:bg-gray-100 rounded-lg flex gap-2 items-center">
               <X className="w-4 h-4" /> Close
             </button>
@@ -269,6 +305,19 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
                         <span className={order.source === 'online' ? 'text-green-700 font-semibold' : 'text-blue-700 font-semibold'}>
                           {order.source === 'online' ? 'Online Order' : 'POS Order'}
                         </span>
+                        {order.paymentStatus && (
+                          <span className={`ml-2 px-2 py-0.5 text-xs font-medium rounded-full ${
+                            order.paymentStatus === 'paid' 
+                              ? 'bg-green-100 text-green-800' 
+                              : order.paymentStatus === 'unpaid'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {order.paymentStatus === 'paid' ? 'Paid' : 
+                             order.paymentStatus === 'unpaid' ? 'Unpaid' : 
+                             'Pending'}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-2">

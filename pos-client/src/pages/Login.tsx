@@ -7,7 +7,6 @@ import Logo from '../assets/logo.png'
 import { useDocument } from 'react-firebase-hooks/firestore'
 import { doc } from 'firebase/firestore'
 import { db } from '../services/firebase'
-import UpcomingGames from '../components/UpcomingGames'
 import { useStore } from '../context/StoreContext'
 import { ChristmasEffect } from '../components/ChristmasEffect'
 import { HalloweenEffect } from '../components/HalloweenEffect'
@@ -33,11 +32,15 @@ export function Login() {
   const [passwordVisible, setPasswordVisible] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
   const { loginWithCredentials, currentUser } = useStore()
-  const version = import.meta.env.PACKAGE_VERSION
+  
+  // Get version from environment variables
+  const version = (import.meta.env as any).__APP_VERSION__ || '1.0.0'
+  const buildDate = (import.meta.env as any).__BUILD_DATE__ || new Date().toISOString().split('T')[0]
 
   // Get current festive type based on date
   const [festiveType, setFestiveType] = useState(getFestiveType())
@@ -45,6 +48,23 @@ export function Login() {
   // Fetch login screen settings from Firestore
   const [snapshot, loading] = useDocument(doc(db, 'settings', 'loginScreen'))
   const locationName = snapshot?.data()?.locationName || 'Right Wingers'
+
+  // Load saved credentials on component mount
+  useEffect(() => {
+    const savedCredentials = localStorage.getItem('pos_remember_me')
+    if (savedCredentials) {
+      try {
+        const { email: savedEmail, password: savedPassword, rememberMe: savedRememberMe } = JSON.parse(savedCredentials)
+        setEmail(savedEmail || '')
+        setPassword(savedPassword || '')
+        setRememberMe(savedRememberMe || false)
+      } catch (error) {
+        console.error('Error loading saved credentials:', error)
+        // Clear corrupted data
+        localStorage.removeItem('pos_remember_me')
+      }
+    }
+  }, [])
 
   // Update festive type when date changes (check every minute)
   useEffect(() => {
@@ -83,6 +103,19 @@ export function Login() {
     try {
       const success = await loginWithCredentials(email, password);
       if (success) {
+        // Save credentials if remember me is checked
+        if (rememberMe) {
+          const credentialsToSave = {
+            email,
+            password,
+            rememberMe: true
+          }
+          localStorage.setItem('pos_remember_me', JSON.stringify(credentialsToSave))
+        } else {
+          // Clear saved credentials if remember me is unchecked
+          localStorage.removeItem('pos_remember_me')
+        }
+        
         navigate('/', { replace: true });
       } else {
         setError('Invalid email or password. Please check your credentials.');
@@ -104,14 +137,13 @@ export function Login() {
     }
   }
 
-  // Sample credentials for reference (not clickable)
-  const sampleCredentials = [
-    { label: 'Master Admin', email: 'admin@rightwingers.com', note: 'Access to all stores' },
-    { label: 'Hamilton Manager', email: 'hamilton.manager@rightwingers.com', note: 'Hamilton store only' },
-    { label: 'Burlington Manager', email: 'burlington.manager@rightwingers.com', note: 'Burlington store only' },
-    { label: 'St. Catharines Manager', email: 'stcatharines.manager@rightwingers.com', note: 'St. Catharines store only' },
-    { label: 'Oakville Manager', email: 'oakville.manager@rightwingers.com', note: 'Oakville store only' }
-  ];
+  const handleRememberMeChange = (checked: boolean) => {
+    setRememberMe(checked)
+    // If unchecking remember me, clear saved credentials
+    if (!checked) {
+      localStorage.removeItem('pos_remember_me')
+    }
+  }
 
   return (
     <div className="min-h-screen w-full flex bg-gray-100">
@@ -125,20 +157,18 @@ export function Login() {
         <div className="absolute -bottom-24 -right-10 w-80 h-80 bg-white/10 rounded-full"></div>
         
         <div className="z-10 text-center flex-grow flex flex-col items-center justify-center">
-          <img src={Logo} alt="POS System Logo" className="w-32 h-32 mx-auto" />
-          <h2 className="text-3xl font-bold mt-4">
+          <img src={Logo} alt="POS System Logo" className="w-48 h-48 mx-auto" />
+          <h2 className="text-3xl font-bold mt-6">
             {loading ? '...' : locationName}
           </h2>
-          <div className="mt-4">
+          <div className="mt-6">
             <LiveClock />
-          </div>
-          <div className="w-full max-w-sm">
-            <UpcomingGames />
           </div>
         </div>
 
         <div className="z-10 text-center pb-4">
-          <p className="text-sm text-white/70">Version {version}</p>
+          <p className="text-sm text-white/70">POS System v{version}</p>
+          <p className="text-xs text-white/50">Build: {buildDate}</p>
         </div>
       </div>
       
@@ -189,6 +219,20 @@ export function Login() {
                   {passwordVisible ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
+
+              {/* Remember Me Checkbox */}
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => handleRememberMeChange(e.target.checked)}
+                  className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                  Remember me
+                </label>
+              </div>
             </div>
             
             <div className="mt-8">
@@ -200,26 +244,6 @@ export function Login() {
                 {isLoading ? 'Signing In...' : 'Sign In'}
                 <LogIn className="ml-2 h-5 w-5"/>
               </Button>
-            </div>
-
-            {/* Available Accounts Reference */}
-            <div className="mt-6 pt-4 border-t border-gray-200">
-              <p className="text-xs text-gray-600 mb-3 text-center">Available User Accounts:</p>
-              <div className="space-y-2 max-h-32 overflow-y-auto">
-                {sampleCredentials.map((cred, index) => (
-                  <div
-                    key={index}
-                    className="w-full text-left p-2 text-xs bg-gray-50 rounded border"
-                  >
-                    <div className="font-medium text-gray-700">{cred.label}</div>
-                    <div className="text-gray-500">{cred.email}</div>
-                    <div className="text-gray-400 text-xs">{cred.note}</div>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                Contact your administrator for login credentials
-              </p>
             </div>
           </form>
         </div>

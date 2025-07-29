@@ -16,6 +16,7 @@ export interface PreviousOrder {
   total: number;
   orderType: 'pickup' | 'delivery';
   status: 'completed' | 'cancelled';
+  paymentStatus?: 'paid' | 'unpaid' | 'pending';
 }
 
 // Mock previous orders data
@@ -741,7 +742,8 @@ export const getPreviousOrdersFromFirebase = async (customerPhone: string, store
           ? 'completed' as const 
           : data.status === 'cancelled' 
             ? 'cancelled' as const 
-            : 'completed' as const
+            : 'completed' as const,
+        paymentStatus: data.paymentStatus || 'unpaid'
       };
       
       console.log('🎉 FINAL PROCESSED ORDER:', JSON.stringify(finalOrder, null, 2));

@@ -467,23 +467,23 @@ const CustomerInfoCard = memo(({
       <div className="space-y-3 flex-1">
         {/* Customer Name */}
         <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
-          <div className="p-1.5 rounded-lg bg-green-100">
+          <div className="p-1 rounded-lg bg-green-100">
             <CheckCircle className="h-4 w-4 text-green-600" />
           </div>
           <div>
-            <p className="font-bold text-green-800 text-sm">{customer.name}</p>
+            <p className="font-bold text-green-800 text-xs">{customer.name}</p>
             <p className="text-xs text-gray-600">Customer</p>
           </div>
         </div>
         
         {/* Phone Number */}
         <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
-          <div className="p-1.5 rounded-lg bg-blue-100">
+          <div className="p-1 rounded-lg bg-blue-100">
             <Phone className="h-4 w-4 text-blue-600" />
           </div>
           <div>
-            <p className="font-semibold text-gray-900 text-sm">{phone}</p>
-            <p className="text-xs text-gray-600">Phone Number</p>
+            <p className="font-semibold text-gray-900 text-xs">{phone}</p>
+            <p className="text-xs text-gray-600">Phone</p>
           </div>
         </div>
         
@@ -548,6 +548,7 @@ const CheckoutPage = () => {
   const [showOrderSuccess, setShowOrderSuccess] = useState(false); // New state for success modal
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
+  const [paymentStatus, setPaymentStatus] = useState<'paid' | 'unpaid'>('unpaid');
   const [cashAmount, setCashAmount] = useState('');
   const [cardAmount, setCardAmount] = useState('');
   const [mobileAmount, setMobileAmount] = useState('');
@@ -748,7 +749,7 @@ const CheckoutPage = () => {
             total: total,
             orderType: (typeof orderType === 'string' && ['pickup','delivery','dine-in'].includes(orderType.toLowerCase()) ? orderType.toLowerCase() : 'pickup'),
             paymentMethod: paymentMethod,
-            paymentStatus: 'paid',
+            paymentStatus: paymentStatus, // Use the payment status state
             createdAt: new Date().toISOString(),
             store: {
               id: currentStore.id,
@@ -815,7 +816,7 @@ const CheckoutPage = () => {
             total: total,
             orderType: (typeof orderType === 'string' && ['pickup','delivery','dine-in'].includes(orderType.toLowerCase()) ? orderType.toLowerCase() : 'pickup'),
             paymentMethod: paymentMethod,
-            paymentStatus: 'paid',
+            paymentStatus: paymentStatus, // Use the payment status state
             createdAt: new Date().toISOString(),
             store: {
               id: currentStore.id,
@@ -858,9 +859,9 @@ const CheckoutPage = () => {
       setIsProcessing(false);
     } catch (error) {
       setIsProcessing(false);
-      alert('Failed to process payment or save order. Please try again.');
+      alert('Failed to place order. Please try again.');
     }
-  }, [isProcessing, orderSaved, currentStore, customer, phone, cartItems, subtotal, tax, discountAmount, orderType, paymentMethod, createOrder, deepRemoveUndefined, deliveryAddress, deliveryTimeType, scheduledDeliveryDateTime, pickupTime, scheduledDateTime, editingOrderId, clearCart, navigate]);
+  }, [isProcessing, orderSaved, currentStore, customer, phone, cartItems, subtotal, tax, discountAmount, orderType, paymentMethod, createOrder, deepRemoveUndefined, deliveryAddress, deliveryTimeType, scheduledDeliveryDateTime, pickupTime, scheduledDateTime, editingOrderId, clearCart, navigate, paymentStatus]);
   
   // Utility to remove undefined fields from an object (shallow)
   function removeUndefinedFields(obj: Record<string, any>) {
@@ -1539,7 +1540,7 @@ const CheckoutPage = () => {
                 </h2>
                 <div className="space-y-2">
                   {/* Customer Name */}
-                  <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
+                  <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
                     <div className="p-1 rounded-lg bg-green-100">
                       <CheckCircle className="h-3 w-3 text-green-600" />
                     </div>
@@ -1601,7 +1602,8 @@ const CheckoutPage = () => {
               <div className="bg-white rounded-xl shadow-lg p-3 border border-gray-200 flex-1 flex flex-col">
                 <h2 className="text-base font-bold text-gray-900 mb-3">Payment Method</h2>
                 
-                <div className="grid gap-2 mb-3">
+                {/* Payment Method Cards - 2x2 Grid */}
+                <div className="grid grid-cols-2 gap-2 mb-3">
                   {paymentMethods.map(({ method, icon, title, description }) => (
                     <PaymentMethodCard
                       key={method}
@@ -1615,59 +1617,103 @@ const CheckoutPage = () => {
                   ))}
                 </div>
 
-                {/* Discount Section */}
-                <div className="bg-gray-50 rounded-lg p-2 mb-3">
-                  <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                    <Percent className="h-3 w-3" />
-                    Discount
-                  </h3>
-                  
-                  {/* Discount Code Input */}
-                  <div className="mb-2">
-                    <div className="flex gap-2">
-                      <Input
-                        type="text"
-                        placeholder="Enter discount code"
-                        value={discountCode}
-                        onChange={(e) => handleDiscountCodeChange(e.target.value)}
-                        className="flex-1"
-                        disabled={isValidatingCode}
-                      />
-                      <Button
-                        onClick={validateDiscountCode}
-                        disabled={!discountCode.trim() || isValidatingCode}
-                        className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        {isValidatingCode ? (
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                        ) : (
-                          'Apply'
-                        )}
-                      </Button>
+                {/* Payment Status & Discount Section - Same Row */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  {/* Payment Status Section */}
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                      <DollarSign className="h-3 w-3" />
+                      Payment Status
+                    </h3>
+                    
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="paymentStatus"
+                          value="unpaid"
+                          checked={paymentStatus === 'unpaid'}
+                          onChange={(e) => setPaymentStatus(e.target.value as 'paid' | 'unpaid')}
+                          className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700">Unpaid</span>
+                      </label>
+                      
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="paymentStatus"
+                          value="paid"
+                          checked={paymentStatus === 'paid'}
+                          onChange={(e) => setPaymentStatus(e.target.value as 'paid' | 'unpaid')}
+                          className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700">Paid</span>
+                      </label>
                     </div>
-                    {discountCodeError && (
-                      <p className="text-red-600 text-xs mt-1">{discountCodeError}</p>
-                    )}
-                    {appliedDiscountCode && (
-                      <div className="flex items-center justify-between mt-1 p-1 bg-green-50 rounded text-xs">
-                        <span className="text-green-800">
-                          ✓ {appliedDiscountCode.name} applied
-                        </span>
-                        <button
-                          onClick={removeDiscountCode}
-                          className="text-red-600 hover:text-red-800"
+                    
+                    <p className="text-xs text-gray-500 mt-2">
+                      {paymentStatus === 'unpaid' 
+                        ? 'Payment to be collected later'
+                        : 'No payment collection needed'
+                      }
+                    </p>
+                  </div>
+
+                  {/* Discount Section */}
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                      <Percent className="h-3 w-3" />
+                      Discount
+                    </h3>
+                    
+                    {/* Discount Code Input */}
+                    <div className="mb-2">
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          placeholder="Enter discount code"
+                          value={discountCode}
+                          onChange={(e) => handleDiscountCodeChange(e.target.value)}
+                          className="flex-1"
+                          disabled={isValidatingCode}
+                        />
+                        <Button
+                          onClick={validateDiscountCode}
+                          disabled={!discountCode.trim() || isValidatingCode}
+                          className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white"
                         >
-                          ✕
-                        </button>
+                          {isValidatingCode ? (
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                          ) : (
+                            'Apply'
+                          )}
+                        </Button>
                       </div>
+                      {discountCodeError && (
+                        <p className="text-red-600 text-xs mt-1">{discountCodeError}</p>
+                      )}
+                      {appliedDiscountCode && (
+                        <div className="flex items-center justify-between mt-1 p-1 bg-green-50 rounded text-xs">
+                          <span className="text-green-800">
+                            ✓ {appliedDiscountCode.name} applied
+                          </span>
+                          <button
+                            onClick={removeDiscountCode}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {discountAmount > 0 && (
+                      <p className="text-red-600 text-xs mt-1">
+                        Discount applied: -${discountAmount.toFixed(2)}
+                      </p>
                     )}
                   </div>
-                  
-                  {discountAmount > 0 && (
-                    <p className="text-red-600 text-xs mt-1">
-                      Discount applied: -${discountAmount.toFixed(2)}
-                    </p>
-                  )}
                 </div>
 
                 {/* Action Buttons */}
@@ -1691,12 +1737,12 @@ const CheckoutPage = () => {
                         {isProcessing ? (
                           <>
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                            Processing...
+                            Placing Order...
                           </>
                         ) : (
                           <>
-                            <CreditCard className="h-4 w-4 mr-2" />
-                            Pay ${total.toFixed(2)}
+                            <ShoppingCart className="h-4 w-4 mr-2" />
+                            Place Order
                           </>
                         )}
                       </Button>

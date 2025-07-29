@@ -139,6 +139,13 @@ const CustomerLookupPage = () => {
 
   // Memoized handlers
   const handleSelectCustomer = useCallback((customer: Customer) => {
+    // Check if customer is blocked
+    if (customer.isBlocked) {
+      const blockedMessage = `This customer is blocked and cannot place orders.\n\nReason: ${customer.blockedReason || 'No reason provided'}\nBlocked on: ${customer.blockedDate ? new Date(customer.blockedDate).toLocaleDateString() : 'Unknown date'}\nBlocked by: ${customer.blockedBy || 'Unknown'}`;
+      alert(blockedMessage);
+      return;
+    }
+    
     navigate('/order', { 
       state: { 
         customer: customer, 

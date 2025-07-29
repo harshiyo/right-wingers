@@ -79,9 +79,31 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                       </div>
                     )}
                     <div className="min-w-0">
-                      <h4 className="font-bold text-sm lg:text-base truncate">{customer.name}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-sm lg:text-base truncate">{customer.name}</h4>
+                        {customer.isBlocked && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white">
+                            BLOCKED
+                          </span>
+                        )}
+                      </div>
                       <p className="text-red-100 text-xs lg:text-sm">{formatPhoneDisplay(customer.phone)}</p>
-                      <p className="text-red-200 text-xs truncate">{customer.address.street}, {customer.address.city}</p>
+                      {customer.email && (
+                        <p className="text-red-100 text-xs lg:text-sm">{customer.email}</p>
+                      )}
+                      {(customer.address.street || customer.address.city) && (
+                        <p className="text-red-200 text-xs truncate">
+                          {customer.address.street && customer.address.city 
+                            ? `${customer.address.street}, ${customer.address.city}`
+                            : customer.address.street || customer.address.city
+                          }
+                        </p>
+                      )}
+                      {customer.isBlocked && customer.blockedReason && (
+                        <p className="text-red-300 text-xs truncate mt-1">
+                          Blocked: {customer.blockedReason}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">

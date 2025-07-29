@@ -5,6 +5,7 @@ export interface Customer {
   id: string;
   phone: string;
   name: string;
+  email?: string;
   address: {
     street: string;
     city: string;
@@ -13,6 +14,11 @@ export interface Customer {
   orderCount: number;
   lastOrderDate: string;
   storeId: string; // Store where customer was created/primarily shops
+  notes?: string;
+  isBlocked?: boolean;
+  blockedReason?: string;
+  blockedDate?: string;
+  blockedBy?: string;
 }
 
 export const dummyCustomers: Customer[] = [
