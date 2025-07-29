@@ -21,6 +21,7 @@ import {
   Tag,
   Shield,
   Megaphone,
+  Package2,
 } from 'lucide-react';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -54,12 +55,13 @@ export const navLinks: NavLinkItem[] = [
   { id: 'kitchen', to: '/kitchen', text: 'Kitchen Display', icon: ChefHat, order: 9.5, color: 'red' },
   { id: 'feedback', to: '/feedback', text: 'Feedback', icon: MessageSquare, order: 10, color: 'pink' },
   { id: 'marketing', to: '/marketing', text: 'Marketing', icon: Megaphone, order: 10.5, color: 'teal' },
-  { id: 'layout', to: '/layout', text: 'Layout Manager', icon: Layout, order: 11, color: 'teal' },
-  { id: 'appearance', to: '/appearance', text: 'Appearance', icon: Palette, order: 12, color: 'violet' },
-  { id: 'settings', to: '/settings', text: 'Settings', icon: Settings, order: 13, color: 'gray' },
-  { id: 'live-logs', to: '/live-logs', text: 'Live Logs', icon: Monitor, order: 14, color: 'red' },
-  { id: 'job-status', to: '/job-status', text: 'Job Status', icon: Activity, order: 15, color: 'indigo' },
-  { id: 'discount-codes', to: '/discount-codes', text: 'Discount Codes', icon: Tag, order: 16, color: 'orange' },
+  { id: 'inventory', to: '/inventory', text: 'Inventory', icon: Package2, order: 11, color: 'indigo' },
+  { id: 'layout', to: '/layout', text: 'Layout Manager', icon: Layout, order: 12, color: 'teal' },
+  { id: 'appearance', to: '/appearance', text: 'Appearance', icon: Palette, order: 13, color: 'violet' },
+  { id: 'settings', to: '/settings', text: 'Settings', icon: Settings, order: 14, color: 'gray' },
+  { id: 'live-logs', to: '/live-logs', text: 'Live Logs', icon: Monitor, order: 15, color: 'red' },
+  { id: 'job-status', to: '/job-status', text: 'Job Status', icon: Activity, order: 16, color: 'indigo' },
+  { id: 'discount-codes', to: '/discount-codes', text: 'Discount Codes', icon: Tag, order: 17, color: 'orange' },
 ];
 
 const colorClasses: Record<ColorType, string> = {
@@ -175,6 +177,7 @@ export const Sidebar = () => {
       'kitchen': 'kitchen',
       'feedback': 'feedback',
       'marketing': 'marketing',
+      'inventory': 'inventory',
       'layout': 'layout_manager',
       'appearance': 'appearance',
       'settings': 'settings',

@@ -25,6 +25,7 @@ import JobStatus from './pages/JobStatus';
 import DiscountCodes from './pages/DiscountCodes';
 import Analytics from './pages/Analytics';
 import Marketing from './pages/Marketing';
+import Inventory from './pages/Inventory';
 import { SelectedStoreProvider } from './context/SelectedStoreContext';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -79,6 +80,7 @@ function App() {
                 <Route path="discount-codes" element={<DiscountCodes />} />
                 <Route path="analytics" element={<Analytics />} />
                 <Route path="marketing" element={<Marketing />} />
+                <Route path="inventory" element={<Inventory />} />
               </Route>
             </Routes>
           </Router>

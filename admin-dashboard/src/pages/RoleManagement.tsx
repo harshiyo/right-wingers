@@ -32,7 +32,8 @@ import {
   Monitor,
   ChevronDown,
   ChevronRight,
-  Megaphone
+  Megaphone,
+  Package2
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -175,6 +176,14 @@ const RoleManagement = () => {
       description: 'Send promotional messages to customers',
       category: 'management',
       icon: Megaphone,
+      isEnabled: true
+    },
+    {
+      id: 'inventory',
+      name: 'Inventory Management',
+      description: 'Manage store inventory and stock levels',
+      category: 'management',
+      icon: Package2,
       isEnabled: true
     },
     {
