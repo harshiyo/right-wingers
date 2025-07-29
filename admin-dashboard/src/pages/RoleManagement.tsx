@@ -31,7 +31,8 @@ import {
   Globe,
   Monitor,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Megaphone
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -166,6 +167,14 @@ const RoleManagement = () => {
       description: 'View and respond to customer feedback',
       category: 'management',
       icon: Bell,
+      isEnabled: true
+    },
+    {
+      id: 'marketing',
+      name: 'Marketing',
+      description: 'Send promotional messages to customers',
+      category: 'management',
+      icon: Megaphone,
       isEnabled: true
     },
     {
@@ -528,53 +537,53 @@ const RoleManagement = () => {
       {/* Role Permissions Dialog */}
       {showRoleDialog && selectedUser && (
         <div 
-          className="fixed inset-0 z-[60] flex justify-center items-center p-4"
+          className="fixed inset-0 z-[60] flex justify-center items-center p-2 sm:p-4"
           style={{
             backgroundColor: 'rgba(0, 0, 0, 0.4)',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)'
           }}
         >
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b border-gray-200">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Manage Permissions</h2>
-                <p className="text-gray-600 mt-1">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-3 sm:p-4 border-b border-gray-200">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-base sm:text-lg font-bold text-gray-900">Manage Permissions</h2>
+                <p className="text-xs sm:text-sm text-gray-600 mt-1 truncate">
                   {selectedUser.name} - {getRoleLabel(selectedUser.role)}
                 </p>
               </div>
               <button
                 onClick={() => setShowRoleDialog(false)}
-                className="p-2 rounded-full hover:bg-gray-100"
+                className="p-1 rounded-full hover:bg-gray-100 ml-2 flex-shrink-0"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
             
-            <div className="p-6">
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Permissions</h3>
-                <p className="text-gray-600 mb-4">
+            <div className="p-3 sm:p-4">
+              <div className="mb-3">
+                <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-1">Select Permissions</h3>
+                <p className="text-xs sm:text-sm text-gray-600 mb-3">
                   Choose which modules and features this user can access. Only selected permissions will be visible in their sidebar.
                 </p>
               </div>
               
-              <div className="space-y-6">
+              <div className="space-y-3">
                 {permissionCategories.map(category => {
                   const categoryPermissions = availablePermissions.filter(p => p.category === category.id);
                   return (
-                    <div key={category.id} className="border border-gray-200 rounded-lg p-4">
-                      <h4 className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${category.color} mb-4`}>
+                    <div key={category.id} className="border border-gray-200 rounded-lg p-2 sm:p-3">
+                      <h4 className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${category.color} mb-2`}>
                         {category.name}
                       </h4>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                         {categoryPermissions.map(permission => {
                           const Icon = permission.icon;
                           return (
                             <div
                               key={permission.id}
-                              className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                              className={`border rounded p-2 cursor-pointer transition-all ${
                                 permission.isEnabled
                                   ? 'border-blue-300 bg-blue-50'
                                   : 'border-gray-200 hover:border-gray-300'
@@ -582,30 +591,30 @@ const RoleManagement = () => {
                               onClick={() => togglePermission(permission.id)}
                             >
                               <div className="flex items-start justify-between">
-                                <div className="flex items-start space-x-3">
-                                  <Icon className={`h-5 w-5 mt-0.5 ${
+                                <div className="flex items-start space-x-2 flex-1 min-w-0">
+                                  <Icon className={`h-3 w-3 sm:h-4 sm:w-4 mt-0.5 flex-shrink-0 ${
                                     permission.isEnabled ? 'text-blue-600' : 'text-gray-400'
                                   }`} />
-                                  <div>
-                                    <h5 className={`font-medium ${
+                                  <div className="min-w-0 flex-1">
+                                    <h5 className={`font-medium text-xs ${
                                       permission.isEnabled ? 'text-blue-900' : 'text-gray-900'
-                                    }`}>
+                                    } truncate`}>
                                       {permission.name}
                                     </h5>
-                                    <p className={`text-sm ${
+                                    <p className={`text-xs ${
                                       permission.isEnabled ? 'text-blue-700' : 'text-gray-500'
-                                    }`}>
+                                    } mt-0.5 line-clamp-1`}>
                                       {permission.description}
                                     </p>
                                   </div>
                                 </div>
-                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                <div className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ml-1 ${
                                   permission.isEnabled
                                     ? 'border-blue-600 bg-blue-600'
                                     : 'border-gray-300'
                                 }`}>
                                   {permission.isEnabled && (
-                                    <Check className="h-3 w-3 text-white" />
+                                    <Check className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-white" />
                                   )}
                                 </div>
                               </div>
@@ -618,18 +627,19 @@ const RoleManagement = () => {
                 })}
               </div>
               
-              <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-3 border-t border-gray-200 mt-3">
                 <Button
                   variant="outline"
                   onClick={() => setShowRoleDialog(false)}
+                  className="w-full sm:w-auto order-2 sm:order-1 text-xs sm:text-sm py-1 sm:py-2"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleUpdatePermissions}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto order-1 sm:order-2 text-xs sm:text-sm py-1 sm:py-2"
                 >
-                  <Save className="h-4 w-4 mr-2" />
+                  <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Save Permissions
                 </Button>
               </div>

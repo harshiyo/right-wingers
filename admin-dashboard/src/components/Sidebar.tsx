@@ -20,6 +20,7 @@ import {
   Activity,
   Tag,
   Shield,
+  Megaphone,
 } from 'lucide-react';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -52,6 +53,7 @@ export const navLinks: NavLinkItem[] = [
   { id: 'orders', to: '/orders', text: 'Orders', icon: ShoppingCart, order: 9, color: 'green', badge: '12' },
   { id: 'kitchen', to: '/kitchen', text: 'Kitchen Display', icon: ChefHat, order: 9.5, color: 'red' },
   { id: 'feedback', to: '/feedback', text: 'Feedback', icon: MessageSquare, order: 10, color: 'pink' },
+  { id: 'marketing', to: '/marketing', text: 'Marketing', icon: Megaphone, order: 10.5, color: 'teal' },
   { id: 'layout', to: '/layout', text: 'Layout Manager', icon: Layout, order: 11, color: 'teal' },
   { id: 'appearance', to: '/appearance', text: 'Appearance', icon: Palette, order: 12, color: 'violet' },
   { id: 'settings', to: '/settings', text: 'Settings', icon: Settings, order: 13, color: 'gray' },
@@ -172,6 +174,7 @@ export const Sidebar = () => {
       'orders': 'orders',
       'kitchen': 'kitchen',
       'feedback': 'feedback',
+      'marketing': 'marketing',
       'layout': 'layout_manager',
       'appearance': 'appearance',
       'settings': 'settings',

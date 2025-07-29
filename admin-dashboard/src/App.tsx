@@ -24,6 +24,7 @@ import LiveLogs from './pages/LiveLogs';
 import JobStatus from './pages/JobStatus';
 import DiscountCodes from './pages/DiscountCodes';
 import Analytics from './pages/Analytics';
+import Marketing from './pages/Marketing';
 import { SelectedStoreProvider } from './context/SelectedStoreContext';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -73,10 +74,11 @@ function App() {
                 <Route path="layout" element={<LayoutManager />} />
                 <Route path="appearance" element={<Appearance />} />
                 <Route path="settings" element={<Settings />} />
-                              <Route path="live-logs" element={<LiveLogs />} />
-              <Route path="job-status" element={<JobStatus />} />
-              <Route path="discount-codes" element={<DiscountCodes />} />
-              <Route path="analytics" element={<Analytics />} />
+                <Route path="live-logs" element={<LiveLogs />} />
+                <Route path="job-status" element={<JobStatus />} />
+                <Route path="discount-codes" element={<DiscountCodes />} />
+                <Route path="analytics" element={<Analytics />} />
+                <Route path="marketing" element={<Marketing />} />
               </Route>
             </Routes>
           </Router>
