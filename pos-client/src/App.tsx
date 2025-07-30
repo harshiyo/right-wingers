@@ -16,6 +16,8 @@ import { OfflineIndicator } from './components/OfflineIndicator';
 import { useMenuCache } from './hooks/useMenuCache';
 import { MenuTriggeredDailyReport } from './components/layout/MenuTriggeredDailyReport';
 import { MenuTriggeredCustomReport } from './components/layout/MenuTriggeredCustomReport';
+import { PaperOutNotification } from './components/PaperOutNotification';
+import { PrintQueueIndicator } from './components/PrintQueueIndicator';
 
 import './index.css';
 
@@ -35,6 +37,8 @@ function AppContent() {
       <NotificationsContainer />
       <MenuTriggeredDailyReport />
       <MenuTriggeredCustomReport />
+      <PaperOutNotification />
+      <PrintQueueIndicator />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={
