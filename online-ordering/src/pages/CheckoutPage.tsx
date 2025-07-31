@@ -272,10 +272,55 @@ export default function CheckoutPage() {
           name: selectedStore.name,
           address: selectedStore.address,
         },
-        items: cartItems.map(item => ({
-          ...item,
-          baseId: item.id, // Keep original item ID for reference
-        })),
+        items: cartItems.map(item => {
+          // Transform online order structure to match POS structure
+          const transformedItem = {
+            ...item,
+            baseId: item.id, // Keep original item ID for reference
+          };
+
+          // Transform customizations to match POS structure
+          if (item.toppings || item.sauces || item.size || item.isHalfAndHalf) {
+            transformedItem.customizations = {} as any;
+            
+            // Handle size
+            if (item.size) {
+              (transformedItem.customizations as any).size = item.size;
+            }
+            
+            // Handle toppings (pizza)
+            if (item.toppings) {
+              (transformedItem.customizations as any).toppings = item.toppings;
+            }
+            
+            // Handle sauces (wings)
+            if (item.sauces && item.sauces.length > 0) {
+              (transformedItem.customizations as any).sauces = item.sauces;
+            }
+            
+            // Handle half and half
+            if (item.isHalfAndHalf) {
+              (transformedItem.customizations as any).isHalfAndHalf = true;
+            }
+          }
+          
+          // Handle combo items
+          if (item.isCombo && item.comboItems) {
+            // Transform combo items to match POS combo structure
+            (transformedItem as any).customizations = item.comboItems.map((comboItem: any, index: number) => ({
+              type: comboItem.type || 'item',
+              itemName: comboItem.name,
+              size: comboItem.size,
+              toppings: comboItem.toppings,
+              sauces: comboItem.sauces,
+              instructions: comboItem.instructions,
+              extraCharge: comboItem.extraCharges || 0,
+              isHalfAndHalf: comboItem.isHalfAndHalf
+            }));
+          }
+          
+          return transformedItem;
+        }),
         subtotal: subtotal,
         tax: tax,
         total: total,
