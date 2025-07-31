@@ -216,10 +216,10 @@ export class PrinterService {
             return;
           }
           
-          port.drain(() => {
-            resolve();
-          });
-        });
+              port.drain(() => {
+                resolve();
+              });
+            });
         
       } catch (error) {
         reject(error);
@@ -396,16 +396,22 @@ export class PrinterService {
     lines.push(`  - ${label}`);
     // Toppings (pizza)
     if (step.toppings && (step.toppings.wholePizza || step.toppings.leftSide || step.toppings.rightSide)) {
-      lines.push('    Toppings');
+      //lines.push('    Toppings');
       lines.push(...this.renderToppingsBySide(step.toppings, '      '));
     }
     // Half & Half
     if (step.isHalfAndHalf) {
-      lines.push('    Half & Half Pizza');
+      //lines.push('    Half & Half Pizza');
     }
     // Sauces (wings)
     if (step.sauces && step.sauces.length > 0) {
-      lines.push(`    Sauces: ${step.sauces.map(s => s.name).join(', ')}`);
+      const sauceNames = step.sauces.map(s => s.name).filter(name => name);
+      if (sauceNames.length > 0) {
+        //lines.push(`    Sauces`);
+        sauceNames.forEach(sauce => {
+          lines.push(`      ${sauce}`);
+        });
+      }
     }
     // Instructions
     if (step.instructions && step.instructions.length > 0) {
@@ -435,18 +441,54 @@ export class PrinterService {
     if (order.storePhone) lines.push('**' + order.storePhone + '**');
     lines.push('-----------------------------');
     
-    // Order information
-    lines.push(`Order #: ${order.orderNumber || 'N/A'}`);
-    lines.push(`Customer: ${order.customerInfo?.name || ''}`);
-    lines.push(`Phone: ${order.customerInfo?.phone || ''}`);
+    // Order type
+    if (order.orderType) {
+      const orderTypeText = order.orderType === 'delivery' ? 'DELIVERY ORDER' : 'PICKUP ORDER';
+      lines.push(orderTypeText);
+      
+      // Add delivery address for delivery orders
+      if (order.orderType === 'delivery' && order.deliveryAddress) {
+        lines.push('DELIVERY ADDRESS:');
+        if (order.deliveryAddress.street) lines.push(order.deliveryAddress.street);
+        if (order.deliveryAddress.city && order.deliveryAddress.postalCode) {
+          lines.push(`${order.deliveryAddress.city}, ON ${order.deliveryAddress.postalCode}`);
+        }
+        
+        // Add customer info for delivery
+        if (order.customerName || order.customerPhone) {
+          lines.push('CUSTOMER:');
+          if (order.customerName) lines.push(order.customerName);
+          if (order.customerPhone) lines.push(order.customerPhone);
+        }
+      }
+    }
+    
+    // Order information - more compact
+    if (order.orderNumber) lines.push(`Order #: ${order.orderNumber}`);
+    if (order.orderDate) {
+      const date = new Date(order.orderDate);
+      lines.push(`Date: ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`);
+    }
     
     // Scheduled order information
+    if (order.scheduledTime) {
+      const scheduledDate = new Date(order.scheduledTime);
+      lines.push(`Scheduled: ${scheduledDate.toLocaleDateString()} ${scheduledDate.toLocaleTimeString()}`);
+    }
+    
+    // Customer info - only if not already shown for delivery
+    if (order.orderType !== 'delivery' && (order.customerInfo?.name || order.customerInfo?.phone)) {
+      if (order.customerInfo?.name) lines.push(`Customer: ${order.customerInfo.name}`);
+      if (order.customerInfo?.phone) lines.push(`Phone: ${order.customerInfo.phone}`);
+    }
+    
+    // Pickup/Delivery details - more compact
     if (order.orderType === 'pickup') {
       if (order.pickupDetails && order.pickupDetails.scheduledDateTime) {
         const scheduledDate = new Date(order.pickupDetails.scheduledDateTime);
-        lines.push(`Scheduled Pickup: ${scheduledDate.toLocaleString()}`);
+        lines.push(`Pickup: ${scheduledDate.toLocaleString()}`);
       } else {
-        lines.push(`Pickup Time: ASAP (${order.pickupDetails?.estimatedTime || '15-25 minutes'})`);
+        lines.push(`Pickup: ASAP`);
       }
     } else if (order.orderType === 'delivery') {
       if (order.deliveryDetails && order.deliveryDetails.scheduledDeliveryDateTime) {
@@ -497,11 +539,19 @@ export class PrinterService {
             } else {
               if (item.customizations.size) lines.push(`  Size: ${item.customizations.size}`);
               if (item.customizations.toppings) {
-                lines.push('  Toppings');
+                //lines.push('  Toppings');
                 lines.push(...this.renderToppingsBySide(item.customizations.toppings, '    '));
               }
               if (item.customizations.isHalfAndHalf) lines.push('  Half & Half Pizza');
-              if (item.customizations.sauces && Array.isArray(item.customizations.sauces) && item.customizations.sauces.length > 0) lines.push(`  Sauces: ${item.customizations.sauces.map(s => s.name).join(', ')}`);
+              if (item.customizations.sauces && Array.isArray(item.customizations.sauces) && item.customizations.sauces.length > 0) {
+                const sauceNames = item.customizations.sauces.map(s => s.name).filter(name => name);
+                if (sauceNames.length > 0) {
+                  //lines.push(`  Sauces`);
+                  sauceNames.forEach(sauce => {
+                    lines.push(`    ${sauce}`);
+                  });
+                }
+              }
               if (item.customizations.instructions && item.customizations.instructions.length > 0) lines.push(`  Instructions: ${item.customizations.instructions.join(', ')}`);
             }
           }
@@ -528,11 +578,19 @@ export class PrinterService {
             } else {
               if (item.customizations.size) lines.push(`  Size: ${item.customizations.size}`);
               if (item.customizations.toppings) {
-                lines.push('  Toppings');
+                //lines.push('  Toppings');
                 lines.push(...this.renderToppingsBySide(item.customizations.toppings, '    '));
               }
               if (item.customizations.isHalfAndHalf) lines.push('  Half & Half Pizza');
-              if (item.customizations.sauces && Array.isArray(item.customizations.sauces) && item.customizations.sauces.length > 0) lines.push(`  Sauces: ${item.customizations.sauces.map(s => s.name).join(', ')}`);
+              if (item.customizations.sauces && Array.isArray(item.customizations.sauces) && item.customizations.sauces.length > 0) {
+                const sauceNames = item.customizations.sauces.map(s => s.name).filter(name => name);
+                if (sauceNames.length > 0) {
+                  //lines.push(`  Sauces`);
+                  sauceNames.forEach(sauce => {
+                    lines.push(`    ${sauce}`);
+                  });
+                }
+              }
               if (item.customizations.instructions && item.customizations.instructions.length > 0) lines.push(`  Instructions: ${item.customizations.instructions.join(', ')}`);
             }
           }
@@ -559,11 +617,19 @@ export class PrinterService {
             } else {
               if (item.customizations.size) lines.push(`  Size: ${item.customizations.size}`);
               if (item.customizations.toppings) {
-                lines.push('  Toppings');
+                //lines.push('  Toppings');
                 lines.push(...this.renderToppingsBySide(item.customizations.toppings, '    '));
               }
               if (item.customizations.isHalfAndHalf) lines.push('  Half & Half Pizza');
-              if (item.customizations.sauces && Array.isArray(item.customizations.sauces) && item.customizations.sauces.length > 0) lines.push(`  Sauces: ${item.customizations.sauces.map(s => s.name).join(', ')}`);
+              if (item.customizations.sauces && Array.isArray(item.customizations.sauces) && item.customizations.sauces.length > 0) {
+                const sauceNames = item.customizations.sauces.map(s => s.name).filter(name => name);
+                if (sauceNames.length > 0) {
+                  //lines.push(`  Sauces`);
+                  sauceNames.forEach(sauce => {
+                    lines.push(`    ${sauce}`);
+                  });
+                }
+              }
               if (item.customizations.instructions && item.customizations.instructions.length > 0) lines.push(`  Instructions: ${item.customizations.instructions.join(', ')}`);
             }
           }
@@ -584,12 +650,17 @@ export class PrinterService {
     // Items
     if (order.items && order.items.length > 0) {
       lines.push('ITEMS:');
-      order.items.forEach(item => {
+      order.items.forEach((item, itemIdx) => {
         // Check if it's a combo by looking for combo customizations (numbered keys)
         if (item.type === 'combo' || (item.customizations && this.isComboCustomizations(item.customizations))) {
           this.renderComboItem(lines, item);
         } else {
           this.renderRegularItem(lines, item);
+        }
+        
+        // Add spacing between items (except for the last item)
+        if (itemIdx < order.items.length - 1) {
+          lines.push('');
         }
       });
     }
@@ -648,7 +719,10 @@ export class PrinterService {
           .map(k => customizations[k]);
         
         steps.forEach((step, idx) => {
-          lines.push(...this.renderComboStep(step, idx));
+          const stepLines = this.renderComboStep(step, idx);
+          if (Array.isArray(stepLines)) {
+            lines.push(...stepLines);
+          }
         });
       } else {
         // Handle regular customizations (array)
@@ -681,46 +755,21 @@ export class PrinterService {
         lines.push(`  Size: ${item.customizations.size}`);
       }
       
-      // Pizza toppings
+      // Pizza toppings - use the same nice formatting as renderComboStep
       if (item.customizations.toppings) {
-        const toppings = [];
-        
-        if (item.customizations.toppings.wholePizza && item.customizations.toppings.wholePizza.length > 0) {
-          const toppingNames = item.customizations.toppings.wholePizza
-            .map(t => t.name || t)
-            .filter(name => name && name !== '' && String(name) !== '0');
-          if (toppingNames.length > 0) {
-            toppings.push(`Whole: ${toppingNames.join(', ')}`);
+        const toppings = item.customizations.toppings;
+        if (toppings.wholePizza || toppings.leftSide || toppings.rightSide) {
+          //lines.push(`  Toppings`);
+          const toppingLines = this.renderToppingsBySide(toppings, '    ');
+          if (Array.isArray(toppingLines)) {
+            lines.push(...toppingLines);
           }
-        }
-        
-        if (item.customizations.toppings.leftSide && item.customizations.toppings.leftSide.length > 0) {
-          const toppingNames = item.customizations.toppings.leftSide
-            .map(t => t.name || t)
-            .filter(name => name && name !== '' && String(name) !== '0');
-          if (toppingNames.length > 0) {
-            toppings.push(`Left: ${toppingNames.join(', ')}`);
-          }
-        }
-        
-        if (item.customizations.toppings.rightSide && item.customizations.toppings.rightSide.length > 0) {
-          const toppingNames = item.customizations.toppings.rightSide
-            .map(t => t.name || t)
-            .filter(name => name && name !== '' && String(name) !== '0');
-          if (toppingNames.length > 0) {
-            toppings.push(`Right: ${toppingNames.join(', ')}`);
-          }
-        }
-        
-        if (toppings.length > 0) {
-          lines.push(`  Toppings:`);
-          toppings.forEach(topping => lines.push(`    ${topping}`));
         }
       }
       
       // Half and half indicator
       if (item.customizations.isHalfAndHalf) {
-        lines.push(`  Half & Half Pizza`);
+        //lines.push(`  Half & Half Pizza`);
       }
       
       // Wing sauces
@@ -729,7 +778,10 @@ export class PrinterService {
           .map(s => s.name || s)
           .filter(name => name && name !== '' && name !== 0 && name !== '0');
         if (sauceNames.length > 0) {
-          lines.push(`  Sauces: ${sauceNames.join(', ')}`);
+          //lines.push(`  Sauces`);
+          sauceNames.forEach(sauce => {
+            lines.push(`    ${sauce}`);
+          });
         }
       }
       
@@ -766,23 +818,12 @@ export class PrinterService {
           }
           lines.push(`  ${stepLabel}`);
           
-          // Toppings for combo items
-          if (step.toppings && step.toppings.wholePizza && step.toppings.wholePizza.length > 0) {
-            const toppingNames = step.toppings.wholePizza.map(t => t.name || t).filter(name => name);
-            if (toppingNames.length > 0) {
-              lines.push(`    Whole: ${toppingNames.join(', ')}`);
-            }
-          }
-          if (step.toppings && step.toppings.leftSide && step.toppings.leftSide.length > 0) {
-            const toppingNames = step.toppings.leftSide.map(t => t.name || t).filter(name => name);
-            if (toppingNames.length > 0) {
-              lines.push(`    Left: ${toppingNames.join(', ')}`);
-            }
-          }
-          if (step.toppings && step.toppings.rightSide && step.toppings.rightSide.length > 0) {
-            const toppingNames = step.toppings.rightSide.map(t => t.name || t).filter(name => name);
-            if (toppingNames.length > 0) {
-              lines.push(`    Right: ${toppingNames.join(', ')}`);
+          // Toppings for combo items - use the same nice formatting
+          if (step.toppings && (step.toppings.wholePizza || step.toppings.leftSide || step.toppings.rightSide)) {
+            //lines.push(`    Toppings`);
+            const toppingLines = this.renderToppingsBySide(step.toppings, '      ');
+            if (Array.isArray(toppingLines)) {
+              lines.push(...toppingLines);
             }
           }
           
@@ -790,7 +831,10 @@ export class PrinterService {
           if (step.sauces && step.sauces.length > 0) {
             const sauceNames = step.sauces.map(s => s.name || s).filter(name => name);
             if (sauceNames.length > 0) {
-              lines.push(`    Sauces: ${sauceNames.join(', ')}`);
+              //lines.push(`    Sauces`);
+              sauceNames.forEach(sauce => {
+                lines.push(`      ${sauce}`);
+              });
             }
           }
           

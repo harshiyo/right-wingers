@@ -44,7 +44,7 @@ function createWindow() {
   });
 
   // IPC handlers for printer service
-  ipcMain.handle('print-receipt', async (event, order, type, showPreview = true) => {
+  ipcMain.handle('print-receipt', async (event, order, type, showPreview = false) => {
     const lines = printerService.renderReceipt(order, type);
     const storeId = order.storeId || 'hamilton'; // Default to hamilton for testing
     
