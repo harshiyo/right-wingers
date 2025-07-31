@@ -7,7 +7,7 @@ import { useCart } from '../context/CartContext';
 import { useCustomer } from '../context/CustomerContext';
 import PizzaToppingDialog from '../components/PizzaToppingDialog';
 import { cn } from '../utils/cn';
-import ComboSelector from '../components/ComboSelector';
+import { ComboSelector } from '../components/ComboSelector';
 import { SizeSelectDialog } from '../components/SizeSelectDialog';
 import { WingSauceDialog } from '../components/WingSauceDialog';
 
@@ -356,7 +356,8 @@ export default function MenuPage() {
           quantity: comp.quantity,
           toppingLimit: comp.maxToppings,
           sauceLimit: comp.maxSauces,
-          itemName: comp.itemName
+          itemName: comp.itemName,
+          availableSizes: comp.availableSizes
         })),
         price: item.basePrice,
         isEditing: false
@@ -456,25 +457,16 @@ export default function MenuPage() {
   const handleComboSubmit = (customizedCombo: any) => {
     const comboItem = {
       id: customizedCombo.isEditing ? customizedCombo.editingItemId : customizedCombo.comboId + '-' + Date.now(),
+      baseId: customizedCombo.comboId,
       name: customizedCombo.name,
       price: parseFloat(customizedCombo.price.toFixed(2)),
       quantity: 1,
       imageUrl: customizedCombo.imageUrl || '',
+      customizations: customizedCombo.items,  // Use same structure as POS client
+      extraCharges: parseFloat((customizedCombo.extraCharges || 0).toFixed(2)),
       isCombo: true,
-      comboItems: customizedCombo.items.map((item: any) => ({
-        id: item.id || item.type,
-        name: item.itemName || item.type,
-        quantity: 1,
-        size: item.size,
-        sauces: item.sauces,
-        toppings: item.toppings,
-        isHalfAndHalf: item.isHalfAndHalf,
-        instructions: item.instructions,
-        extraCharges: parseFloat((item.extraCharge || 0).toFixed(2))
-      })),
-      extraCharges: parseFloat((customizedCombo.extraCharges || 0).toFixed(2))
     };
-
+    
     addToCart(comboItem);
     setShowComboSelector(false);
     setSelectedCombo(null);
@@ -707,13 +699,13 @@ export default function MenuPage() {
 
       {selectedCombo && showComboSelector && (
         <ComboSelector
-          isOpen={true}
+          open={true}
           combo={selectedCombo}
           onClose={() => {
             setShowComboSelector(false);
             setSelectedCombo(null);
           }}
-          onSubmit={handleComboSubmit}
+          onComplete={handleComboSubmit}
         />
       )}
     </div>

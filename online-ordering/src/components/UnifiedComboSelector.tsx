@@ -1,13 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import { X, ChevronLeft, ChevronRight, Check, Edit2, Pizza, Drumstick, Coffee, Utensils } from 'lucide-react';
+import { X, ChevronLeft, Check, Edit2, Pizza, Drumstick, Coffee, Utensils } from 'lucide-react';
 import { cn } from '../utils/cn';
-
-// Import SVG icons
-import fullPizza from '../assets/full-pizza.svg';
-import leftHalfPizza from '../assets/left-half-pizza.svg';
-import rightHalfPizza from '../assets/right-half-pizza.svg';
 
 interface Topping {
   id: string;
@@ -18,25 +13,25 @@ interface Topping {
   isVegan?: boolean;
   isGlutenFree?: boolean;
   isKeto?: boolean;
+  addedOrder?: number;
 }
 
 interface ToppingSide {
-  wholePizza: Topping[];
-  leftSide: Topping[];
-  rightSide: Topping[];
+  wholePizza: (Topping & { addedOrder?: number })[];
+  leftSide: (Topping & { addedOrder?: number })[];
+  rightSide: (Topping & { addedOrder?: number })[];
 }
 
 interface ComboItem {
   type: 'pizza' | 'wings' | 'drink' | 'side';
-  stepIndex: number;
+  quantity: number;
   toppingLimit?: number;
   sauceLimit?: number;
   size?: string;
   itemName?: string;
-  quantity: number;
   availableSizes?: string[];
   defaultSize?: string;
-  isSpecialty?: boolean;
+  extraCharge?: number;
 }
 
 interface ComboDefinition {
@@ -51,17 +46,17 @@ interface ComboDefinition {
 }
 
 interface UnifiedComboSelectorProps {
-  isOpen: boolean;
+  open: boolean;
   onClose: () => void;
   combo: ComboDefinition;
-  onSubmit: (customizedCombo: any) => void;
+  onComplete: (customizedCombo: any) => void;
 }
 
-export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit }: UnifiedComboSelectorProps) {
-  if (!isOpen || !combo) return null;
+export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: UnifiedComboSelectorProps) => {
+  if (!open || !combo) return null;
 
   // Generate steps from combo items
-  const steps = combo.isEditing && combo.items.length > 0
+  const steps = combo.isEditing && combo.items.length > 0 
     ? combo.items.map((item, index) => ({
         type: item.type,
         stepIndex: index,
@@ -71,22 +66,14 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
         itemName: item.itemName,
         quantity: 1,
         availableSizes: item.availableSizes,
-        defaultSize: item.defaultSize,
-        isSpecialty: item.isSpecialty
+        defaultSize: item.defaultSize
       }))
     : (() => {
         let globalStepIndex = 0;
         return combo.items.flatMap((item) =>
-          Array(item.quantity).fill(null).map(() => ({
-            type: item.type,
-            stepIndex: globalStepIndex++,
-            toppingLimit: item.toppingLimit,
-            sauceLimit: item.sauceLimit,
-            size: item.size,
-            itemName: item.itemName,
-            availableSizes: item.availableSizes,
-            defaultSize: item.defaultSize,
-            isSpecialty: item.isSpecialty
+          Array(item.quantity).fill(null).map(() => ({ 
+            ...item, 
+            stepIndex: globalStepIndex++
           }))
         );
       })();
@@ -94,21 +81,24 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
   const [currentStep, setCurrentStep] = useState(0);
   const [draft, setDraft] = useState<any[]>([]);
   const [totalExtraCharges, setTotalExtraCharges] = useState(0);
+  // State for toppings and sauces
   const [toppings, setToppings] = useState<Topping[]>([]);
+  const [sauces, setSauces] = useState<Topping[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Pizza customization state
   const [activeSelection, setActiveSelection] = useState<'whole' | 'left' | 'right'>('whole');
   const [selectedToppings, setSelectedToppings] = useState<{
-    wholePizza: Map<string, Topping>;
-    leftSide: Map<string, Topping>;
-    rightSide: Map<string, Topping>;
+    wholePizza: (Topping & { addedOrder: number })[];
+    leftSide: (Topping & { addedOrder: number })[];
+    rightSide: (Topping & { addedOrder: number })[];
   }>({
-    wholePizza: new Map(),
-    leftSide: new Map(),
-    rightSide: new Map()
+    wholePizza: [],
+    leftSide: [],
+    rightSide: []
   });
   const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [toppingOrderCounter, setToppingOrderCounter] = useState(0);
 
   // Wing customization state
   const [selectedSauces, setSelectedSauces] = useState<Topping[]>([]);
@@ -120,10 +110,35 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
   // Initialize draft with existing data when editing
   useEffect(() => {
     if (combo?.isEditing && combo.items && combo.items.length > 0) {
-      setDraft([...combo.items]);
-      const existingExtraCharges = combo.items.reduce((sum: number, item: any) => {
-        return sum + (item.extraCharge || 0);
-      }, 0);
+      const mappedDraft = steps.map((step, idx) => {
+        // For editing mode, we need to match items more carefully
+        // Find the corresponding item in combo.items based on step index and type
+        let match = null;
+        
+        if (combo.items[idx]) {
+          // Direct index matching for editing mode
+          match = combo.items[idx];
+        } else {
+          // Fallback to type matching if direct index doesn't work
+          match = combo.items.find((item, i) => {
+            if (item.type !== step.type) return false;
+            if (item.type === 'pizza' && step.size && item.size) {
+              return item.size === step.size && item.itemName === step.itemName;
+            }
+            if (item.type === 'wings' && step.itemName && item.itemName) {
+              return item.itemName === step.itemName;
+            }
+            if ((item.type === 'drink' || item.type === 'side') && step.itemName && item.itemName) {
+              return item.itemName === step.itemName && item.size === step.size;
+            }
+            return true;
+          });
+        }
+        
+        return match ? { ...step, ...match, extraCharge: match.extraCharge || 0 } : { ...step, extraCharge: 0 };
+      });
+      setDraft(mappedDraft);
+      const existingExtraCharges = mappedDraft.reduce((sum, item) => sum + (item.extraCharge || 0), 0);
       setTotalExtraCharges(existingExtraCharges);
     } else {
       setDraft([]);
@@ -150,24 +165,50 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
       }
     };
 
-    if (isOpen) {
+    if (open) {
       fetchToppings();
     }
-  }, [isOpen]);
+  }, [open]);
+
+  // Fetch sauces
+  useEffect(() => {
+    const fetchSauces = async () => {
+      try {
+        const saucesQuery = query(collection(db, 'sauces'), orderBy('name'));
+        const snapshot = await getDocs(saucesQuery);
+        const saucesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Topping));
+        setSauces(saucesData);
+      } catch (error) {
+        console.error('Error fetching sauces:', error);
+      }
+    };
+
+    if (open) {
+      fetchSauces();
+    }
+  }, [open]);
 
   // Initialize current step data
   useEffect(() => {
-    if (isOpen && draft[currentStep]) {
+    if (open && draft[currentStep]) {
       const currentItem = draft[currentStep];
       
       if (currentItem.type === 'pizza' && currentItem.toppings) {
         const { wholePizza = [], leftSide = [], rightSide = [] } = currentItem.toppings;
         setSelectedToppings({
-          wholePizza: new Map(wholePizza.map((t: Topping) => [t.id, t])),
-          leftSide: new Map(leftSide.map((t: Topping) => [t.id, t])),
-          rightSide: new Map(rightSide.map((t: Topping) => [t.id, t]))
+          wholePizza: wholePizza.map((t: Topping & { addedOrder?: number }) => ({ ...t, addedOrder: t.addedOrder || 0 })),
+          leftSide: leftSide.map((t: Topping & { addedOrder?: number }) => ({ ...t, addedOrder: t.addedOrder || 0 })),
+          rightSide: rightSide.map((t: Topping & { addedOrder?: number }) => ({ ...t, addedOrder: t.addedOrder || 0 }))
         });
         setActiveSelection(leftSide.length > 0 || rightSide.length > 0 ? 'left' : 'whole');
+        
+        // Set the toppingOrderCounter to the next available number
+        const allToppings = [...wholePizza, ...leftSide, ...rightSide];
+        const maxAddedOrder = Math.max(...allToppings.map((t: Topping & { addedOrder?: number }) => t.addedOrder || 0), -1);
+        setToppingOrderCounter(maxAddedOrder + 1);
       }
       
       if (currentItem.type === 'wings' && currentItem.sauces) {
@@ -180,17 +221,18 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
     } else {
       // Reset state for new step
       setSelectedToppings({
-        wholePizza: new Map(),
-        leftSide: new Map(),
-        rightSide: new Map()
+        wholePizza: [],
+        leftSide: [],
+        rightSide: []
       });
       setSelectedSauces([]);
       setSelectedSize('');
       setActiveSelection('whole');
       setActiveCategory('All');
       setSpicyFilter('all');
+      setToppingOrderCounter(0);
     }
-  }, [isOpen, currentStep, draft]);
+  }, [open, currentStep, draft]);
 
   const step = steps[currentStep];
   
@@ -198,28 +240,132 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
   const pizzaNumber = steps.slice(0, currentStep + 1).filter(s => s.type === 'pizza').length;
   const wingNumber = steps.slice(0, currentStep + 1).filter(s => s.type === 'wings').length;
   
-  // Calculate shared topping pool for pizzas
-  const pizzaSteps = steps.filter(s => s.type === 'pizza');
-  const totalToppingLimit = pizzaSteps.reduce((sum, s) => sum + (s.toppingLimit || 0), 0);
-  const usedToppings = draft.filter((item, idx) => item?.type === 'pizza' && idx !== currentStep)
-    .reduce((sum, pizza) => {
-      if (!pizza.toppings) return sum;
-      const toppingsCount = Array.isArray(pizza.toppings) 
-        ? pizza.toppings.length 
-        : (pizza.toppings.wholePizza || []).length;
-      return sum + Math.min(toppingsCount, totalToppingLimit - sum);
-    }, 0);
-  const remainingToppings = Math.max(0, totalToppingLimit - usedToppings);
+  // Helper function to calculate total topping limit across all pizzas in the combo
+  const getTotalToppingLimit = () => {
+    return steps
+      .filter(step => step.type === 'pizza')
+      .reduce((total, step) => total + (step.toppingLimit || 4), 0);
+  };
 
-  // Calculate shared sauce pool for wings
-  const wingSteps = steps.filter(s => s.type === 'wings');
-  const totalSauceLimit = wingSteps.reduce((sum, s) => sum + (s.sauceLimit || 0), 0);
-  const usedSauces = draft.filter((item, idx) => item?.type === 'wings' && idx !== currentStep)
-    .reduce((sum, wing) => {
-      const sauceCount = wing.sauces?.length || 0;
-      return sum + Math.min(sauceCount, totalSauceLimit - sum);
-    }, 0);
-  const remainingSauces = Math.max(0, totalSauceLimit - usedSauces);
+  // Helper function to calculate total used toppings across all completed pizza steps
+  const getTotalUsedToppings = () => {
+    return draft
+      .filter((item, index) => item?.type === 'pizza' && index !== currentStep)
+      .reduce((total, pizza) => {
+        if (!pizza.toppings) return total;
+        return total + calculateToppingCount(pizza.toppings);
+      }, 0);
+  };
+
+  // Helper function to calculate remaining toppings in the shared pool
+  const getRemainingToppings = () => {
+    const totalLimit = getTotalToppingLimit();
+    const usedToppings = getTotalUsedToppings();
+    const currentStepToppings = step.type === 'pizza' ? 
+      calculateToppingCount({
+        wholePizza: selectedToppings.wholePizza,
+        leftSide: selectedToppings.leftSide,
+        rightSide: selectedToppings.rightSide
+      }) : 0;
+    
+    return Math.max(0, totalLimit - usedToppings - currentStepToppings);
+  };
+
+  // Helper function to calculate topping count (half-side toppings count as 0.5)
+  const calculateToppingCount = (toppings: ToppingSide) => {
+    if (!toppings) return 0;
+    
+    const wholePizzaCount = toppings.wholePizza?.filter(t => t).length || 0;
+    const leftSideCount = toppings.leftSide?.filter(t => t).length || 0;
+    const rightSideCount = toppings.rightSide?.filter(t => t).length || 0;
+    
+    // Half-side toppings count as 0.5 each
+    const halfSideCount = (leftSideCount + rightSideCount) * 0.5;
+    
+    return wholePizzaCount + halfSideCount;
+  };
+
+  // Helper function to calculate extra charge for toppings using shared pool
+  const calculateToppingExtraCharge = (toppings: ToppingSide, stepIndex: number) => {
+    const totalCount = calculateToppingCount(toppings);
+    const totalLimit = getTotalToppingLimit();
+    
+    // Calculate used toppings only from steps BEFORE this step
+    let usedToppings = 0;
+    draft.forEach((stepData, draftStepIndex) => {
+      if (draftStepIndex < stepIndex && stepData.type === 'pizza' && stepData.toppings) {
+        usedToppings += calculateToppingCount(stepData.toppings);
+      }
+    });
+    
+    const availableToppings = totalLimit - usedToppings;
+    const extraToppings = Math.max(0, totalCount - availableToppings);
+    
+    if (extraToppings === 0) return 0;
+    
+    // Combine all toppings from all sections and sort by addedOrder
+    const allToppings: (Topping & { addedOrder?: number, section: string })[] = [];
+    
+    const wholePizzaToppings = toppings.wholePizza || [];
+    const leftSideToppings = toppings.leftSide || [];
+    const rightSideToppings = toppings.rightSide || [];
+    
+    // Add all toppings with their section info
+    wholePizzaToppings.forEach(topping => {
+      allToppings.push({ ...topping, section: 'whole' });
+    });
+    leftSideToppings.forEach(topping => {
+      allToppings.push({ ...topping, section: 'left' });
+    });
+    rightSideToppings.forEach(topping => {
+      allToppings.push({ ...topping, section: 'right' });
+    });
+    
+    // Sort by addedOrder to get the correct order they were added
+    allToppings.sort((a, b) => (a.addedOrder || 0) - (b.addedOrder || 0));
+    
+    // Calculate charge based on the toppings that actually exceed the shared pool
+    let charge = 0;
+    let remainingExtra = extraToppings;
+    let currentToppingCount = 0;
+    
+    // Process toppings in the order they were added
+    for (const topping of allToppings) {
+      if (remainingExtra <= 0) break;
+      
+      // Calculate the topping count up to this point
+      if (topping.section === 'whole') {
+        currentToppingCount += 1;
+      } else {
+        currentToppingCount += 0.5;
+      }
+      
+      // If this topping would exceed the available slots, it's extra
+      if (currentToppingCount > availableToppings) {
+        // This topping is extra, charge for it
+        if (topping.section === 'whole') {
+          charge += topping.price;
+          remainingExtra -= 1;
+        } else {
+          // Half-side toppings are charged at half price
+          const toppingCharge = topping.price * 0.5;
+          charge += toppingCharge;
+          remainingExtra -= 0.5;
+        }
+      }
+    }
+    
+    return charge;
+  };
+
+  // Helper function to calculate extra charge for sauces using actual prices
+  const calculateSauceExtraCharge = (sauces: Topping[], limit: number) => {
+    if (sauces.length <= limit) return 0;
+    
+    // Get sauces that exceed the limit and sum their prices
+    const extraSauces = sauces.slice(limit);
+    return extraSauces.reduce((sum, sauce) => sum + sauce.price, 0);
+  };
 
   // Item names
   const pizzaName = step.type === 'pizza' ? `${combo.name} - Pizza ${pizzaNumber}` : '';
@@ -232,33 +378,31 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
       const newSelections = { ...prev };
       
       if (activeSelection === 'whole') {
-        const wholeMap = new Map(newSelections.wholePizza);
-        if (wholeMap.has(topping.id)) {
-          wholeMap.delete(topping.id);
+        const isSelected = newSelections.wholePizza.find(t => t.id === topping.id);
+        if (isSelected) {
+          newSelections.wholePizza = newSelections.wholePizza.filter(t => t.id !== topping.id);
         } else {
-          wholeMap.set(topping.id, topping);
+          newSelections.wholePizza = [...newSelections.wholePizza, { ...topping, addedOrder: toppingOrderCounter }];
         }
-        newSelections.wholePizza = wholeMap;
       } else if (activeSelection === 'left') {
-        const leftMap = new Map(newSelections.leftSide);
-        if (leftMap.has(topping.id)) {
-          leftMap.delete(topping.id);
+        const isSelected = newSelections.leftSide.find(t => t.id === topping.id);
+        if (isSelected) {
+          newSelections.leftSide = newSelections.leftSide.filter(t => t.id !== topping.id);
         } else {
-          leftMap.set(topping.id, topping);
+          newSelections.leftSide = [...newSelections.leftSide, { ...topping, addedOrder: toppingOrderCounter }];
         }
-        newSelections.leftSide = leftMap;
       } else if (activeSelection === 'right') {
-        const rightMap = new Map(newSelections.rightSide);
-        if (rightMap.has(topping.id)) {
-          rightMap.delete(topping.id);
+        const isSelected = newSelections.rightSide.find(t => t.id === topping.id);
+        if (isSelected) {
+          newSelections.rightSide = newSelections.rightSide.filter(t => t.id !== topping.id);
         } else {
-          rightMap.set(topping.id, topping);
+          newSelections.rightSide = [...newSelections.rightSide, { ...topping, addedOrder: toppingOrderCounter }];
         }
-        newSelections.rightSide = rightMap;
       }
       
       return newSelections;
     });
+    setToppingOrderCounter(prev => prev + 1);
   };
 
   // Wing customization handlers
@@ -275,7 +419,7 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
 
   // Size selection handlers
   const handleSizeSelect = (size: string) => {
-    setSelectedSize(size);
+    setSelectedSize(size || '');
   };
 
   // Navigation handlers
@@ -283,51 +427,46 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
     const newDraft = [...draft];
     let extraCharge = 0;
 
-    if (step.type === 'pizza' && !step.isSpecialty) {
+    if (step.type === 'pizza') {
       const toppingsData = {
-        wholePizza: Array.from(selectedToppings.wholePizza.values()),
-        leftSide: Array.from(selectedToppings.leftSide.values()),
-        rightSide: Array.from(selectedToppings.rightSide.values())
+        wholePizza: selectedToppings.wholePizza,
+        leftSide: selectedToppings.leftSide,
+        rightSide: selectedToppings.rightSide
       };
       
-      const totalToppings = toppingsData.wholePizza.length + 
-                           toppingsData.leftSide.length + 
-                           toppingsData.rightSide.length;
-      
-      if (totalToppings > (step.toppingLimit || 4)) {
-        extraCharge = (totalToppings - (step.toppingLimit || 4)) * 1.50;
-      }
+      extraCharge = calculateToppingExtraCharge(toppingsData, currentStep);
 
       newDraft[currentStep] = {
-        type: step.type,
+        ...step,
         toppings: toppingsData,
         extraCharge
       };
     } else if (step.type === 'wings') {
-      if (selectedSauces.length > (step.sauceLimit || 1)) {
-        extraCharge = (selectedSauces.length - (step.sauceLimit || 1)) * 0.50;
-      }
+      extraCharge = calculateSauceExtraCharge(selectedSauces, step.sauceLimit || 1);
 
       newDraft[currentStep] = {
-        type: step.type,
+        ...step,
         sauces: selectedSauces,
         extraCharge
       };
-    } else if (step.type === 'drink' || step.type === 'side' || (step.type === 'pizza' && step.isSpecialty)) {
+    } else if (step.type === 'drink' || step.type === 'side') {
       newDraft[currentStep] = {
-        type: step.type,
+        ...step,
         size: selectedSize,
         extraCharge: 0
       };
     }
 
     setDraft(newDraft);
-    setTotalExtraCharges(prev => prev + extraCharge);
+    
+    // Fix: Replace the current step's extra charge instead of adding to it
+    const oldExtraCharge = draft[currentStep]?.extraCharge || 0;
+    setTotalExtraCharges(prev => prev - oldExtraCharge + extraCharge);
     
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      const finalExtraCharges = totalExtraCharges + extraCharge;
+      const finalExtraCharges = totalExtraCharges - oldExtraCharge + extraCharge;
       
       const assembled = {
         comboId: combo.comboId,
@@ -342,7 +481,7 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
         isEditing: combo.isEditing,
         editingItemId: combo.editingItemId,
       };
-      onSubmit(assembled);
+      onComplete(assembled);
       
       // Reset states
       setDraft([]);
@@ -378,28 +517,27 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
   });
 
   // Filter sauces by spicy preference
-  const filteredSauces = toppings.filter(topping => {
-    if (spicyFilter === 'spicy' && !topping.name.toLowerCase().includes('spicy')) return false;
-    if (spicyFilter === 'not-spicy' && topping.name.toLowerCase().includes('spicy')) return false;
+  const filteredSauces = sauces.filter(sauce => {
+    if (spicyFilter === 'spicy' && !sauce.name.toLowerCase().includes('spicy')) return false;
+    if (spicyFilter === 'not-spicy' && sauce.name.toLowerCase().includes('spicy')) return false;
     return true;
   });
 
   // Get categories for filter
-  const categories = ['All', ...Array.from(new Set(toppings.map(t => t.category).filter(Boolean)))];
+  const categories = ['All', ...Array.from(new Set(toppings.map(t => t.category).filter(Boolean)))].filter((category): category is string => typeof category === 'string');
 
   // Calculate current step extra charges
   const getCurrentStepExtraCharge = () => {
-    if (step.type === 'pizza' && !step.isSpecialty) {
-      const totalToppings = selectedToppings.wholePizza.size + 
-                           selectedToppings.leftSide.size + 
-                           selectedToppings.rightSide.size;
-      if (totalToppings > (step.toppingLimit || 4)) {
-        return (totalToppings - (step.toppingLimit || 4)) * 1.50;
-      }
+    if (step.type === 'pizza') {
+      const toppingsData = {
+        wholePizza: selectedToppings.wholePizza || [],
+        leftSide: selectedToppings.leftSide || [],
+        rightSide: selectedToppings.rightSide || []
+      };
+      
+      return calculateToppingExtraCharge(toppingsData, currentStep);
     } else if (step.type === 'wings') {
-      if (selectedSauces.length > (step.sauceLimit || 1)) {
-        return (selectedSauces.length - (step.sauceLimit || 1)) * 0.50;
-      }
+      return calculateSauceExtraCharge(selectedSauces, step.sauceLimit || 1);
     }
     return 0;
   };
@@ -408,7 +546,7 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
 
   // Render current step content
   const renderCurrentStepContent = () => {
-    if (step.type === 'pizza' && !step.isSpecialty) {
+    if (step.type === 'pizza') {
       return (
         <div className="flex-1 overflow-y-auto p-6">
           {/* Pizza Section Selection */}
@@ -424,7 +562,7 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
                     : "border-gray-200 hover:border-gray-300"
                 )}
               >
-                <img src={fullPizza} alt="Whole Pizza" className="w-6 h-6" />
+                <Pizza className="w-6 h-6" />
                 <span>Whole Pizza</span>
               </button>
               <button
@@ -436,7 +574,7 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
                     : "border-gray-200 hover:border-gray-300"
                 )}
               >
-                <img src={leftHalfPizza} alt="Left Half" className="w-6 h-6" />
+                <Pizza className="w-6 h-6" />
                 <span>Left Half</span>
               </button>
               <button
@@ -448,7 +586,7 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
                     : "border-gray-200 hover:border-gray-300"
                 )}
               >
-                <img src={rightHalfPizza} alt="Right Half" className="w-6 h-6" />
+                <Pizza className="w-6 h-6" />
                 <span>Right Half</span>
               </button>
             </div>
@@ -479,11 +617,65 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
           {/* Toppings Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
             {filteredToppings.map(topping => {
-              const isSelected = activeSelection === 'whole' 
-                ? selectedToppings.wholePizza.has(topping.id)
-                : activeSelection === 'left'
-                ? selectedToppings.leftSide.has(topping.id)
-                : selectedToppings.rightSide.has(topping.id);
+              // Check if topping is selected in the current active section
+              const isSelected = (() => {
+                if (activeSelection === 'whole') {
+                  return selectedToppings.wholePizza.find(t => t.id === topping.id);
+                } else if (activeSelection === 'left') {
+                  return selectedToppings.leftSide.find(t => t.id === topping.id);
+                } else if (activeSelection === 'right') {
+                  return selectedToppings.rightSide.find(t => t.id === topping.id);
+                }
+                return false;
+              })();
+
+
+
+              // Proper included/extra logic based on selection order
+              const isIncluded = (() => {
+                if (!isSelected) {
+                  // For unselected toppings, check if adding them would still be within limit
+                  const currentCount = calculateToppingCount({
+                    wholePizza: selectedToppings.wholePizza,
+                    leftSide: selectedToppings.leftSide,
+                    rightSide: selectedToppings.rightSide
+                  });
+                  const toppingLimit = step.toppingLimit || 0;
+                  const addedCount = activeSelection === 'whole' ? 1 : 0.5;
+                  return (currentCount + addedCount) <= toppingLimit;
+                }
+                
+                // For selected toppings, determine if THIS specific topping is included or extra
+                // Get all selected toppings with their order and section
+                const allSelectedToppings: (Topping & { addedOrder: number, section: string, count: number })[] = [];
+                
+                selectedToppings.wholePizza.forEach(t => {
+                  allSelectedToppings.push({ ...t, section: 'whole', count: 1 });
+                });
+                selectedToppings.leftSide.forEach(t => {
+                  allSelectedToppings.push({ ...t, section: 'left', count: 0.5 });
+                });
+                selectedToppings.rightSide.forEach(t => {
+                  allSelectedToppings.push({ ...t, section: 'right', count: 0.5 });
+                });
+                
+                // Sort by addedOrder to determine selection order
+                allSelectedToppings.sort((a, b) => a.addedOrder - b.addedOrder);
+                
+                // Calculate cumulative count and check if this topping is within limit
+                let cumulativeCount = 0;
+                const toppingLimit = step.toppingLimit || 0;
+                
+                for (const t of allSelectedToppings) {
+                  if (t.id === topping.id) {
+                    // This is our topping - check if it's within the limit
+                    return (cumulativeCount + t.count) <= toppingLimit;
+                  }
+                  cumulativeCount += t.count;
+                }
+                
+                return false; // Topping not found (shouldn't happen)
+              })();
 
               return (
                 <button
@@ -492,7 +684,9 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
                   className={cn(
                     "p-3 rounded-lg border-2 transition-all hover:shadow-md",
                     isSelected
-                      ? "border-red-500 bg-red-50"
+                      ? isIncluded
+                        ? "border-green-500 bg-green-50"
+                        : "border-red-500 bg-red-50"
                       : "border-gray-200 hover:border-gray-300"
                   )}
                 >
@@ -536,6 +730,13 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
             {filteredSauces.map(sauce => {
               const isSelected = selectedSauces.find(s => s.id === sauce.id);
 
+              // Determine if this sauce would be included or extra
+              const isIncluded = (() => {
+                const sauceLimit = step.sauceLimit || 0;
+                const sauceIndex = selectedSauces.findIndex(s => s.id === sauce.id);
+                return sauceIndex < sauceLimit;
+              })();
+
               return (
                 <button
                   key={sauce.id}
@@ -543,7 +744,9 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
                   className={cn(
                     "p-3 rounded-lg border-2 transition-all hover:shadow-md",
                     isSelected
-                      ? "border-red-500 bg-red-50"
+                      ? isIncluded
+                        ? "border-green-500 bg-green-50"
+                        : "border-red-500 bg-red-50"
                       : "border-gray-200 hover:border-gray-300"
                   )}
                 >
@@ -559,14 +762,14 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
           </div>
         </div>
       );
-    } else if (step.type === 'drink' || step.type === 'side' || (step.type === 'pizza' && step.isSpecialty)) {
+    } else if (step.type === 'drink' || step.type === 'side') {
       return (
         <div className="flex-1 overflow-y-auto p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {step.availableSizes?.map(size => (
               <button
                 key={size}
-                onClick={() => handleSizeSelect(size)}
+                onClick={() => size && handleSizeSelect(size)}
                 className={cn(
                   "p-4 rounded-lg border-2 transition-all hover:shadow-md text-center",
                   selectedSize === size
@@ -585,166 +788,38 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
     return null;
   };
 
-  // Render sidebar summary
-  const renderSidebar = () => {
-    const getStepIcon = (stepType: string) => {
-      switch (stepType) {
-        case 'pizza': return <Pizza className="w-4 h-4" />;
-        case 'wings': return <Drumstick className="w-4 h-4" />;
-        case 'drink': return <Coffee className="w-4 h-4" />;
-        case 'side': return <Utensils className="w-4 h-4" />;
-        default: return <div className="w-4 h-4" />;
-      }
-    };
-
-    const getStepStatus = (stepIndex: number) => {
-      if (stepIndex < currentStep) return 'completed';
-      if (stepIndex === currentStep) return 'current';
-      return 'pending';
-    };
-
-    const getStepSummary = (stepIndex: number) => {
-      const stepData = draft[stepIndex];
-      if (!stepData) return 'Not started';
-
-      switch (stepData.type) {
-        case 'pizza':
-          if (stepData.toppings) {
-            const totalToppings = stepData.toppings.wholePizza?.length || 0;
-            return `${totalToppings} toppings selected`;
-          }
-          return 'No toppings';
-        case 'wings':
-          if (stepData.sauces) {
-            return `${stepData.sauces.length} sauces selected`;
-          }
-          return 'No sauces';
-        case 'drink':
-        case 'side':
-          return stepData.size || 'No size selected';
-        default:
-          return 'Customized';
-      }
-    };
-
-    return (
-      <div className="w-80 bg-gray-50 border-l border-gray-200 p-6 overflow-y-auto">
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-4">Combo Summary</h3>
-          <div className="space-y-3">
-            {steps.map((step, index) => {
-              const status = getStepStatus(index);
-              const summary = getStepSummary(index);
-              const isClickable = index <= currentStep;
-
-              return (
-                <div
-                  key={index}
-                  className={cn(
-                    "p-3 rounded-lg border-2 transition-all cursor-pointer",
-                    status === 'completed'
-                      ? "border-green-500 bg-green-50"
-                      : status === 'current'
-                      ? "border-red-500 bg-red-50"
-                      : "border-gray-200 bg-white",
-                    isClickable && "hover:shadow-md"
-                  )}
-                  onClick={() => isClickable && handleStepClick(index)}
-                >
-                  <div className="flex items-center gap-3">
-                    {getStepIcon(step.type)}
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">
-                        {step.type.charAt(0).toUpperCase() + step.type.slice(1)} {index + 1}
-                      </div>
-                      <div className="text-xs text-gray-600">{summary}</div>
-                    </div>
-                    {status === 'completed' && (
-                      <Check className="w-4 h-4 text-green-600" />
-                    )}
-                    {status === 'current' && (
-                      <Edit2 className="w-4 h-4 text-red-600" />
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Extra Charges Summary */}
-        <div className="border-t pt-4">
-          <h4 className="font-medium mb-2">Extra Charges</h4>
-          <div className="space-y-2 text-sm">
-            {draft.map((item, index) => {
-              if (item?.extraCharge && item.extraCharge > 0) {
-                return (
-                  <div key={index} className="flex justify-between">
-                    <span>{item.type.charAt(0).toUpperCase() + item.type.slice(1)} {index + 1}</span>
-                    <span className="text-red-600">+${item.extraCharge.toFixed(2)}</span>
-                  </div>
-                );
-              }
-              return null;
-            })}
-            {currentStepExtraCharge > 0 && (
-              <div className="flex justify-between border-t pt-2">
-                <span>Current Step</span>
-                <span className="text-red-600">+${currentStepExtraCharge.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between font-medium border-t pt-2">
-              <span>Total Extra</span>
-              <span className="text-red-600">
-                ${(totalExtraCharges + currentStepExtraCharge).toFixed(2)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Progress */}
-        <div className="mt-6">
-          <div className="flex justify-between text-sm text-gray-600 mb-2">
-            <span>Progress</span>
-            <span>{currentStep + 1} of {steps.length}</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-red-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      style={{
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)'
+      }}
+    >
       <div className="bg-white rounded-xl shadow-xl w-full max-w-7xl h-[90vh] flex">
         {/* Main Content */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col bg-gradient-to-br from-gray-50 to-white">
           {/* Header */}
-          <div className="p-6 border-b flex items-center justify-between">
+          <div className="p-6 border-b flex items-center justify-between bg-gradient-to-r from-red-600 to-red-700 text-white">
             <div className="flex items-center gap-3">
               {currentStep > 0 && (
                 <button
                   onClick={handleGoBack}
-                  className="p-1.5 hover:bg-gray-100 rounded-full"
+                  className="p-1.5 hover:bg-red-500 rounded-full transition-colors"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
               )}
               <div>
                 <h2 className="text-xl font-bold">Customize {combo.name}</h2>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-red-100">
                   Step {currentStep + 1} of {steps.length}: {step.type.charAt(0).toUpperCase() + step.type.slice(1)}
                 </p>
               </div>
             </div>
             <button
               onClick={handleClose}
-              className="p-2 hover:bg-gray-100 rounded-full"
+              className="p-2 hover:bg-red-500 rounded-full transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -754,30 +829,27 @@ export default function UnifiedComboSelector({ isOpen, onClose, combo, onSubmit 
           {renderCurrentStepContent()}
 
           {/* Footer */}
-          <div className="p-6 border-t bg-gray-50 flex justify-between items-center">
+          <div className="p-6 border-t bg-gradient-to-r from-gray-50 to-gray-100 flex justify-between items-center">
             <div className="text-sm text-gray-600">
               {currentStep < steps.length - 1 ? 'Click Next to continue' : 'Review your selections'}
             </div>
             <div className="flex gap-4">
               <button
                 onClick={handleClose}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleStepComplete}
-                className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-semibold"
               >
                 {currentStep < steps.length - 1 ? 'Next' : 'Add to Cart'}
               </button>
             </div>
           </div>
         </div>
-
-        {/* Sidebar */}
-        {renderSidebar()}
       </div>
     </div>
   );
-} 
+}; 

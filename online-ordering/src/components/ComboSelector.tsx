@@ -1,17 +1,16 @@
 import React from 'react';
-import UnifiedComboSelector from './UnifiedComboSelector';
+import { UnifiedComboSelector } from './UnifiedComboSelector';
 
 interface ComboItem {
   type: 'pizza' | 'wings' | 'drink' | 'side';
-  stepIndex: number;
+  quantity: number;
   toppingLimit?: number;
   sauceLimit?: number;
   size?: string;
   itemName?: string;
-  quantity: number;
   availableSizes?: string[];
   defaultSize?: string;
-  isSpecialty?: boolean;
+  extraCharge?: number;
 }
 
 interface ComboDefinition {
@@ -26,19 +25,19 @@ interface ComboDefinition {
 }
 
 interface ComboSelectorProps {
-  isOpen: boolean;
+  open: boolean;
   onClose: () => void;
   combo: ComboDefinition;
-  onSubmit: (customizedCombo: any) => void;
+  onComplete: (customizedCombo: any) => void;
 }
 
-export default function ComboSelector({ isOpen, onClose, combo, onSubmit }: ComboSelectorProps) {
+export const ComboSelector = ({ open, onClose, combo, onComplete }: ComboSelectorProps) => {
   return (
     <UnifiedComboSelector
-      isOpen={isOpen}
+      open={open}
       onClose={onClose}
       combo={combo}
-      onSubmit={onSubmit}
+      onComplete={onComplete}
     />
   );
-} 
+}; 

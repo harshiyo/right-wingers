@@ -184,15 +184,11 @@ const OrderSummary = memo(({
       }
       
       if (toppings.length > 0) {
-        details.push('Toppings:');
-        toppings.forEach(topping => details.push(`  ${topping}`));
+        toppings.forEach(topping => details.push(`${topping}`));
       }
     }
     
-    // Half and half indicator
-    if (item.customizations.isHalfAndHalf) {
-      details.push(`Half & Half Pizza`);
-    }
+    // Half and half is obvious from Left/Right toppings - no need for extra label
     
     // Wing sauces (handle both array of objects and simple arrays)
     if (item.customizations.sauces && item.customizations.sauces.length > 0) {
@@ -233,9 +229,9 @@ const OrderSummary = memo(({
         } else if (step.type === 'wings') {
           stepLabel = `Wings${step.size ? ` (${step.size})` : ''}`;
         } else if (step.type === 'side') {
-          stepLabel = `Side${step.size ? ` (${step.size})` : ''}`;
+          stepLabel = `${step.itemName || 'Side'}${step.size ? ` (${step.size})` : ''}`;
         } else if (step.type === 'drink') {
-          stepLabel = `Drink${step.size ? ` (${step.size})` : ''}`;
+          stepLabel = `${step.itemName || 'Drink'}${step.size ? ` (${step.size})` : ''}`;
         } else {
           stepLabel = step.itemName || `Item ${idx + 1}`;
         }
@@ -263,10 +259,7 @@ const OrderSummary = memo(({
             details.push(`  Instructions: ${instructionLabels.join(', ')}`);
           }
         }
-        // Extra charge
-        if (Number(step.extraCharge) > 0) {
-          details.push(`  Extra Charge: +$${Number(step.extraCharge).toFixed(2)}`);
-        }
+        // Skip individual step extra charges for combo items - we show total at the end
       });
     }
     
@@ -307,37 +300,56 @@ const OrderSummary = memo(({
                   
                   {/* Detailed customizations */}
                   {Array.isArray(customizations) && customizations.length > 0 && (
-                    <div className="space-y-1">
+                    <div className="mt-2 space-y-0.5">
                       {customizations
                         .filter(detail => detail != null && detail !== '' && String(detail).trim() !== '0')
                         .map((detail, index) => {
-
-                          // Handle bold formatting for Whole, Left, Right
                           const isIndented = detail.startsWith('  ');
                           const cleanDetail = detail.replace(/^  /, '');
                           
-                          // Check for topping section labels
-                          if (cleanDetail.match(/^(Whole|Left|Right):/)) {
-                            const [label, ...rest] = cleanDetail.split(':');
+                          // Main step headers (Pizza 1, Wings, Fries (Small), etc.)
+                          if (!isIndented && !cleanDetail.includes(':') && !cleanDetail.startsWith('Extra Charge')) {
                             return (
-                              <div key={index} className="text-xs text-gray-600 leading-relaxed ml-4">
-                                • <span className="font-bold">{label}:</span>{rest.join(':')}
-                              </div>
-                            );
-                          }
-                          
-                          // Check if it's just "Toppings:" header or "Sauces:" header
-                          if (cleanDetail === 'Toppings:' || cleanDetail.startsWith('Sauces:')) {
-                            return (
-                              <div key={index} className="text-xs text-gray-700 leading-relaxed font-semibold">
+                              <div key={index} className="text-xs font-semibold text-gray-800 mt-1.5 first:mt-0">
                                 • {cleanDetail}
                               </div>
                             );
                           }
                           
+                          // Topping details (Whole:, Left:, Right:)
+                          if (cleanDetail.match(/^(Whole|Left|Right):/)) {
+                            const [label, toppings] = cleanDetail.split(': ');
+                            return (
+                              <div key={index} className="text-xs text-gray-600 ml-4">
+                                <span className="font-medium text-gray-700">{label}:</span> <span className="text-gray-600">{toppings}</span>
+                              </div>
+                            );
+                          }
+                          
+                          // Sauces, Instructions, Size, etc.
+                          if (cleanDetail.includes(':')) {
+                            const [label, value] = cleanDetail.split(': ');
+                            return (
+                              <div key={index} className="text-xs text-gray-600 ml-4">
+                                <span className="font-medium text-gray-700">{label}:</span> <span className="text-gray-600">{value}</span>
+                              </div>
+                            );
+                          }
+                          
+                          // Skip individual step extra charges (we'll show total at the end)
+                          if (cleanDetail.startsWith('Extra Charge:')) {
+                            return null;
+                          }
+                          
+                          // Handle "Toppings:" header - skip it as it's redundant
+                          if (cleanDetail === 'Toppings:') {
+                            return null;
+                          }
+                          
+                          // Other details
                           return (
-                            <div key={index} className={`text-xs text-gray-600 leading-relaxed ${isIndented ? 'ml-4' : ''}`}>
-                              • {cleanDetail}
+                            <div key={index} className="text-xs text-gray-600 ml-4">
+                              {cleanDetail}
                             </div>
                           );
                         })}
@@ -1228,7 +1240,13 @@ const CheckoutPage = () => {
           let comboModified = false;
           item.customizations.forEach((step: any, index: number) => {
             const stepDetails = [];
-            let stepName = step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : `Item ${index + 1}`;
+            // For steps with itemName (like sides/drinks), use the actual item name
+            let stepName;
+            if (step.itemName && step.itemName.trim() !== '') {
+              stepName = step.itemName;
+            } else {
+              stepName = step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : `Item ${index + 1}`;
+            }
             stepDetails.push(`&nbsp;&nbsp;<strong>${stepName}</strong>${step.size ? ` (${step.size})` : ''}`);
             if (step.toppings) {
               const toppings = [];

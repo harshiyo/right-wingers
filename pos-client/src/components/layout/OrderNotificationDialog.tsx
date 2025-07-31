@@ -382,7 +382,14 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
                             else if (item.customizations && typeof item.customizations === 'object' && Object.keys(item.customizations).every(k => !isNaN(Number(k)))) comboArr = Object.values(item.customizations);
                             if (comboArr && comboArr.length > 0) {
                               comboArr.forEach(step => {
-                                html += `&nbsp;&nbsp;- <b>${step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : 'Item'}</b>${step.size ? ' (' + step.size + ')' : ''}<br/>`;
+                                // For steps with itemName (like sides/drinks), use the actual item name
+                                let stepDisplayName;
+                                if (step.itemName && step.itemName.trim() !== '') {
+                                  stepDisplayName = step.itemName;
+                                } else {
+                                  stepDisplayName = step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : 'Item';
+                                }
+                                html += `&nbsp;&nbsp;- <b>${stepDisplayName}</b>${step.size ? ' (' + step.size + ')' : ''}<br/>`;
                                 if (step.toppings) {
                                   const t = step.toppings;
                                   if (t.wholePizza && t.wholePizza.length > 0) html += `&nbsp;&nbsp;&nbsp;&nbsp;Whole: ${(t.wholePizza as { name: string }[]).map((t: { name: string }) => t.name).join(', ')}<br/>`;

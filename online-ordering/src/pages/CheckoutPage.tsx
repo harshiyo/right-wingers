@@ -304,19 +304,31 @@ export default function CheckoutPage() {
             }
           }
           
-          // Handle combo items
-          if (item.isCombo && item.comboItems) {
-            // Transform combo items to match POS combo structure
-            (transformedItem as any).customizations = item.comboItems.map((comboItem: any, index: number) => ({
-              type: comboItem.type || 'item',
-              itemName: comboItem.name,
-              size: comboItem.size,
-              toppings: comboItem.toppings,
-              sauces: comboItem.sauces,
-              instructions: comboItem.instructions,
-              extraCharge: comboItem.extraCharges || 0,
-              isHalfAndHalf: comboItem.isHalfAndHalf
-            }));
+          // Handle customizations exactly like POS client
+          if (item.customizations) {
+            // Convert array to object with numeric keys and filter undefined values
+            if (Array.isArray(item.customizations)) {
+              const customizationsObj: any = {};
+              item.customizations.forEach((customization: any, index: number) => {
+                const cleanCustomization: any = {};
+                
+                // Only add fields that are not undefined
+                Object.keys(customization).forEach(key => {
+                  if (customization[key] !== undefined) {
+                    cleanCustomization[key] = customization[key];
+                  }
+                });
+                
+                customizationsObj[index] = cleanCustomization;
+              });
+              
+              (transformedItem as any).customizations = customizationsObj;
+            } else {
+              // Already an object, just filter undefined values
+              (transformedItem as any).customizations = Object.fromEntries(
+                Object.entries(item.customizations).filter(([_, v]) => v !== undefined)
+              );
+            }
           }
           
           return transformedItem;

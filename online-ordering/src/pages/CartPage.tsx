@@ -37,6 +37,111 @@ export default function CartPage() {
   const [isAnimating, setIsAnimating] = useState<string | null>(null);
   const taxRate = useTaxRate();
 
+
+
+  // Helper function to render customization details (copied from POS client OrderNotificationDialog)
+  const renderCustomizationDetails = (item: any) => {
+    const details: string[] = [];
+
+    // Handle combo items: customizations as array or object with numeric keys (exact same logic as POS client)
+    let comboArr = null;
+    if (Array.isArray(item.customizations)) {
+      comboArr = item.customizations;
+    } else if (item.customizations && typeof item.customizations === 'object' && Object.keys(item.customizations).every(k => !isNaN(Number(k)))) {
+      comboArr = Object.values(item.customizations);
+    }
+
+    if (comboArr && comboArr.length > 0) {
+      // This is a combo item - process each step
+      comboArr.forEach((step: any) => {
+        // For steps with itemName (like sides/drinks), use the actual item name
+        if (step.itemName && step.itemName.trim() !== '') {
+          const stepSize = step.size ? ` (${step.size})` : '';
+          details.push(`${step.itemName}${stepSize}`);
+        } else {
+          // For other steps (pizza, wings), use the step type
+          const stepType = step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : 'Item';
+          const stepSize = step.size ? ` (${step.size})` : '';
+          details.push(`${stepType}${stepSize}`);
+        }
+        
+        if (step.toppings) {
+          const t = step.toppings;
+          if (t.wholePizza && t.wholePizza.length > 0) {
+            details.push(`  Whole: ${t.wholePizza.map((topping: any) => topping.name).join(', ')}`);
+          }
+          if (t.leftSide && t.leftSide.length > 0) {
+            details.push(`  Left: ${t.leftSide.map((topping: any) => topping.name).join(', ')}`);
+          }
+          if (t.rightSide && t.rightSide.length > 0) {
+            details.push(`  Right: ${t.rightSide.map((topping: any) => topping.name).join(', ')}`);
+          }
+        }
+        
+        if (step.sauces && step.sauces.length > 0) {
+          details.push(`  Sauces: ${step.sauces.map((sauce: any) => sauce.name).join(', ')}`);
+        }
+        
+        if (step.instructions && step.instructions.length > 0) {
+          details.push(`  Instructions: ${step.instructions.join(', ')}`);
+        }
+      });
+    } 
+    // Handle non-combo items (only if it's NOT a combo)
+    else if (!item.isCombo) {
+      // Check customizations object first
+      if (item.customizations && typeof item.customizations === 'object') {
+        if (item.customizations.size) {
+          details.push(`Size: ${item.customizations.size}`);
+        }
+        if (item.customizations.toppings) {
+          const t = item.customizations.toppings;
+          if (t.wholePizza && t.wholePizza.length > 0) {
+            details.push(`Whole: ${t.wholePizza.map((topping: any) => topping.name).join(', ')}`);
+          }
+          if (t.leftSide && t.leftSide.length > 0) {
+            details.push(`Left: ${t.leftSide.map((topping: any) => topping.name).join(', ')}`);
+          }
+          if (t.rightSide && t.rightSide.length > 0) {
+            details.push(`Right: ${t.rightSide.map((topping: any) => topping.name).join(', ')}`);
+          }
+        }
+        if (item.customizations.sauces && item.customizations.sauces.length > 0) {
+          details.push(`Sauces: ${item.customizations.sauces.map((sauce: any) => sauce.name).join(', ')}`);
+        }
+        if (item.customizations.instructions && item.customizations.instructions.length > 0) {
+          details.push(`Instructions: ${item.customizations.instructions.join(', ')}`);
+        }
+      }
+      // Check direct properties (fallback)
+      else {
+        if (item.toppings) {
+          const t = item.toppings;
+          if (t.wholePizza && t.wholePizza.length > 0) {
+            details.push(`Whole: ${t.wholePizza.map((topping: any) => topping.name).join(', ')}`);
+          }
+          if (t.leftSide && t.leftSide.length > 0) {
+            details.push(`Left: ${t.leftSide.map((topping: any) => topping.name).join(', ')}`);
+          }
+          if (t.rightSide && t.rightSide.length > 0) {
+            details.push(`Right: ${t.rightSide.map((topping: any) => topping.name).join(', ')}`);
+          }
+        }
+        if (item.sauces && Array.isArray(item.sauces) && item.sauces.length > 0) {
+          details.push(`Sauces: ${item.sauces.map((sauce: any) => sauce.name).join(', ')}`);
+        }
+        if (item.size) {
+          details.push(`Size: ${item.size.charAt(0).toUpperCase() + item.size.slice(1)}`);
+        }
+        if (item.instructions && Array.isArray(item.instructions) && item.instructions.length > 0) {
+          details.push(`Instructions: ${item.instructions.join(', ')}`);
+        }
+      }
+    }
+
+    return details.length > 0 ? details : null;
+  };
+
   // Load store's tax rate
   useEffect(() => {
     const loadTaxRate = async () => {
@@ -154,14 +259,14 @@ export default function CartPage() {
 
   const handleQuantityChange = async (index: number, change: number) => {
     const cartItem = cartItems[index];
-    if (!cartItem.uniqueId) return;
+    if (!cartItem.id) return;
 
-    setIsAnimating(cartItem.uniqueId);
+    setIsAnimating(cartItem.id);
     
     if (change > 0) {
-      updateQuantity(cartItem.uniqueId, cartItem.quantity + 1);
+      updateQuantity(cartItem.id, cartItem.quantity + 1);
     } else if (cartItem.quantity > 1) {
-      updateQuantity(cartItem.uniqueId, cartItem.quantity - 1);
+      updateQuantity(cartItem.id, cartItem.quantity - 1);
     }
 
     setTimeout(() => setIsAnimating(null), 200);
@@ -169,12 +274,12 @@ export default function CartPage() {
 
   const handleRemoveItem = async (index: number) => {
     const cartItem = cartItems[index];
-    if (!cartItem.uniqueId) return;
+    if (!cartItem.id) return;
 
-    setIsAnimating(cartItem.uniqueId);
+    setIsAnimating(cartItem.id);
     
     setTimeout(() => {
-      removeFromCart(cartItem.uniqueId!);
+      removeFromCart(cartItem.id);
       setIsAnimating(null);
     }, 300);
   };
@@ -269,7 +374,7 @@ export default function CartPage() {
               <div className="space-y-4">
                 {cartSummary.items.map((item, index) => {
                   const cartItem = cartItems[index];
-                  const isAnimatingItem = isAnimating === cartItem.uniqueId;
+                                      const isAnimatingItem = isAnimating === cartItem.id;
                   return (
                     <div
                       key={`${item.id}-${index}`}
@@ -284,18 +389,16 @@ export default function CartPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-gray-900 mb-1">{item.name}</h3>
-                          {item.options && item.options.length > 0 && (
-                            <div className="space-y-1 mb-3">
-                              {item.options.map((option, optIndex) => (
-                                <span
-                                  key={optIndex}
-                                  className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-lg mr-1 mb-1"
-                                >
-                                  {option}
-                                </span>
-                              ))}
-                            </div>
-                          )}
+                          {(() => {
+                            const details = renderCustomizationDetails(cartItem);
+                            return details && details.length > 0 && (
+                              <div className="mb-3">
+                                <div className="text-sm text-gray-600 whitespace-pre-line font-mono">
+                                  {details.join('\n')}
+                                </div>
+                              </div>
+                            );
+                          })()}
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <div className="flex items-center bg-gray-100 rounded-xl">
