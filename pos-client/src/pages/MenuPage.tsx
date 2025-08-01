@@ -50,12 +50,13 @@ interface Combo {
 }
 
 interface ComboComponent {
-  type: 'pizza' | 'wings' | 'side' | 'drink';
+  type: 'pizza' | 'wings' | 'side' | 'drink' | 'dipping';
   itemId: string;
   itemName: string;
   quantity: number;
   maxToppings?: number;
   maxSauces?: number;
+  maxDipping?: number;
 }
 
 interface CartItem {
@@ -302,7 +303,11 @@ const CartPanel = ({
     });
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price + (item.extraCharges || 0)) * item.quantity, 0);
+  const subtotal = cartItems.reduce((sum, item) => {
+    const itemTotal = (item.price + (item.extraCharges || 0)) * item.quantity;
+    console.log(`🛒 CART SUBTOTAL DEBUG: ${item.name} - Price: $${item.price}, Extra: $${item.extraCharges || 0}, Qty: ${item.quantity}, Total: $${itemTotal}`);
+    return sum + itemTotal;
+  }, 0);
   const tax = subtotal * 0.13;
   const total = subtotal + tax;
 
@@ -462,7 +467,7 @@ const CartPanel = ({
                     <div className="mt-2 text-xs text-gray-700 space-y-1">
                       {(() => {
                         const customizationsArr = item.customizations;
-                        const typeOrder = { pizza: 1, wings: 2, side: 3, drink: 4 };
+                        const typeOrder = { pizza: 1, wings: 2, side: 3, drink: 4, dipping: 5 };
                         const sortedCustomizations = [...customizationsArr].sort((a, b) => 
                           (typeOrder[a.type as keyof typeof typeOrder] || 5) - (typeOrder[b.type as keyof typeof typeOrder] || 5)
                         );
@@ -490,6 +495,25 @@ const CartPanel = ({
                               )}
                               {step.type === 'drink' && (
                                 <>🥤 {step.itemName || 'Drink'} {step.size && <span className="text-green-600 text-xs ml-1">({step.size})</span>}</>
+                              )}
+                              {step.type === 'dipping' && step.selectedDippingSauces && (
+                                <>
+                                  {Object.entries(step.selectedDippingSauces).map(([sauceId, quantity]: [string, any]) => (
+                                    <div key={sauceId}>
+                                      🥄 {quantity}x {sauceId === 'unknown' ? 'Dipping Sauce' : 
+                                        // Find sauce name from the stored data or fallback
+                                        (() => {
+                                          // If we have sauce data in the step, use it
+                                          if (step.sauceData && step.sauceData[sauceId]) {
+                                            return step.sauceData[sauceId].name;
+                                          }
+                                          // Otherwise extract from sauceId if it contains the name
+                                          return sauceId.includes('_') ? sauceId.split('_').slice(1).join(' ') : 'Dipping Sauce';
+                                        })()
+                                      }
+                                    </div>
+                                  ))}
+                                </>
                               )}
                             </div>
                             {/* Toppings */}
@@ -736,6 +760,7 @@ const MenuPage = () => {
           quantity: comp.quantity,
           toppingLimit: comp.maxToppings,
           sauceLimit: comp.maxSauces,
+          maxDipping: comp.maxDipping,
           itemName: comp.itemName,
           availableSizes: comp.availableSizes,
           defaultSize: comp.defaultSize,
@@ -795,6 +820,7 @@ const MenuPage = () => {
     };
 
   const handleAddCustomizedComboToCart = (customizedCombo: any) => {
+    console.log(`📦 ADDING COMBO TO CART:`, customizedCombo);
 
     const comboItem = {
       id: customizedCombo.isEditing ? customizedCombo.editingItemId : customizedCombo.comboId + '-' + Date.now(),
@@ -807,6 +833,8 @@ const MenuPage = () => {
       extraCharges: parseFloat((customizedCombo.extraCharges || 0).toFixed(2)),
       isCombo: true,
     };
+    
+    console.log(`📦 COMBO ITEM CREATED:`, comboItem);
 
     if (customizedCombo.isEditing) {
       // Replace the existing combo
@@ -1134,7 +1162,11 @@ const MenuPage = () => {
     });
   };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price + (item.extraCharges || 0)) * item.quantity, 0);
+  const subtotal = cartItems.reduce((sum, item) => {
+    const itemTotal = (item.price + (item.extraCharges || 0)) * item.quantity;
+    console.log(`🛒 MAIN SUBTOTAL DEBUG: ${item.name} - Price: $${item.price}, Extra: $${item.extraCharges || 0}, Qty: ${item.quantity}, Total: $${itemTotal}`);
+    return sum + itemTotal;
+  }, 0);
   const totalItemsCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (

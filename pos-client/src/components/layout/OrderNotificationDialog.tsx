@@ -382,23 +382,32 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
                             else if (item.customizations && typeof item.customizations === 'object' && Object.keys(item.customizations).every(k => !isNaN(Number(k)))) comboArr = Object.values(item.customizations);
                             if (comboArr && comboArr.length > 0) {
                               comboArr.forEach(step => {
-                                // For steps with itemName (like sides/drinks), use the actual item name
-                                let stepDisplayName;
-                                if (step.itemName && step.itemName.trim() !== '') {
-                                  stepDisplayName = step.itemName;
+                                // Handle dipping sauces specially
+                                if (step.type === 'dipping' && step.selectedDippingSauces && step.sauceData) {
+                                  // Show individual dipping sauce items
+                                  Object.entries(step.selectedDippingSauces).forEach(([sauceId, quantity]: [string, any]) => {
+                                    const sauceName = step.sauceData[sauceId]?.name || 'Dipping Sauce';
+                                    html += `&nbsp;&nbsp;- <b>${quantity}x ${sauceName}</b><br/>`;
+                                  });
                                 } else {
-                                  stepDisplayName = step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : 'Item';
+                                  // For steps with itemName (like sides/drinks), use the actual item name
+                                  let stepDisplayName;
+                                  if (step.itemName && step.itemName.trim() !== '') {
+                                    stepDisplayName = step.itemName;
+                                  } else {
+                                    stepDisplayName = step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : 'Item';
+                                  }
+                                  html += `&nbsp;&nbsp;- <b>${stepDisplayName}</b>${step.size ? ' (' + step.size + ')' : ''}<br/>`;
+                                  if (step.toppings) {
+                                    const t = step.toppings;
+                                    if (t.wholePizza && t.wholePizza.length > 0) html += `&nbsp;&nbsp;&nbsp;&nbsp;Whole: ${(t.wholePizza as { name: string }[]).map((t: { name: string }) => t.name).join(', ')}<br/>`;
+                                    if (t.leftSide && t.leftSide.length > 0) html += `&nbsp;&nbsp;&nbsp;&nbsp;Left: ${(t.leftSide as { name: string }[]).map((t: { name: string }) => t.name).join(', ')}<br/>`;
+                                    if (t.rightSide && t.rightSide.length > 0) html += `&nbsp;&nbsp;&nbsp;&nbsp;Right: ${(t.rightSide as { name: string }[]).map((t: { name: string }) => t.name).join(', ')}<br/>`;
+                                  }
+                                  if (step.sauces && step.sauces.length > 0) html += `&nbsp;&nbsp;&nbsp;&nbsp;Sauces: ${step.sauces.map((s: { name: string }) => s.name).join(', ')}<br/>`;
+                                  if (step.instructions && step.instructions.length > 0) html += `&nbsp;&nbsp;&nbsp;&nbsp;Instructions: ${step.instructions.join(', ')}<br/>`;
+                                  if (!isNaN(Number(step.extraCharge)) && Number(step.extraCharge) > 0) html += `&nbsp;&nbsp;&nbsp;&nbsp;Extra Charge: $${Number(step.extraCharge).toFixed(2)}<br/>`;
                                 }
-                                html += `&nbsp;&nbsp;- <b>${stepDisplayName}</b>${step.size ? ' (' + step.size + ')' : ''}<br/>`;
-                                if (step.toppings) {
-                                  const t = step.toppings;
-                                  if (t.wholePizza && t.wholePizza.length > 0) html += `&nbsp;&nbsp;&nbsp;&nbsp;Whole: ${(t.wholePizza as { name: string }[]).map((t: { name: string }) => t.name).join(', ')}<br/>`;
-                                  if (t.leftSide && t.leftSide.length > 0) html += `&nbsp;&nbsp;&nbsp;&nbsp;Left: ${(t.leftSide as { name: string }[]).map((t: { name: string }) => t.name).join(', ')}<br/>`;
-                                  if (t.rightSide && t.rightSide.length > 0) html += `&nbsp;&nbsp;&nbsp;&nbsp;Right: ${(t.rightSide as { name: string }[]).map((t: { name: string }) => t.name).join(', ')}<br/>`;
-                                }
-                                if (step.sauces && step.sauces.length > 0) html += `&nbsp;&nbsp;&nbsp;&nbsp;Sauces: ${step.sauces.map((s: { name: string }) => s.name).join(', ')}<br/>`;
-                                if (step.instructions && step.instructions.length > 0) html += `&nbsp;&nbsp;&nbsp;&nbsp;Instructions: ${step.instructions.join(', ')}<br/>`;
-                                if (!isNaN(Number(step.extraCharge)) && Number(step.extraCharge) > 0) html += `&nbsp;&nbsp;&nbsp;&nbsp;Extra Charge: $${Number(step.extraCharge).toFixed(2)}<br/>`;
                               });
                               if (Number(item.extraCharges) > 0) html += `&nbsp;&nbsp;Extra Charge: $${Number(item.extraCharges).toFixed(2)}<br/>`;
                             } else if (item.customizations && typeof item.customizations === 'object') {

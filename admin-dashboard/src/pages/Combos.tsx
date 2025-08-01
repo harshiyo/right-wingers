@@ -17,12 +17,13 @@ interface Combo {
 }
 
 interface ComboComponent {
-  type: 'pizza' | 'wings' | 'side' | 'drink';
+  type: 'pizza' | 'wings' | 'side' | 'drink' | 'dipping';
   itemId: string;
   itemName: string;
   quantity: number;
   maxToppings?: number;
   maxSauces?: number;
+  maxDipping?: number;
   availableSizes?: string[];
   defaultSize?: string;
 }
@@ -140,6 +141,7 @@ const Combos = () => {
       case 'wings': return <span title="Wings" className="mr-1">🍗</span>;
       case 'side': return <span title="Side" className="mr-1">🍟</span>;
       case 'drink': return <span title="Drink" className="mr-1">🥤</span>;
+      case 'dipping': return <span title="Dipping Sauce" className="mr-1">🥄</span>;
       default: return null;
     }
   };
@@ -185,9 +187,9 @@ const Combos = () => {
               </div>
 
               <div className="flex flex-wrap gap-2 mb-3">
-                {['pizza', 'wings', 'side', 'drink'].map((type) => (
+                {['pizza', 'wings', 'side', 'drink', 'dipping'].map((type) => (
                   <Button key={type} type="button" size="sm" variant="outline" className="rounded-full border-dashed text-sm" onClick={() => addComponent(type as ComboComponent['type'])}>
-                    {typeIcon(type as ComboComponent['type'])} Add {type.charAt(0).toUpperCase() + type.slice(1)}
+                    {typeIcon(type as ComboComponent['type'])} Add {type === 'dipping' ? 'Dipping Sauce' : type.charAt(0).toUpperCase() + type.slice(1)}
                   </Button>
                 ))}
               </div>
@@ -223,6 +225,9 @@ const Combos = () => {
                     )}
                     {component.type === 'wings' && (
                       <Input type="number" min="0" value={component.maxSauces || 0} onChange={(e) => updateComponent(index, 'maxSauces', parseInt(e.target.value) || 0)} placeholder="Max Sauces" className="mt-3" />
+                    )}
+                    {component.type === 'dipping' && (
+                      <Input type="number" min="0" value={component.maxDipping || 0} onChange={(e) => updateComponent(index, 'maxDipping', parseInt(e.target.value) || 0)} placeholder="Max Dipping Sauces" className="mt-3" />
                     )}
                     {(component.type === 'drink' || component.type === 'side') && (
                       <div className="mt-3">
@@ -308,9 +313,12 @@ const Combos = () => {
                         {comp.type === 'pizza' && comp.maxToppings !== undefined && (
                           <span className="ml-1 text-gray-500">/ {comp.maxToppings} toppings</span>
                         )}
-                        {comp.type === 'wings' && comp.maxSauces !== undefined && (
-                          <span className="ml-1 text-gray-500">/ {comp.maxSauces} sauces</span>
-                        )}
+                                            {comp.type === 'wings' && comp.maxSauces !== undefined && (
+                      <span className="ml-1 text-gray-500">/ {comp.maxSauces} sauces</span>
+                    )}
+                    {comp.type === 'dipping' && comp.maxDipping !== undefined && (
+                      <span className="ml-1 text-gray-500">/ {comp.maxDipping} dipping sauces</span>
+                    )}
                       </span>
                     ))}
                   </div>

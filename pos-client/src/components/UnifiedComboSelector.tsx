@@ -24,10 +24,11 @@ interface ToppingSide {
 }
 
 interface ComboItem {
-  type: 'pizza' | 'wings' | 'drink' | 'side';
+  type: 'pizza' | 'wings' | 'drink' | 'side' | 'dipping';
   quantity: number;
   toppingLimit?: number;
   sauceLimit?: number;
+  maxDipping?: number;
   size?: string;
   itemName?: string;
   availableSizes?: string[];
@@ -57,12 +58,18 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
   if (!open || !combo) return null;
 
   // Generate steps from combo items
-  const steps = combo.isEditing && combo.items.length > 0 
-    ? combo.items.map((item, index) => ({
+  // Use combo.components if combo.items is not available or empty
+  const comboItems = combo.items && combo.items.length > 0 ? combo.items : combo.components || [];
+  
+
+  
+  const steps = combo.isEditing && comboItems.length > 0 
+    ? comboItems.map((item, index) => ({
         type: item.type,
         stepIndex: index,
-        toppingLimit: item.toppingLimit,
-        sauceLimit: item.sauceLimit,
+        toppingLimit: item.toppingLimit || item.maxToppings,
+        sauceLimit: item.sauceLimit || item.maxSauces,
+        maxDipping: item.maxDipping,
         size: item.size,
         itemName: item.itemName,
         quantity: 1,
@@ -71,12 +78,16 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
       }))
     : (() => {
         let globalStepIndex = 0;
-        return combo.items.flatMap((item) =>
+        const generatedSteps = comboItems.flatMap((item) =>
           Array(item.quantity).fill(null).map(() => ({ 
             ...item, 
             stepIndex: globalStepIndex++
           }))
         );
+        
+
+
+        return generatedSteps;
       })();
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -104,6 +115,10 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
   // Wing customization state
   const [selectedSauces, setSelectedSauces] = useState<Topping[]>([]);
   const [spicyFilter, setSpicyFilter] = useState<'all' | 'spicy' | 'not-spicy'>('all');
+
+  // Dipping sauce customization state
+  const [dippingSauces, setDippingSauces] = useState<Topping[]>([]);
+  const [selectedDippingSauces, setSelectedDippingSauces] = useState<{[sauceId: string]: number}>({});
 
   // Size selection state
   const [selectedSize, setSelectedSize] = useState<string>('');
@@ -192,6 +207,35 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
     }
   }, [open]);
 
+  // Fetch dipping sauces from menu items with category 'Dipping'
+  useEffect(() => {
+    const fetchDippingSauces = async () => {
+      try {
+        const menuItemsQuery = query(collection(db, 'menuItems'), orderBy('name'));
+        const snapshot = await getDocs(menuItemsQuery);
+        const dippingData = snapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+          .filter((item: any) => item.category === 'Dipping')
+          .map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            price: item.price || 0,
+            category: item.category
+          } as Topping));
+        setDippingSauces(dippingData);
+      } catch (error) {
+        console.error('Error fetching dipping sauces:', error);
+      }
+    };
+
+    if (open) {
+      fetchDippingSauces();
+    }
+  }, [open]);
+
   // Initialize current step data
   useEffect(() => {
     if (open && draft[currentStep]) {
@@ -216,6 +260,21 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
         setSelectedSauces(currentItem.sauces);
       }
       
+      if (currentItem.type === 'dipping' && currentItem.selectedDippingSauces) {
+        // Handle both old array format and new quantity object format
+        if (Array.isArray(currentItem.selectedDippingSauces)) {
+          // Convert old array format to quantity object
+          const quantityObj: {[sauceId: string]: number} = {};
+          currentItem.selectedDippingSauces.forEach((sauce: any) => {
+            quantityObj[sauce.id] = (quantityObj[sauce.id] || 0) + 1;
+          });
+          setSelectedDippingSauces(quantityObj);
+        } else {
+          // New quantity object format
+          setSelectedDippingSauces(currentItem.selectedDippingSauces);
+        }
+      }
+      
       if (currentItem.size) {
         setSelectedSize(currentItem.size);
       }
@@ -227,6 +286,7 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
         rightSide: []
       });
       setSelectedSauces([]);
+      setSelectedDippingSauces({});
       setSelectedSize('');
       setActiveSelection('whole');
       setActiveCategory('All');
@@ -418,6 +478,21 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
     });
   };
 
+  // Dipping sauce customization handlers
+  const handleDippingSauceQuantityChange = (sauce: Topping, delta: number) => {
+    setSelectedDippingSauces(prev => {
+      const currentQuantity = prev[sauce.id] || 0;
+      const newQuantity = Math.max(0, currentQuantity + delta);
+      
+      if (newQuantity === 0) {
+        const { [sauce.id]: removed, ...rest } = prev;
+        return rest;
+      } else {
+        return { ...prev, [sauce.id]: newQuantity };
+      }
+    });
+  };
+
   // Size selection handlers
   const handleSizeSelect = (size: string) => {
     setSelectedSize(size || '');
@@ -456,32 +531,85 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
         size: selectedSize,
         extraCharge: 0
       };
+    } else if (step.type === 'dipping') {
+      // Use the configured maxDipping value, fallback to 0 if not set
+      const dippingLimit = step.maxDipping || 0;
+
+      // Convert quantity object to array for charging calculation
+      const dippingSauceArray = Object.entries(selectedDippingSauces).flatMap(([sauceId, quantity]) => {
+        const sauce = dippingSauces.find(s => s.id === sauceId);
+        return sauce ? Array(quantity).fill(sauce) : [];
+      });
+
+      // Only charge for sauces beyond the limit
+      const extraCharge = dippingSauceArray
+        .slice(dippingLimit)
+        .reduce((acc, sauce) => acc + (sauce.price || 0), 0);
+      
+      // Create sauce data lookup for display purposes
+      const sauceData = Object.keys(selectedDippingSauces).reduce((acc, sauceId) => {
+        const sauce = dippingSauces.find(s => s.id === sauceId);
+        if (sauce) {
+          acc[sauceId] = { name: sauce.name, price: sauce.price };
+        }
+        return acc;
+      }, {} as {[sauceId: string]: {name: string, price: number}});
+
+      newDraft[currentStep] = {
+        ...step,
+        selectedDippingSauces: selectedDippingSauces,
+        sauceData: sauceData,
+        extraCharge
+      };
+      console.log(`🥄 DIPPING STEP SAVED:`, {
+        stepIndex: currentStep,
+        selectedDippingSauces,
+        sauceData,
+        extraCharge,
+        dippingLimit: step.maxDipping || 0
+      });
     }
 
     setDraft(newDraft);
     
     // Fix: Replace the current step's extra charge instead of adding to it
     const oldExtraCharge = draft[currentStep]?.extraCharge || 0;
-    setTotalExtraCharges(prev => prev - oldExtraCharge + extraCharge);
+    const newTotalExtraCharges = totalExtraCharges - oldExtraCharge + extraCharge;
+    console.log(`💰 STEP ${currentStep} EXTRA CHARGE UPDATE:`, {
+      stepType: step.type,
+      oldExtraCharge,
+      extraCharge,
+      totalExtraCharges,
+      newTotalExtraCharges
+    });
+    setTotalExtraCharges(newTotalExtraCharges);
     
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      const finalExtraCharges = totalExtraCharges - oldExtraCharge + extraCharge;
+      // For final completion, calculate total from all saved step extra charges
+      const finalExtraCharges = newDraft.reduce((sum, step) => sum + (step.extraCharge || 0), 0);
+      
+      console.log(`🔥 COMBO COMPLETION DEBUG:`, {
+        totalExtraCharges,
+        oldExtraCharge,
+        extraCharge,
+        finalExtraCharges,
+        comboName: combo.name
+      });
       
       const assembled = {
         comboId: combo.comboId,
         name: combo.name,
         imageUrl: combo.imageUrl,
         items: newDraft,
-        price: parseFloat((Number(combo.isEditing 
-          ? (combo.price - (combo.extraCharges || 0))
-          : combo.price
-        )).toFixed(2)),
+        price: parseFloat(Number(combo.price).toFixed(2)),
         extraCharges: parseFloat(finalExtraCharges.toFixed(2)),
         isEditing: combo.isEditing,
         editingItemId: combo.editingItemId,
       };
+      
+      console.log(`🔥 ASSEMBLED COMBO:`, assembled);
       onComplete(assembled);
       
       // Reset states
@@ -539,6 +667,28 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
       return calculateToppingExtraCharge(toppingsData, currentStep);
     } else if (step.type === 'wings') {
       return calculateSauceExtraCharge(selectedSauces, step.sauceLimit || 1);
+    } else if (step.type === 'dipping') {
+      const dippingLimit = step.maxDipping || 0;
+      
+      // Convert quantity object to array for charging calculation
+      const dippingSauceArray = Object.entries(selectedDippingSauces).flatMap(([sauceId, quantity]) => {
+        const sauce = dippingSauces.find(s => s.id === sauceId);
+        return sauce ? Array(quantity).fill(sauce) : [];
+      });
+
+      const extraCharge = dippingSauceArray
+        .slice(dippingLimit)
+        .reduce((acc, sauce) => acc + (sauce.price || 0), 0);
+        
+      console.log(`🥄 DIPPING EXTRA CHARGE CALC:`, {
+        dippingLimit,
+        selectedDippingSauces,
+        dippingSauceArray: dippingSauceArray.map(s => ({name: s.name, price: s.price})),
+        extraSauces: dippingSauceArray.slice(dippingLimit).map(s => ({name: s.name, price: s.price})),
+        extraCharge
+      });
+      
+      return extraCharge;
     }
     return 0;
   };
@@ -796,6 +946,101 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
           </div>
         </div>
       );
+    } else if (step.type === 'dipping') {
+      // Use the configured maxDipping value, fallback to 0 if not set
+      const dippingLimit = step.maxDipping || 0;
+      
+      return (
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Select Dipping Sauces</h3>
+            <p className="text-sm text-gray-600">
+              Choose your preferred dipping sauces for this combo.
+              {dippingLimit > 0 && ` (${dippingLimit} included, additional sauces extra)`}
+            </p>
+          </div>
+
+          {/* Dipping Sauces Grid - Individual items with quantity controls */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {dippingSauces.map((sauce, sauceIndex) => {
+              const currentQuantity = selectedDippingSauces[sauce.id] || 0;
+              
+              // Create a flat array of all selected sauces in order for proper included/extra calculation
+              const allSelectedSauces = Object.entries(selectedDippingSauces).flatMap(([sauceId, quantity]) => {
+                const sauceData = dippingSauces.find(s => s.id === sauceId);
+                return sauceData ? Array(quantity).fill(sauceData) : [];
+              });
+              
+              // Count how many of this specific sauce are included vs extra
+              let includedForThisSauce = 0;
+              let chargedForThisSauce = 0;
+              
+              allSelectedSauces.forEach((selectedSauce, index) => {
+                if (selectedSauce.id === sauce.id) {
+                  if (index < dippingLimit) {
+                    includedForThisSauce++;
+                  } else {
+                    chargedForThisSauce++;
+                  }
+                }
+              });
+
+              return (
+                <div
+                  key={sauce.id}
+                  className="p-4 rounded-lg border-2 border-gray-200 bg-white"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">{sauce.name}</h4>
+                      <div className="text-xs text-gray-600 mt-1">
+                        {sauce.price > 0 ? `$${sauce.price.toFixed(2)} each` : 'Free'}
+                        {currentQuantity > 0 && (
+                          <div className="mt-1">
+                            {includedForThisSauce > 0 && (
+                              <span className="text-green-600">
+                                {includedForThisSauce} included
+                              </span>
+                            )}
+                            {chargedForThisSauce > 0 && (
+                              <span className={includedForThisSauce > 0 ? "text-red-600 ml-2" : "text-red-600"}>
+                                {chargedForThisSauce} extra (+${(chargedForThisSauce * sauce.price).toFixed(2)})
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 ml-4">
+                      <button
+                        onClick={() => handleDippingSauceQuantityChange(sauce, -1)}
+                        disabled={currentQuantity === 0}
+                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        -
+                      </button>
+                      <span className="w-8 text-center font-medium">{currentQuantity}</span>
+                      <button
+                        onClick={() => handleDippingSauceQuantityChange(sauce, 1)}
+                        className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {dippingSauces.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <div className="text-sm">No dipping sauces available</div>
+              <div className="text-xs mt-1">Create items in the "Dipping" category to show them here</div>
+            </div>
+          )}
+        </div>
+      );
     }
     return null;
   };
@@ -808,6 +1053,7 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
         case 'wings': return <Drumstick className="w-4 h-4" />;
         case 'drink': return <Coffee className="w-4 h-4" />;
         case 'side': return <Utensils className="w-4 h-4" />;
+        case 'dipping': return <span className="text-sm">🥄</span>;
         default: return <div className="w-4 h-4" />;
       }
     };

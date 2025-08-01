@@ -217,7 +217,7 @@ const OrderSummary = memo(({
     
     // Handle combo arrays (for combo customizations)
     if (Array.isArray(item.customizations)) {
-      const typeOrder = { pizza: 1, wings: 2, side: 3, drink: 4 };
+      const typeOrder = { pizza: 1, wings: 2, side: 3, drink: 4, dipping: 5 };
       const sortedCustomizations = [...item.customizations].sort((a, b) => 
         (typeOrder[a.type as keyof typeof typeOrder] || 5) - (typeOrder[b.type as keyof typeof typeOrder] || 5)
       );
@@ -232,6 +232,17 @@ const OrderSummary = memo(({
           stepLabel = `${step.itemName || 'Side'}${step.size ? ` (${step.size})` : ''}`;
         } else if (step.type === 'drink') {
           stepLabel = `${step.itemName || 'Drink'}${step.size ? ` (${step.size})` : ''}`;
+        } else if (step.type === 'dipping') {
+          // Handle individual dipping sauces
+          if (step.selectedDippingSauces && step.sauceData) {
+            const dippingItems = Object.entries(step.selectedDippingSauces).map(([sauceId, quantity]: [string, any]) => {
+              const sauceName = step.sauceData[sauceId]?.name || 'Dipping Sauce';
+              return `${quantity}x ${sauceName}`;
+            });
+            stepLabel = dippingItems.join(', ');
+          } else {
+            stepLabel = `${step.itemName || 'Dipping Sauce'}${step.size ? ` (${step.size})` : ''}`;
+          }
         } else {
           stepLabel = step.itemName || `Item ${idx + 1}`;
         }
@@ -362,6 +373,8 @@ const OrderSummary = memo(({
     Extra charges: +${item.extraCharges.toFixed(2)}
   </p>
 )}
+{/* Debug: Show extra charges even if 0 for dipping combos */}
+{item.isCombo && console.log(`🔍 COMBO EXTRA CHARGES DEBUG: ${item.name} - extraCharges: ${item.extraCharges}, type: ${typeof item.extraCharges}`)}
 
                 </div>
               </div>
@@ -598,11 +611,15 @@ const CheckoutPage = () => {
   }, [currentStore?.id]);
   
   // Calculate totals
-  const subtotal = useMemo(() => 
-    cartItems.reduce((sum: number, item: CartItem) => 
-      sum + (item.price + (item.extraCharges || 0)) * item.quantity, 0
-    ), [cartItems]
-  );
+  const subtotal = useMemo(() => {
+    const total = cartItems.reduce((sum: number, item: CartItem) => {
+      const itemTotal = (item.price + (item.extraCharges || 0)) * item.quantity;
+      console.log(`🧮 SUBTOTAL DEBUG: ${item.name} - Base: $${item.price}, Extra: $${item.extraCharges || 0}, Qty: ${item.quantity}, Total: $${itemTotal}`);
+      return sum + itemTotal;
+    }, 0);
+    console.log(`🧮 TOTAL SUBTOTAL: $${total}`);
+    return total;
+  }, [cartItems]);
   
     const discountAmount = useMemo(() => discount, [discount]);
   
@@ -1240,42 +1257,53 @@ const CheckoutPage = () => {
           let comboModified = false;
           item.customizations.forEach((step: any, index: number) => {
             const stepDetails = [];
-            // For steps with itemName (like sides/drinks), use the actual item name
-            let stepName;
-            if (step.itemName && step.itemName.trim() !== '') {
-              stepName = step.itemName;
+            
+            // Handle dipping sauces specially
+            if (step.type === 'dipping' && step.selectedDippingSauces && step.sauceData) {
+              // Show individual dipping sauce items
+              Object.entries(step.selectedDippingSauces).forEach(([sauceId, quantity]: [string, any]) => {
+                const sauceName = step.sauceData[sauceId]?.name || 'Dipping Sauce';
+                stepDetails.push(`&nbsp;&nbsp;<strong>${quantity}x ${sauceName}</strong>`);
+              });
             } else {
-              stepName = step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : `Item ${index + 1}`;
-            }
-            stepDetails.push(`&nbsp;&nbsp;<strong>${stepName}</strong>${step.size ? ` (${step.size})` : ''}`);
-            if (step.toppings) {
-              const toppings = [];
-              if (step.toppings.wholePizza && step.toppings.wholePizza.length > 0) {
-                const toppingNames = step.toppings.wholePizza.map((t: any) => t.name || t).filter((name: any) => name && name !== '' && String(name) !== '0');
-                if (toppingNames.length > 0) {
-                  toppings.push(`&nbsp;&nbsp;&nbsp;&nbsp;<strong>Whole:</strong> ${toppingNames.join(', ')}`);
+              // For steps with itemName (like sides/drinks), use the actual item name
+              let stepName;
+              if (step.itemName && step.itemName.trim() !== '') {
+                stepName = step.itemName;
+              } else {
+                stepName = step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : `Item ${index + 1}`;
+              }
+              stepDetails.push(`&nbsp;&nbsp;<strong>${stepName}</strong>${step.size ? ` (${step.size})` : ''}`);
+              if (step.toppings) {
+                const toppings = [];
+                if (step.toppings.wholePizza && step.toppings.wholePizza.length > 0) {
+                  const toppingNames = step.toppings.wholePizza.map((t: any) => t.name || t).filter((name: any) => name && name !== '' && String(name) !== '0');
+                  if (toppingNames.length > 0) {
+                    toppings.push(`&nbsp;&nbsp;&nbsp;&nbsp;<strong>Whole:</strong> ${toppingNames.join(', ')}`);
+                  }
+                }
+                if (toppings.length > 0) {
+                  stepDetails.push(...toppings);
                 }
               }
-              if (toppings.length > 0) {
-                stepDetails.push(...toppings);
+              if (step.sauces && step.sauces.length > 0) {
+                const sauceNames = step.sauces.map((s: any) => s.name || s).filter((name: any) => name && name !== '' && String(name) !== '0');
+                if (sauceNames.length > 0) {
+                  stepDetails.push(`&nbsp;&nbsp;&nbsp;&nbsp;<strong>Sauces:</strong> ${sauceNames.join(', ')}`);
+                }
+              }
+              // Instructions
+              if (step.instructions && Array.isArray(step.instructions) && step.instructions.length > 0) {
+                const instructions = step.instructions.map((inst: any) => inst.name || inst).join(', ');
+                if (instructions) {
+                  stepDetails.push(`&nbsp;&nbsp;&nbsp;&nbsp;<strong>Instructions:</strong> ${instructions}`);
+                }
+              }
+              if (step.extraCharge && Number(step.extraCharge) > 0) {
+                stepDetails.push(`&nbsp;&nbsp;&nbsp;&nbsp;<strong>Extra Charge:</strong> +$${Number(step.extraCharge).toFixed(2)}`);
               }
             }
-            if (step.sauces && step.sauces.length > 0) {
-              const sauceNames = step.sauces.map((s: any) => s.name || s).filter((name: any) => name && name !== '' && String(name) !== '0');
-              if (sauceNames.length > 0) {
-                stepDetails.push(`&nbsp;&nbsp;&nbsp;&nbsp;<strong>Sauces:</strong> ${sauceNames.join(', ')}`);
-              }
-            }
-            // Instructions
-            if (step.instructions && Array.isArray(step.instructions) && step.instructions.length > 0) {
-              const instructions = step.instructions.map((inst: any) => inst.name || inst).join(', ');
-              if (instructions) {
-                stepDetails.push(`&nbsp;&nbsp;&nbsp;&nbsp;<strong>Instructions:</strong> ${instructions}`);
-              }
-            }
-            if (step.extraCharge && Number(step.extraCharge) > 0) {
-              stepDetails.push(`&nbsp;&nbsp;&nbsp;&nbsp;<strong>Extra Charge:</strong> +$${Number(step.extraCharge).toFixed(2)}`);
-            }
+            
             // Combo step diff: if step.isUpdated or step.isNew, mark combo as modified
             if (step.isUpdated || step.isNew) comboModified = true;
             details.push(stepDetails.join('<br>'));

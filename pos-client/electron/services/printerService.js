@@ -391,35 +391,45 @@ export class PrinterService {
 
   renderComboStep(step, idx) {
     const lines = [];
-    let label = step.itemName || (step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : `Item ${idx + 1}`);
-    if (step.size) label += ` (${step.size})`;
-    lines.push(`  - ${label}`);
-    // Toppings (pizza)
-    if (step.toppings && (step.toppings.wholePizza || step.toppings.leftSide || step.toppings.rightSide)) {
-      //lines.push('    Toppings');
-      lines.push(...this.renderToppingsBySide(step.toppings, '      '));
-    }
-    // Half & Half
-    if (step.isHalfAndHalf) {
-      //lines.push('    Half & Half Pizza');
-    }
-    // Sauces (wings)
-    if (step.sauces && step.sauces.length > 0) {
-      const sauceNames = step.sauces.map(s => s.name).filter(name => name);
-      if (sauceNames.length > 0) {
-        //lines.push(`    Sauces`);
-        sauceNames.forEach(sauce => {
-          lines.push(`      ${sauce}`);
-        });
+    
+    // Handle dipping sauces specially
+    if (step.type === 'dipping' && step.selectedDippingSauces && step.sauceData) {
+      // Show individual dipping sauce items
+      Object.entries(step.selectedDippingSauces).forEach(([sauceId, quantity]) => {
+        const sauceName = step.sauceData[sauceId]?.name || 'Dipping Sauce';
+        lines.push(`  - ${quantity}x ${sauceName}`);
+      });
+    } else {
+      let label = step.itemName || (step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : `Item ${idx + 1}`);
+      if (step.size) label += ` (${step.size})`;
+      lines.push(`  - ${label}`);
+      // Toppings (pizza)
+      if (step.toppings && (step.toppings.wholePizza || step.toppings.leftSide || step.toppings.rightSide)) {
+        //lines.push('    Toppings');
+        lines.push(...this.renderToppingsBySide(step.toppings, '      '));
       }
-    }
-    // Instructions
-    if (step.instructions && step.instructions.length > 0) {
-      lines.push(`    Instructions: ${step.instructions.join(', ')}`);
-    }
-    // Extra charge
-    if (step.extraCharge && Number(step.extraCharge) > 0) {
-      lines.push(`    Extra Charge: +$${Number(step.extraCharge).toFixed(2)}`);
+      // Half & Half
+      if (step.isHalfAndHalf) {
+        //lines.push('    Half & Half Pizza');
+      }
+      // Sauces (wings)
+      if (step.sauces && step.sauces.length > 0) {
+        const sauceNames = step.sauces.map(s => s.name).filter(name => name);
+        if (sauceNames.length > 0) {
+          //lines.push(`    Sauces`);
+          sauceNames.forEach(sauce => {
+            lines.push(`      ${sauce}`);
+          });
+        }
+      }
+      // Instructions
+      if (step.instructions && step.instructions.length > 0) {
+        lines.push(`    Instructions: ${step.instructions.join(', ')}`);
+      }
+      // Extra charge
+      if (step.extraCharge && Number(step.extraCharge) > 0) {
+        lines.push(`    Extra Charge: +$${Number(step.extraCharge).toFixed(2)}`);
+      }
     }
     return lines;
   }
@@ -711,8 +721,17 @@ export class PrinterService {
     if (combo.customizations) {
       const customizations = combo.customizations;
       
+      // Handle combo customizations (array format - like what modified receipt uses)
+      if (Array.isArray(customizations)) {
+        customizations.forEach((step, idx) => {
+          const stepLines = this.renderComboStep(step, idx);
+          if (Array.isArray(stepLines)) {
+            lines.push(...stepLines);
+          }
+        });
+      }
       // Handle combo customizations (object with numeric keys)
-      if (this.isComboCustomizations(customizations)) {
+      else if (this.isComboCustomizations(customizations)) {
         // Sort the keys numerically and render each step
         const steps = Object.keys(customizations)
           .sort((a, b) => Number(a) - Number(b))
