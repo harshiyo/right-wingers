@@ -15,6 +15,9 @@ interface MenuItem {
     maxToppings?: number;
     maxSauces?: number;
     isSpecialtyPizza?: boolean;
+    pricingMode?: string;
+    flatRatePrice?: number;
+    halfPizzaMultiplier?: number;
     sizePricing?: {
         small: number;
         medium: number;
@@ -59,6 +62,11 @@ export const EditMenuItemDialog = ({ open, onClose, item, categories }: EditMenu
   const [drinkSmallPrice, setDrinkSmallPrice] = useState('2.00');
   const [drinkMediumPrice, setDrinkMediumPrice] = useState('2.50');
   const [drinkLargePrice, setDrinkLargePrice] = useState('3.00');
+  
+  // Flat rate pricing fields
+  const [pricingMode, setPricingMode] = useState('individual'); // 'individual' or 'flat'
+  const [flatRatePrice, setFlatRatePrice] = useState('1.50');
+  const [halfPizzaMultiplier, setHalfPizzaMultiplier] = useState('0.5');
 
   useEffect(() => {
     if (item) {
@@ -105,6 +113,13 @@ export const EditMenuItemDialog = ({ open, onClose, item, categories }: EditMenu
         if (item.sizePricing.small) setDrinkSmallPrice(item.sizePricing.small.toString());
         if (item.sizePricing.medium) setDrinkMediumPrice(item.sizePricing.medium.toString());
         if (item.sizePricing.large) setDrinkLargePrice(item.sizePricing.large.toString());
+      }
+      
+      // Load flat rate pricing fields for customizable pizzas
+      if (item.isCustomizable && item.maxToppings) {
+        setPricingMode(item.pricingMode || 'individual');
+        if (item.flatRatePrice) setFlatRatePrice(item.flatRatePrice.toString());
+        if (item.halfPizzaMultiplier) setHalfPizzaMultiplier(item.halfPizzaMultiplier.toString());
       }
     }
   }, [item]);
@@ -153,6 +168,13 @@ export const EditMenuItemDialog = ({ open, onClose, item, categories }: EditMenu
       } else if (itemType === 'customizablePizza') {
         updateData.isCustomizable = true;
         updateData.isSpecialtyPizza = false;
+        
+        // Add flat rate pricing data
+        updateData.pricingMode = pricingMode;
+        if (pricingMode === 'flat') {
+          updateData.flatRatePrice = parseFloat(flatRatePrice);
+          updateData.halfPizzaMultiplier = parseFloat(halfPizzaMultiplier);
+        }
         if (maxToppings && parseInt(maxToppings) > 0) {
           updateData.maxToppings = parseInt(maxToppings);
         }
@@ -336,6 +358,65 @@ export const EditMenuItemDialog = ({ open, onClose, item, categories }: EditMenu
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Flat Rate Pricing - show for customizable pizzas */}
+              {itemType === 'customizablePizza' && (
+                <div className="mt-4 p-3 bg-white rounded-lg border">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">🍕 Topping Pricing Mode</h4>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Pricing Mode</label>
+                    <select
+                      value={pricingMode}
+                      onChange={(e) => setPricingMode(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                    >
+                      <option value="individual">Individual Topping Prices</option>
+                      <option value="flat">Flat Rate Per Topping</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {pricingMode === 'individual' 
+                        ? 'Use individual topping prices from the toppings database'
+                        : 'Use a flat rate for all extra toppings on this pizza'
+                      }
+                    </p>
+                  </div>
+
+                  {pricingMode === 'flat' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="editFlatRatePrice" className="block text-sm font-medium text-gray-700">Flat Rate Price</label>
+                        <input
+                          id="editFlatRatePrice"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={flatRatePrice}
+                          onChange={(e) => setFlatRatePrice(e.target.value)}
+                          placeholder="1.50"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Price per extra topping</p>
+                      </div>
+                      <div>
+                        <label htmlFor="editHalfPizzaMultiplier" className="block text-sm font-medium text-gray-700">Half Pizza Multiplier</label>
+                        <input
+                          id="editHalfPizzaMultiplier"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="1"
+                          value={halfPizzaMultiplier}
+                          onChange={(e) => setHalfPizzaMultiplier(e.target.value)}
+                          placeholder="0.5"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">0.5 = 50% price for half pizza</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

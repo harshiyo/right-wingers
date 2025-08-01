@@ -44,6 +44,11 @@ export const AddMenuItemDialog = ({ open, onClose, categories, menuItems }: AddM
   const [drinkSmallPrice, setDrinkSmallPrice] = useState('2.00');
   const [drinkMediumPrice, setDrinkMediumPrice] = useState('2.50');
   const [drinkLargePrice, setDrinkLargePrice] = useState('3.00');
+  
+  // Flat rate pricing fields
+  const [pricingMode, setPricingMode] = useState('individual'); // 'individual' or 'flat'
+  const [flatRatePrice, setFlatRatePrice] = useState('1.50');
+  const [halfPizzaMultiplier, setHalfPizzaMultiplier] = useState('0.5');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,6 +100,13 @@ export const AddMenuItemDialog = ({ open, onClose, categories, menuItems }: AddM
       } else if (itemType === 'customizablePizza') {
         menuItemData.isCustomizable = true;
         menuItemData.isSpecialtyPizza = false;
+        
+        // Add flat rate pricing data
+        menuItemData.pricingMode = pricingMode;
+        if (pricingMode === 'flat') {
+          menuItemData.flatRatePrice = parseFloat(flatRatePrice);
+          menuItemData.halfPizzaMultiplier = parseFloat(halfPizzaMultiplier);
+        }
       } else if (itemType === 'customizableWings') {
         menuItemData.isCustomizable = true;
       } else if (itemType === 'sideWithSizes') {
@@ -129,6 +141,9 @@ export const AddMenuItemDialog = ({ open, onClose, categories, menuItems }: AddM
       setDrinkSmallPrice('2.00');
       setDrinkMediumPrice('2.50');
       setDrinkLargePrice('3.00');
+      setPricingMode('individual');
+      setFlatRatePrice('1.50');
+      setHalfPizzaMultiplier('0.5');
     } catch (error) {
       console.error("Error adding document: ", error);
       alert('Failed to add menu item.');
@@ -272,6 +287,65 @@ export const AddMenuItemDialog = ({ open, onClose, categories, menuItems }: AddM
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Flat Rate Pricing - show for customizable pizzas */}
+              {itemType === 'customizablePizza' && (
+                <div className="mt-4 p-3 bg-white rounded-lg border">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">🍕 Topping Pricing Mode</h4>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Pricing Mode</label>
+                    <select
+                      value={pricingMode}
+                      onChange={(e) => setPricingMode(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                    >
+                      <option value="individual">Individual Topping Prices</option>
+                      <option value="flat">Flat Rate Per Topping</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {pricingMode === 'individual' 
+                        ? 'Use individual topping prices from the toppings database'
+                        : 'Use a flat rate for all extra toppings on this pizza'
+                      }
+                    </p>
+                  </div>
+
+                  {pricingMode === 'flat' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="flatRatePrice" className="block text-sm font-medium text-gray-700">Flat Rate Price</label>
+                        <input
+                          id="flatRatePrice"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={flatRatePrice}
+                          onChange={(e) => setFlatRatePrice(e.target.value)}
+                          placeholder="1.50"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Price per extra topping</p>
+                      </div>
+                      <div>
+                        <label htmlFor="halfPizzaMultiplier" className="block text-sm font-medium text-gray-700">Half Pizza Multiplier</label>
+                        <input
+                          id="halfPizzaMultiplier"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="1"
+                          value={halfPizzaMultiplier}
+                          onChange={(e) => setHalfPizzaMultiplier(e.target.value)}
+                          placeholder="0.5"
+                          className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">0.5 = 50% price for half pizza</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -1296,6 +1296,7 @@ const MenuPage = () => {
         onSubmit={handlePizzaCustomizationComplete}
         toppingLimit={customizingPizza?.maxToppings || 3} // Use item-specific limit or default to 3
         pizzaName={(customizingPizza as any)?.isEditing ? `Edit ${customizingPizza?.name || 'Pizza'}` : customizingPizza?.name || 'Pizza'}
+        pizzaItem={customizingPizza} // Pass the full pizza item for pricing data
         existingSelections={(customizingPizza as any)?.isEditing ? editingCartItem?.customizations : undefined}
       />
       <WingSauceDialog

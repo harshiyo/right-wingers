@@ -36,6 +36,7 @@ interface PizzaToppingDialogProps {
   onSubmit: (result: { type: string; toppings: ToppingSide; extraCharge: number; toppingLimit: number; isHalfAndHalf: boolean; instructions?: string[] }) => void;
   toppingLimit: number;
   pizzaName: string;
+  pizzaItem?: any; // The full pizza menu item with pricing data
   sharedToppingInfo?: {
     totalLimit: number;
     usedToppings: number;
@@ -55,7 +56,7 @@ interface PizzaToppingDialogProps {
   comboSummaryPanel?: React.ReactNode;
 }
 
-export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizzaName, sharedToppingInfo, navigationProps, existingSelections, comboSummaryPanel }: PizzaToppingDialogProps) => {
+export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizzaName, pizzaItem, sharedToppingInfo, navigationProps, existingSelections, comboSummaryPanel }: PizzaToppingDialogProps) => {
   const [toppingsSnapshot, loadingToppings] = useCollection(
     query(collection(db, 'toppings'), orderBy('name'))
   );
@@ -281,6 +282,52 @@ export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizz
     
     // Calculate how many equivalents are extra
     const extraEquivalents = totalEquivalents - toppingLimit;
+    
+    // Check if this pizza uses flat rate pricing
+    if (pizzaItem?.pricingMode === 'flat' && pizzaItem?.flatRatePrice) {
+      const flatRate = pizzaItem.flatRatePrice;
+      const halfMultiplier = pizzaItem.halfPizzaMultiplier || 0.5;
+      
+      // For flat rate, we charge the cheapest extra toppings first
+      // Half-side toppings are cheaper (flatRate * halfMultiplier) than whole pizza toppings (flatRate)
+      let extraCharge = 0;
+      let remainingExtras = extraEquivalents;
+      
+      // Count actual individual toppings (not equivalents)
+      const actualHalfSideToppings = halfSideCount;
+      const actualWholePizzaToppings = wholePizzaCount;
+      
+      // Strategy: Use included toppings optimally, then charge for extras starting with cheapest
+      // If we have half-side toppings and they go over the limit, charge them first (cheaper)
+      if (actualHalfSideToppings > 0 && remainingExtras > 0) {
+        // Calculate how many half-side toppings should be charged
+        // Each 2 half-side toppings = 1 equivalent, but we charge per individual topping
+        const halfSideEquivalentsUsed = Math.min(halfSideEquivalents, Math.max(0, toppingLimit - wholePizzaCount));
+        const halfSideIncluded = halfSideEquivalentsUsed * 2; // Convert back to individual toppings
+        const halfSideExtras = Math.max(0, actualHalfSideToppings - halfSideIncluded);
+        
+        if (halfSideExtras > 0) {
+          const halfSideExtrasToCharge = Math.min(halfSideExtras, remainingExtras * 2);
+          extraCharge += halfSideExtrasToCharge * flatRate * halfMultiplier;
+          remainingExtras -= Math.ceil(halfSideExtrasToCharge / 2); // Convert back to equivalents
+        }
+      }
+      
+      // Then charge any remaining extras as whole pizza toppings (more expensive)
+      if (remainingExtras > 0) {
+        const wholePizzaIncluded = Math.min(wholePizzaCount, Math.max(0, toppingLimit - halfSideEquivalents));
+        const wholePizzaExtras = Math.max(0, wholePizzaCount - wholePizzaIncluded);
+        
+        if (wholePizzaExtras > 0) {
+          const wholePizzaExtrasToCharge = Math.min(wholePizzaExtras, remainingExtras);
+          extraCharge += wholePizzaExtrasToCharge * flatRate;
+        }
+      }
+      
+      return extraCharge;
+    }
+    
+    // Original individual topping pricing logic
     let extraCharge = 0;
     let extraToAccount = extraEquivalents;
     
@@ -367,7 +414,7 @@ export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizz
     return toppingLimit;
   };
 
-  // Helper function to get exact list of extra toppings (matches cart display logic)
+  // Helper function to get exact list of extra toppings 
   const getExtraToppings = () => {
     const wholePizzaCount = selectedToppings.wholePizza.size;
     const halfSideCount = selectedToppings.leftSide.size + selectedToppings.rightSide.size;
@@ -378,42 +425,46 @@ export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizz
       return new Set(); // No extras
     }
     
-    const extraEquivalents = totalEquivalents - toppingLimit;
     const extraToppings = new Set();
-    let extraToAccount = extraEquivalents;
     
-    // First, get extra whole pizza toppings
-    const wholePizzaExtra = Math.max(0, wholePizzaCount - Math.max(0, toppingLimit - halfSideEquivalents));
-    if (wholePizzaExtra > 0 && extraToAccount > 0) {
-      const toppingsToCharge = Math.min(wholePizzaExtra, extraToAccount);
-      const wholeToppings = Array.from(selectedToppings.wholePizza.values());
-      // Take the last selected toppings as extra (use slice to get the last N)
-      const extraWholeToppings = wholeToppings.slice(-wholePizzaExtra).slice(0, toppingsToCharge);
-      extraWholeToppings.forEach(topping => extraToppings.add(topping.id));
-      extraToAccount -= toppingsToCharge;
-    }
+    // When over limit, prioritize marking half-side toppings as extra (they're cheaper)
+    // This matches the pricing calculation logic
     
-    // Then, get extra half-side toppings
-    if (extraToAccount > 0) {
-      const halfSideExtraEquivalents = Math.min(extraToAccount, halfSideEquivalents - Math.max(0, toppingLimit - wholePizzaCount));
-      const halfSideExtraToppings = halfSideExtraEquivalents * 2;
-      
+    // Step 1: Calculate how many half-side toppings can be included
+    const maxHalfSideEquivalents = Math.max(0, toppingLimit - wholePizzaCount);
+    const halfSideIncluded = Math.min(halfSideEquivalents, maxHalfSideEquivalents);
+    const actualHalfSideIncluded = halfSideIncluded * 2; // Convert back to individual toppings
+    
+    // Step 2: Mark extra half-side toppings
+    if (halfSideCount > actualHalfSideIncluded) {
       const leftToppings = Array.from(selectedToppings.leftSide.values());
       const rightToppings = Array.from(selectedToppings.rightSide.values());
       
-      let toppingsToCharge = Math.min(halfSideExtraToppings, halfSideCount);
+      const halfSideExtras = halfSideCount - actualHalfSideIncluded;
+      let extrasMarked = 0;
       
-      // Distribute proportionally
-      const leftSideExtra = Math.min(leftToppings.length, Math.ceil(toppingsToCharge * (leftToppings.length / halfSideCount)));
-      const rightSideExtra = Math.min(rightToppings.length, toppingsToCharge - leftSideExtra);
+      // Mark extras from left side first, then right side
+      for (let i = Math.max(0, leftToppings.length - Math.ceil(halfSideExtras / 2)); i < leftToppings.length && extrasMarked < halfSideExtras; i++) {
+        extraToppings.add(leftToppings[i].id);
+        extrasMarked++;
+      }
       
-      // Add left side extras (take last selected)
-      const extraLeftToppings = leftToppings.slice(-leftSideExtra);
-      extraLeftToppings.forEach(topping => extraToppings.add(topping.id));
+      for (let i = Math.max(0, rightToppings.length - Math.floor(halfSideExtras / 2)); i < rightToppings.length && extrasMarked < halfSideExtras; i++) {
+        extraToppings.add(rightToppings[i].id);
+        extrasMarked++;
+      }
+    }
+    
+    // Step 3: Only mark whole pizza toppings as extra if they alone exceed the limit
+    // (Don't penalize whole pizza toppings for half-side selections)
+    if (wholePizzaCount > toppingLimit) {
+      const wholeToppings = Array.from(selectedToppings.wholePizza.values());
+      const wholePizzaExtras = wholePizzaCount - toppingLimit;
       
-      // Add right side extras (take last selected)
-      const extraRightToppings = rightToppings.slice(-rightSideExtra);
-      extraRightToppings.forEach(topping => extraToppings.add(topping.id));
+      // Mark the last selected whole pizza toppings as extra
+      for (let i = wholeToppings.length - wholePizzaExtras; i < wholeToppings.length; i++) {
+        extraToppings.add(wholeToppings[i].id);
+      }
     }
     
     return extraToppings;
@@ -678,7 +729,6 @@ export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizz
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
                 {filteredToppings.map((topping) => {
                   const isSelected = currentSelection.has(topping.id);
-                  const price = (activeSelection === 'left' || activeSelection === 'right') ? topping.price / 2 : topping.price;
                   const extraToppingsSet = getExtraToppings();
                   let isExtra = false;
                   
@@ -729,29 +779,30 @@ export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizz
 
                         {/* Topping Name */}
                         <p className={cn(
-                          "text-sm font-semibold leading-tight mb-2",
+                          "text-sm font-bold leading-tight mb-2",
                           isSelected ? "text-gray-800" : "text-gray-700"
                         )}>
                           {topping.name}
                         </p>
 
-                        {/* Price */}
+                        {/* Status Indicator */}
                         <div className="flex flex-col items-center">
                           <span className={cn(
-                            "text-sm font-bold",
-                            isSelected && isExtra ? "text-orange-600" : isSelected ? "text-green-600" : "text-gray-500"
-                          )}>
-                            +${price.toFixed(2)}
-                          </span>
-                          <span className={cn(
-                            "text-xs px-2 py-0.5 rounded-full mt-1 h-5 flex items-center justify-center",
+                            "text-xs px-2 py-0.5 rounded-full h-5 flex items-center justify-center",
                             isSelected 
                               ? isExtra 
                                 ? "bg-orange-100 text-orange-700" 
                                 : "bg-green-100 text-green-700"
-                              : "bg-transparent text-transparent"
+                              : getTotalSelectedCount() >= toppingLimit
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-gray-100 text-gray-500"
                           )}>
-                            {isSelected ? (isExtra ? "Extra" : "Included") : "Included"}
+                            {isSelected 
+                              ? (isExtra ? "Extra" : "Included") 
+                              : getTotalSelectedCount() >= toppingLimit 
+                                ? "Extra" 
+                                : "Included"
+                            }
                           </span>
                         </div>
                       </div>

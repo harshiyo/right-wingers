@@ -677,6 +677,7 @@ export default function MenuPage() {
           }}
           onSubmit={handleToppingSelection}
           pizzaName={selectedPizza.name}
+          pizzaItem={selectedPizza} // Pass the full pizza item for pricing data
           toppingLimit={selectedPizza.maxToppings || 3}
         />
       )}
