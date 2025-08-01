@@ -80,7 +80,16 @@ function normalizeOrderItemsForCart(orderItems: any[]): any[] {
         isCombo: true,
       };
     }
-    // For non-combo, just return as-is
+    // For items with existing customizations object, preserve it
+    if (item.customizations && typeof item.customizations === 'object') {
+      const isComboItem = item.isCombo || Array.isArray(item.customizations);
+      return {
+        ...item,
+        isCombo: isComboItem,
+        customizations: item.customizations
+      };
+    }
+    // For items without customizations, return as-is
     return { ...item };
   });
 }

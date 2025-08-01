@@ -305,7 +305,7 @@ const CartPanel = ({
 
   const subtotal = cartItems.reduce((sum, item) => {
     const itemTotal = (item.price + (item.extraCharges || 0)) * item.quantity;
-    console.log(`🛒 CART SUBTOTAL DEBUG: ${item.name} - Price: $${item.price}, Extra: $${item.extraCharges || 0}, Qty: ${item.quantity}, Total: $${itemTotal}`);
+    //console.log(`🛒 CART SUBTOTAL DEBUG: ${item.name} - Price: $${item.price}, Extra: $${item.extraCharges || 0}, Qty: ${item.quantity}, Total: $${itemTotal}`);
     return sum + itemTotal;
   }, 0);
   const tax = subtotal * 0.13;
@@ -851,6 +851,16 @@ const MenuPage = () => {
   };
 
   const handleEditCartItem = (cartItem: CartItem) => {
+    console.log('🔧 Editing cart item:', {
+      id: cartItem.id,
+      baseId: cartItem.baseId,
+      name: cartItem.name,
+      isCombo: cartItem.isCombo,
+      customizations: cartItem.customizations,
+      hasCustomizations: !!cartItem.customizations,
+      customizationType: cartItem.customizations?.type
+    });
+    
     setEditingCartItem(cartItem);
     
     if (cartItem.isCombo) {
@@ -876,7 +886,31 @@ const MenuPage = () => {
       }
       if (cartItem.customizations.type === 'pizza') {
         // Find the original menu item for pizza customization
-        const originalItem = menuItems.find(item => item.id === cartItem.baseId);
+        let originalItem = menuItems.find(item => item.id === cartItem.baseId);
+        
+        // If not found by baseId, try to find by name or category
+        if (!originalItem) {
+          originalItem = menuItems.find(item => 
+            item.category === 'Pizza' && 
+            item.isCustomizable && 
+            item.name.toLowerCase().includes('pizza')
+          );
+        }
+        
+        // If still not found, use first customizable pizza
+        if (!originalItem) {
+          originalItem = menuItems.find(item => 
+            item.category === 'Pizza' && item.isCustomizable
+          );
+        }
+        
+        console.log('🍕 Looking for pizza item:', {
+          searchingForBaseId: cartItem.baseId,
+          foundOriginalItem: !!originalItem,
+          originalItemName: originalItem?.name,
+          fallbackUsed: cartItem.baseId !== originalItem?.id
+        });
+        
         if (originalItem) {
           setCustomizingPizza({
             ...originalItem,
@@ -884,10 +918,34 @@ const MenuPage = () => {
             editingItemId: cartItem.id
           } as any);
           setShowPizzaDialog(true);
+        } else {
+          console.error('❌ Could not find any pizza item for editing');
         }
       } else if (cartItem.customizations.type === 'wings') {
         // Find the original menu item for wing customization
-        const originalItem = menuItems.find(item => item.id === cartItem.baseId);
+        let originalItem = menuItems.find(item => item.id === cartItem.baseId);
+        
+        // If not found by baseId, try to find by category
+        if (!originalItem) {
+          originalItem = menuItems.find(item => 
+            item.category === 'Wings' && item.isCustomizable
+          );
+        }
+        
+        // If still not found, try to find any wing item
+        if (!originalItem) {
+          originalItem = menuItems.find(item => 
+            item.name.toLowerCase().includes('wing') && item.isCustomizable
+          );
+        }
+        
+        console.log('🍗 Looking for wing item:', {
+          searchingForBaseId: cartItem.baseId,
+          foundOriginalItem: !!originalItem,
+          originalItemName: originalItem?.name,
+          fallbackUsed: cartItem.baseId !== originalItem?.id
+        });
+        
         if (originalItem) {
           setCustomizingWing({
             ...originalItem,
@@ -895,13 +953,36 @@ const MenuPage = () => {
             editingItemId: cartItem.id
           } as any);
           setShowWingDialog(true);
+        } else {
+          console.error('❌ Could not find any wing item for editing');
         }
       } else if (cartItem.customizations.type === 'item' || cartItem.customizations.type === 'side' || cartItem.customizations.type === 'drink') {
         // For sides/drinks, open size select dialog
-        const originalItem = menuItems.find(item => item.id === cartItem.baseId);
+        let originalItem = menuItems.find(item => item.id === cartItem.baseId);
+        
+        // If not found by baseId, try to find by category
+        if (!originalItem) {
+          const category = cartItem.customizations.type === 'side' ? 'Sides' : 
+                          cartItem.customizations.type === 'drink' ? 'Drinks' : 
+                          cartItem.category;
+          originalItem = menuItems.find(item => 
+            item.category === category && item.sizePricing
+          );
+        }
+        
+        console.log('🥤 Looking for side/drink item:', {
+          searchingForBaseId: cartItem.baseId,
+          type: cartItem.customizations.type,
+          foundOriginalItem: !!originalItem,
+          originalItemName: originalItem?.name,
+          fallbackUsed: cartItem.baseId !== originalItem?.id
+        });
+        
         if (originalItem) {
           setSizingItem(originalItem);
           setShowSizeDialog(true);
+        } else {
+          console.error('❌ Could not find any item for side/drink editing');
         }
       } else {
         // Fallback for other customizable items
@@ -1164,7 +1245,7 @@ const MenuPage = () => {
 
   const subtotal = cartItems.reduce((sum, item) => {
     const itemTotal = (item.price + (item.extraCharges || 0)) * item.quantity;
-    console.log(`🛒 MAIN SUBTOTAL DEBUG: ${item.name} - Price: $${item.price}, Extra: $${item.extraCharges || 0}, Qty: ${item.quantity}, Total: $${itemTotal}`);
+    //console.log(`🛒 MAIN SUBTOTAL DEBUG: ${item.name} - Price: $${item.price}, Extra: $${item.extraCharges || 0}, Qty: ${item.quantity}, Total: $${itemTotal}`);
     return sum + itemTotal;
   }, 0);
   const totalItemsCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);

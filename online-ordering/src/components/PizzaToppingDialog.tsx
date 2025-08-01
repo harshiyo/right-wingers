@@ -29,7 +29,7 @@ interface ToppingSide {
 interface PizzaToppingDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (result: { toppings: ToppingSide; extraCharge: number; isHalfAndHalf: boolean }) => void;
+  onSubmit: (result: { toppings: ToppingSide; extraCharge: number; isHalfAndHalf: boolean; type: string; size?: string }) => void;
   pizzaName: string;
   toppingLimit: number;
   sharedToppingInfo?: {
@@ -243,7 +243,8 @@ export default function PizzaToppingDialog({
         rightSide: Array.from(selectedToppings.rightSide.values())
       },
       extraCharge: getExtraCharge(),
-      isHalfAndHalf: selectedToppings.leftSide.size > 0 || selectedToppings.rightSide.size > 0
+      isHalfAndHalf: selectedToppings.leftSide.size > 0 || selectedToppings.rightSide.size > 0,
+      type: 'pizza'
     };
     onSubmit(result);
   };

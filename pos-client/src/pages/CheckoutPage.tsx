@@ -789,7 +789,7 @@ const CheckoutPage = () => {
             discountTotal: 0,
             ...(orderType === 'delivery' && customer.address ? { deliveryDetails: { ...customer.address, ...(deliveryAddress || {}), ...(deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime ? { scheduledDeliveryDateTime } : {}) } } : {}),
             ...(orderType === 'pickup' ? { pickupDetails: { estimatedTime: '15-25 minutes', ...(pickupTime === 'scheduled' && scheduledDateTime ? { scheduledDateTime } : {}) } } : {}),
-            source: 'pos',
+            source: location.state?.originalOrder?.source || 'pos',
           };
 
           // Update existing order in Firestore
@@ -1101,7 +1101,7 @@ const CheckoutPage = () => {
         discountTotal: 0,
         ...(orderType === 'delivery' && customer.address ? { deliveryDetails: { ...customer.address, ...(deliveryAddress || {}), ...(deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime ? { scheduledDeliveryDateTime } : {}) } } : {}),
         ...(orderType === 'pickup' ? { pickupDetails: { estimatedTime: '15-25 minutes', ...(pickupTime === 'scheduled' && scheduledDateTime ? { scheduledDateTime } : {}) } } : {}),
-        source: 'pos',
+        source: location.state?.originalOrder?.source || 'pos',
       };
 
       // --- LOGGING FOR KITCHEN SEND ---

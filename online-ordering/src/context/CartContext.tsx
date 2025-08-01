@@ -10,12 +10,6 @@ interface CartItem {
   customizations?: any;
   extraCharges?: number;
   isCombo?: boolean;
-  // Legacy fields for non-combo items
-  toppings?: any;
-  sauces?: any;
-  size?: string;
-  isHalfAndHalf?: boolean;
-  instructions?: string[];
 }
 
 interface CartContextType {

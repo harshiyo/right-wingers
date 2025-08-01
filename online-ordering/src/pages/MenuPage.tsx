@@ -407,18 +407,24 @@ export default function MenuPage() {
     }
   };
 
-  const handleToppingSelection = (result: { toppings: any; extraCharge: number; isHalfAndHalf: boolean }) => {
+  const handleToppingSelection = (result: { toppings: any; extraCharge: number; isHalfAndHalf: boolean; type: string; size?: string }) => {
     if (!selectedPizza) return;
 
     addToCart({
-      id: selectedPizza.id,
+      id: `${selectedPizza.id}-${Date.now()}`,
+      baseId: selectedPizza.id,
       name: selectedPizza.name,
       price: selectedPizza.price,
       quantity: 1,
       imageUrl: selectedPizza.imageUrl,
-      toppings: result.toppings,
-      extraCharges: result.extraCharge,
-      isHalfAndHalf: result.isHalfAndHalf
+      customizations: {
+        type: result.type,
+        size: result.size,
+        toppings: result.toppings,
+        isHalfAndHalf: result.isHalfAndHalf,
+        instructions: []
+      },
+      extraCharges: result.extraCharge
     });
 
     setIsToppingDialogOpen(false);
@@ -441,12 +447,16 @@ export default function MenuPage() {
     }
 
     const cartItem: CartItem = {
-      id: item.id,
+      id: `${item.id}-${sizeKey}-${Date.now()}`,
+      baseId: item.id,
       name: item.name,
       price: sizePrice,
       quantity: 1,
       imageUrl: item.imageUrl,
-      size: sizeKey as 'small' | 'medium' | 'large'
+      customizations: {
+        type: item.category === 'Pizza' ? 'pizza' : 'item',
+        size: sizeKey
+      }
     };
 
     addToCart(cartItem);
@@ -477,14 +487,18 @@ export default function MenuPage() {
     if (!selectedWing) return;
     
     const cartItem: CartItem = {
-      id: selectedWing.id,
+      id: `${selectedWing.id}-${Date.now()}`,
+      baseId: selectedWing.id,
       name: selectedWing.name,
       price: selectedWing.price,
       quantity: 1,
       imageUrl: selectedWing.imageUrl,
-      extraCharges: result.extraCharge,
-      sauces: result.sauces,
-      instructions: result.instructions
+      customizations: {
+        type: result.type,
+        sauces: result.sauces,
+        instructions: result.instructions || []
+      },
+      extraCharges: result.extraCharge
     };
 
     addToCart(cartItem);

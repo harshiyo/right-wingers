@@ -316,33 +316,10 @@ export default function CheckoutPage() {
           // Transform online order structure to match POS structure
           const transformedItem = {
             ...item,
-            baseId: item.id, // Keep original item ID for reference
+            baseId: item.baseId || item.id, // Use baseId if available, otherwise fall back to id
           };
 
-          // Transform customizations to match POS structure
-          if (item.toppings || item.sauces || item.size || item.isHalfAndHalf) {
-            transformedItem.customizations = {} as any;
-            
-            // Handle size
-            if (item.size) {
-              (transformedItem.customizations as any).size = item.size;
-            }
-            
-            // Handle toppings (pizza)
-            if (item.toppings) {
-              (transformedItem.customizations as any).toppings = item.toppings;
-            }
-            
-            // Handle sauces (wings)
-            if (item.sauces && item.sauces.length > 0) {
-              (transformedItem.customizations as any).sauces = item.sauces;
-            }
-            
-            // Handle half and half
-            if (item.isHalfAndHalf) {
-              (transformedItem.customizations as any).isHalfAndHalf = true;
-            }
-          }
+          // No legacy field handling needed - items already have proper customizations structure
           
           // Handle customizations exactly like POS client
           if (item.customizations) {
