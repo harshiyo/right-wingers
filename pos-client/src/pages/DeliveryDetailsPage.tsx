@@ -4,7 +4,7 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { TopBar } from '../components/layout/TopBar';
 import { Truck, MapPin, Home, ArrowRight, CheckCircle, User, Clock, Calendar } from 'lucide-react';
-import { Customer } from '../data/customers';
+import { Customer, updateCustomerAddress } from '../data/customers';
 
 // Memoized customer info card component
 const CustomerInfoCard = memo(({ 
@@ -202,17 +202,51 @@ const DeliveryDetailsPage = () => {
     navigate('/order', { state: { customer, phone } });
   }, [navigate, customer, phone]);
 
-  const handleConfirmDelivery = useCallback(() => {
-    navigate('/menu', { 
-      state: { 
-        customer, 
-        phone, 
-        orderType: 'delivery', 
-        deliveryAddress,
-        deliveryTimeType,
-        scheduledDeliveryDateTime
-      } 
-    });
+  const handleConfirmDelivery = useCallback(async () => {
+    try {
+      // Update customer address in database if it has changed
+      if (phone && (
+        deliveryAddress.street !== customer?.address?.street ||
+        deliveryAddress.city !== customer?.address?.city ||
+        deliveryAddress.postalCode !== customer?.address?.postalCode
+      )) {
+        console.log('Updating customer address in database...');
+        await updateCustomerAddress(phone, deliveryAddress);
+      }
+
+      // Update the customer object with the new address for immediate use
+      const updatedCustomer = {
+        ...customer,
+        address: deliveryAddress
+      };
+
+      navigate('/menu', { 
+        state: { 
+          customer: updatedCustomer, 
+          phone, 
+          orderType: 'delivery', 
+          deliveryAddress,
+          deliveryTimeType,
+          scheduledDeliveryDateTime
+        } 
+      });
+    } catch (error) {
+      console.error('Error updating customer address:', error);
+      // Continue with navigation even if address update fails
+      navigate('/menu', { 
+        state: { 
+          customer: {
+            ...customer,
+            address: deliveryAddress
+          }, 
+          phone, 
+          orderType: 'delivery', 
+          deliveryAddress,
+          deliveryTimeType,
+          scheduledDeliveryDateTime
+        } 
+      });
+    }
   }, [navigate, customer, phone, deliveryAddress, deliveryTimeType, scheduledDeliveryDateTime]);
 
   // Memoized derived state

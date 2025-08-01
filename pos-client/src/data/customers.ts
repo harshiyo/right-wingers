@@ -1,4 +1,4 @@
-import { collection, addDoc, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
 export interface Customer {
@@ -98,6 +98,48 @@ export const saveCustomerToFirebase = async (customerData: Omit<Customer, 'id'>)
   } catch (error) {
     console.error('❌ Error saving customer to Firebase:', error);
     throw error;
+  }
+};
+
+// Update existing customer in Firebase
+export const updateCustomerInFirebase = async (customerId: string, updates: Partial<Customer>) => {
+  try {
+    // Import Firebase functions dynamically to avoid import issues
+    const { doc, updateDoc } = await import('firebase/firestore');
+    const { db } = await import('../services/firebase');
+    
+    const customerRef = doc(db, 'customers', customerId);
+    await updateDoc(customerRef, {
+      ...updates,
+      updatedAt: new Date().toISOString()
+    });
+    
+    console.log('✅ Customer updated in Firebase:', customerId);
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Error updating customer in Firebase:', error);
+    throw error;
+  }
+};
+
+// Update customer address specifically
+export const updateCustomerAddress = async (phone: string, address: { street: string; city: string; postalCode: string }) => {
+  try {
+    // Find customer by phone first
+    const customer = await findCustomerByPhone(phone);
+    if (!customer) {
+      console.log('Customer not found, cannot update address');
+      return false;
+    }
+
+    // Update the customer's address
+    await updateCustomerInFirebase(customer.id, { address });
+    console.log('✅ Customer address updated successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Error updating customer address:', error);
+    return false;
   }
 };
 
