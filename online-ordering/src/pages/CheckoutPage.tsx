@@ -113,85 +113,125 @@ export default function CheckoutPage() {
       .filter((label: any) => typeof label === 'string' && label.trim().length > 0);
   };
 
-  // Helper function to render item customizations
-  const renderItemCustomizations = (item: any) => {
-    const customizations: string[] = [];
+  // Helper function to render customization details (copied from CartPage)
+  const renderCustomizationDetails = (item: any) => {
+    const details: string[] = [];
 
-    // Handle size
-    if (item.size) {
-      customizations.push(`${item.size.charAt(0).toUpperCase() + item.size.slice(1)} Size`);
+    // Handle combo items: customizations as array or object with numeric keys (exact same logic as CartPage)
+    let comboArr = null;
+    if (Array.isArray(item.customizations)) {
+      comboArr = item.customizations;
+    } else if (item.customizations && typeof item.customizations === 'object' && Object.keys(item.customizations).every(k => !isNaN(Number(k)))) {
+      comboArr = Object.values(item.customizations);
     }
 
-    // Handle combo items
-    if (item.isCombo && item.comboItems) {
-      item.comboItems.forEach((combo: any) => {
-        customizations.push(combo.name);
-
-        if (combo.size) {
-          customizations.push(`${combo.size.charAt(0).toUpperCase() + combo.size.slice(1)} Size`);
+    if (comboArr && comboArr.length > 0) {
+      // This is a combo item - process each step
+      comboArr.forEach((step: any) => {
+        // Handle dipping sauces specially - always show "Dipping" as header
+        if (step.type === 'dipping') {
+          details.push('Dipping');
+        }
+        // For steps with itemName (like sides/drinks), use the actual item name
+        else if (step.itemName && step.itemName.trim() !== '') {
+          const stepSize = step.size ? ` (${step.size})` : '';
+          details.push(`${step.itemName}${stepSize}`);
+        } else {
+          // For other steps (pizza, wings), use the step type
+          const stepType = step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : 'Item';
+          const stepSize = step.size ? ` (${step.size})` : '';
+          details.push(`${stepType}${stepSize}`);
+        }
+        
+        if (step.toppings) {
+          const t = step.toppings;
+          if (t.wholePizza && t.wholePizza.length > 0) {
+            details.push(`  Whole: ${t.wholePizza.map((topping: any) => topping.name).join(', ')}`);
+          }
+          if (t.leftSide && t.leftSide.length > 0) {
+            details.push(`  Left: ${t.leftSide.map((topping: any) => topping.name).join(', ')}`);
+          }
+          if (t.rightSide && t.rightSide.length > 0) {
+            details.push(`  Right: ${t.rightSide.map((topping: any) => topping.name).join(', ')}`);
+          }
+        }
+        
+        if (step.sauces && step.sauces.length > 0) {
+          details.push(`  Sauces: ${step.sauces.map((sauce: any) => sauce.name).join(', ')}`);
         }
 
-        if (combo.toppings) {
-          if (combo.toppings.wholePizza?.length) {
-            const toppings = combo.toppings.wholePizza.map((t: any) => t.name).join(', ');
-            customizations.push(`Whole Pizza: ${toppings}`);
-          }
-          if (combo.toppings.leftSide?.length) {
-            const toppings = combo.toppings.leftSide.map((t: any) => t.name).join(', ');
-            customizations.push(`Left Half: ${toppings}`);
-          }
-          if (combo.toppings.rightSide?.length) {
-            const toppings = combo.toppings.rightSide.map((t: any) => t.name).join(', ');
-            customizations.push(`Right Half: ${toppings}`);
-          }
+        // Handle dipping sauces specially
+        if (step.type === 'dipping' && step.selectedDippingSauces && step.sauceData) {
+          // Show individual dipping sauce items
+          Object.entries(step.selectedDippingSauces).forEach(([sauceId, quantity]: [string, any]) => {
+            const sauceName = step.sauceData[sauceId]?.name || 'Dipping Sauce';
+            details.push(`  ${quantity}x ${sauceName}`);
+          });
+        }
+        
+        if (step.instructions && step.instructions.length > 0) {
+          details.push(`  Instructions: ${step.instructions.join(', ')}`);
         }
 
-        if (combo.sauces?.length) {
-          const sauces = combo.sauces.map((s: any) => s.name).join(', ');
-          customizations.push(`Sauces: ${sauces}`);
-        }
-
-        // Handle combo item instructions
-        if (combo.instructions?.length) {
-          const instructionLabels = getInstructionLabels(combo.instructions, 'pizza');
-          if (instructionLabels.length > 0) {
-            customizations.push(`Instructions: ${instructionLabels.join(', ')}`);
-          }
+        // Add extra charge info for this specific step
+        if (step.extraCharge && step.extraCharge > 0) {
+          details.push(`  [EXTRA] +$${step.extraCharge.toFixed(2)}`);
         }
       });
-    } else {
-      // Handle individual item customizations
-      if (item.toppings?.wholePizza?.length) {
-        const toppings = item.toppings.wholePizza.map((t: any) => t.name).join(', ');
-        customizations.push(`Toppings: ${toppings}`);
+    } 
+    // Handle non-combo items (only if it's NOT a combo)
+    else if (!item.isCombo) {
+      // Check customizations object first
+      if (item.customizations && typeof item.customizations === 'object') {
+        if (item.customizations.size) {
+          details.push(`Size: ${item.customizations.size}`);
+        }
+        if (item.customizations.toppings) {
+          const t = item.customizations.toppings;
+          if (t.wholePizza && t.wholePizza.length > 0) {
+            details.push(`Whole: ${t.wholePizza.map((topping: any) => topping.name).join(', ')}`);
+          }
+          if (t.leftSide && t.leftSide.length > 0) {
+            details.push(`Left: ${t.leftSide.map((topping: any) => topping.name).join(', ')}`);
+          }
+          if (t.rightSide && t.rightSide.length > 0) {
+            details.push(`Right: ${t.rightSide.map((topping: any) => topping.name).join(', ')}`);
+          }
+        }
+        if (item.customizations.sauces && item.customizations.sauces.length > 0) {
+          details.push(`Sauces: ${item.customizations.sauces.map((sauce: any) => sauce.name).join(', ')}`);
+        }
+        if (item.customizations.instructions && item.customizations.instructions.length > 0) {
+          details.push(`Instructions: ${item.customizations.instructions.join(', ')}`);
+        }
       }
-
-      if (item.toppings?.leftSide?.length) {
-        const toppings = item.toppings.leftSide.map((t: any) => t.name).join(', ');
-        customizations.push(`Left Half: ${toppings}`);
-      }
-
-      if (item.toppings?.rightSide?.length) {
-        const toppings = item.toppings.rightSide.map((t: any) => t.name).join(', ');
-        customizations.push(`Right Half: ${toppings}`);
-      }
-
-      if (item.sauces?.length) {
-        const sauces = item.sauces.map((s: any) => s.name).join(', ');
-        customizations.push(`Sauces: ${sauces}`);
-      }
-
-      // Handle individual item instructions
-      if (item.instructions?.length) {
-        const itemType = item.name.toLowerCase().includes('wing') ? 'wings' : 'pizza';
-        const instructionLabels = getInstructionLabels(item.instructions, itemType);
-        if (instructionLabels.length > 0) {
-          customizations.push(`Instructions: ${instructionLabels.join(', ')}`);
+      // Check direct properties (fallback)
+      else {
+        if (item.toppings) {
+          const t = item.toppings;
+          if (t.wholePizza && t.wholePizza.length > 0) {
+            details.push(`Whole: ${t.wholePizza.map((topping: any) => topping.name).join(', ')}`);
+          }
+          if (t.leftSide && t.leftSide.length > 0) {
+            details.push(`Left: ${t.leftSide.map((topping: any) => topping.name).join(', ')}`);
+          }
+          if (t.rightSide && t.rightSide.length > 0) {
+            details.push(`Right: ${t.rightSide.map((topping: any) => topping.name).join(', ')}`);
+          }
+        }
+        if (item.sauces && Array.isArray(item.sauces) && item.sauces.length > 0) {
+          details.push(`Sauces: ${item.sauces.map((sauce: any) => sauce.name).join(', ')}`);
+        }
+        if (item.size) {
+          details.push(`Size: ${item.size.charAt(0).toUpperCase() + item.size.slice(1)}`);
+        }
+        if (item.instructions && Array.isArray(item.instructions) && item.instructions.length > 0) {
+          details.push(`Instructions: ${item.instructions.join(', ')}`);
         }
       }
     }
 
-    return customizations;
+    return details.length > 0 ? details : null;
   };
 
   useEffect(() => {
@@ -506,7 +546,7 @@ export default function CheckoutPage() {
             ) : (
               <div className="space-y-4">
                 {cartItems.map((item, index) => {
-                  const customizations = renderItemCustomizations(item);
+                  const details = renderCustomizationDetails(item);
                   const itemPrice = item.price + (item.extraCharges || 0);
                   
                   return (
@@ -520,16 +560,33 @@ export default function CheckoutPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-gray-900 mb-1">{item.name}</h3>
-                          {customizations.length > 0 && (
-                            <div className="space-y-1 mb-3">
-                              {customizations.map((customization, optIndex) => (
-                                <span
-                                  key={optIndex}
-                                  className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-lg mr-1 mb-1"
-                                >
-                                  {customization}
-                                </span>
-                              ))}
+                          {details && details.length > 0 && (
+                            <div className="mb-3 space-y-1">
+                              {details.map((detail, idx) => {
+                                const isCategory = !detail.startsWith('  ');
+                                const isExtra = detail.includes('[EXTRA]');
+                                const cleanDetail = detail.replace('[EXTRA]', '').trim();
+                                
+                                if (isCategory) {
+                                  return (
+                                    <div key={idx} className="font-semibold text-gray-900 text-sm">
+                                      {cleanDetail}
+                                    </div>
+                                  );
+                                } else if (isExtra) {
+                                  return (
+                                    <div key={idx} className="text-sm text-red-600 font-medium ml-3">
+                                      {cleanDetail}
+                                    </div>
+                                  );
+                                } else {
+                                  return (
+                                    <div key={idx} className="text-sm text-gray-600 ml-3">
+                                      {cleanDetail}
+                                    </div>
+                                  );
+                                }
+                              })}
                             </div>
                           )}
                           <div className="flex items-center justify-between">

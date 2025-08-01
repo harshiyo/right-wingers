@@ -356,6 +356,7 @@ export default function MenuPage() {
           quantity: comp.quantity,
           toppingLimit: comp.maxToppings,
           sauceLimit: comp.maxSauces,
+          maxDipping: comp.maxDipping,
           itemName: comp.itemName,
           availableSizes: comp.availableSizes
         })),

@@ -2,10 +2,11 @@ import React from 'react';
 import { UnifiedComboSelector } from './UnifiedComboSelector';
 
 interface ComboItem {
-  type: 'pizza' | 'wings' | 'drink' | 'side';
+  type: 'pizza' | 'wings' | 'drink' | 'side' | 'dipping';
   quantity: number;
   toppingLimit?: number;
   sauceLimit?: number;
+  maxDipping?: number;
   size?: string;
   itemName?: string;
   availableSizes?: string[];

@@ -14,6 +14,7 @@ interface CartSummary {
     name: string;
     price: number;
     quantity: number;
+    extraCharges?: number;
     options?: string[];
   }>;
   subtotal: number;
@@ -54,8 +55,12 @@ export default function CartPage() {
     if (comboArr && comboArr.length > 0) {
       // This is a combo item - process each step
       comboArr.forEach((step: any) => {
+        // Handle dipping sauces specially - always show "Dipping" as header
+        if (step.type === 'dipping') {
+          details.push('Dipping');
+        }
         // For steps with itemName (like sides/drinks), use the actual item name
-        if (step.itemName && step.itemName.trim() !== '') {
+        else if (step.itemName && step.itemName.trim() !== '') {
           const stepSize = step.size ? ` (${step.size})` : '';
           details.push(`${step.itemName}${stepSize}`);
         } else {
@@ -81,9 +86,23 @@ export default function CartPage() {
         if (step.sauces && step.sauces.length > 0) {
           details.push(`  Sauces: ${step.sauces.map((sauce: any) => sauce.name).join(', ')}`);
         }
+
+        // Handle dipping sauces specially
+        if (step.type === 'dipping' && step.selectedDippingSauces && step.sauceData) {
+          // Show individual dipping sauce items
+          Object.entries(step.selectedDippingSauces).forEach(([sauceId, quantity]: [string, any]) => {
+            const sauceName = step.sauceData[sauceId]?.name || 'Dipping Sauce';
+            details.push(`  ${quantity}x ${sauceName}`);
+          });
+        }
         
         if (step.instructions && step.instructions.length > 0) {
           details.push(`  Instructions: ${step.instructions.join(', ')}`);
+        }
+
+        // Add extra charge info for this specific step
+        if (step.extraCharge && step.extraCharge > 0) {
+          details.push(`  [EXTRA] +$${step.extraCharge.toFixed(2)}`);
         }
       });
     } 
@@ -246,8 +265,9 @@ export default function CartPage() {
       return {
         id: item.id,
         name: item.name,
-        price: itemPrice,
+        price: item.price,
         quantity: item.quantity,
+        extraCharges: item.extraCharges,
         options
       };
     }),
@@ -374,7 +394,8 @@ export default function CartPage() {
               <div className="space-y-4">
                 {cartSummary.items.map((item, index) => {
                   const cartItem = cartItems[index];
-                                      const isAnimatingItem = isAnimating === cartItem.id;
+                  const itemPrice = item.price + (item.extraCharges || 0);
+                  const isAnimatingItem = isAnimating === cartItem.id;
                   return (
                     <div
                       key={`${item.id}-${index}`}
@@ -392,10 +413,32 @@ export default function CartPage() {
                           {(() => {
                             const details = renderCustomizationDetails(cartItem);
                             return details && details.length > 0 && (
-                              <div className="mb-3">
-                                <div className="text-sm text-gray-600 whitespace-pre-line font-mono">
-                                  {details.join('\n')}
-                                </div>
+                              <div className="mb-3 space-y-1">
+                                {details.map((detail, idx) => {
+                                  const isCategory = !detail.startsWith('  ');
+                                  const isExtra = detail.includes('[EXTRA]');
+                                  const cleanDetail = detail.replace('[EXTRA]', '').trim();
+                                  
+                                  if (isCategory) {
+                                    return (
+                                      <div key={idx} className="font-semibold text-gray-900 text-sm">
+                                        {cleanDetail}
+                                      </div>
+                                    );
+                                  } else if (isExtra) {
+                                    return (
+                                      <div key={idx} className="text-sm text-red-600 font-medium ml-3">
+                                        {cleanDetail}
+                                      </div>
+                                    );
+                                  } else {
+                                    return (
+                                      <div key={idx} className="text-sm text-gray-600 ml-3">
+                                        {cleanDetail}
+                                      </div>
+                                    );
+                                  }
+                                })}
                               </div>
                             );
                           })()}
@@ -433,11 +476,16 @@ export default function CartPage() {
                             </div>
                             <div className="text-right">
                               <p className="font-bold text-lg text-gray-900">
-                                ${(item.price * item.quantity).toFixed(2)}
+                                ${(itemPrice * item.quantity).toFixed(2)}
                               </p>
                               {item.quantity > 1 && (
                                 <p className="text-sm text-gray-600">
-                                  ${item.price.toFixed(2)} each
+                                  ${itemPrice.toFixed(2)} each
+                                </p>
+                              )}
+                              {item.extraCharges && item.extraCharges > 0 && (
+                                <p className="text-sm text-red-600 mt-1">
+                                  +${item.extraCharges.toFixed(2)} extra
                                 </p>
                               )}
                             </div>
