@@ -80,10 +80,13 @@ interface Category {
 interface ComboComponent {
   itemId: string;
   itemName: string;
-  type: 'pizza' | 'wings' | 'side' | 'drink';
+  type: 'pizza' | 'wings' | 'side' | 'drink' | 'dipping';
   quantity: number;
   maxToppings?: number;
   maxSauces?: number;
+  maxDipping?: number;
+  availableSizes?: string[];
+  defaultSize?: string;
 }
 
 interface Combo {
@@ -358,7 +361,9 @@ export default function MenuPage() {
           sauceLimit: comp.maxSauces,
           maxDipping: comp.maxDipping,
           itemName: comp.itemName,
-          availableSizes: comp.availableSizes
+          itemId: comp.itemId, // Preserve itemId for pizza pricing lookups
+          availableSizes: comp.availableSizes,
+          pizzaItem: item // Pass the pizza item data for flat rate pricing
         })),
         price: item.basePrice,
         isEditing: false

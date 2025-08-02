@@ -762,6 +762,7 @@ const MenuPage = () => {
           sauceLimit: comp.maxSauces,
           maxDipping: comp.maxDipping,
           itemName: comp.itemName,
+          itemId: comp.itemId, // Preserve itemId for pizza pricing lookups
           availableSizes: comp.availableSizes,
           defaultSize: comp.defaultSize,
           size: comp.itemName || comp.type,

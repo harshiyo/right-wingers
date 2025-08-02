@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { X, ChevronLeft, Check, Edit2, Pizza, Drumstick, Coffee, Utensils } from 'lucide-react';
 import { cn } from '../utils/cn';
@@ -30,6 +30,7 @@ interface ComboItem {
   maxDipping?: number;
   size?: string;
   itemName?: string;
+  itemId?: string; // Add itemId field for pizza pricing lookups
   availableSizes?: string[];
   defaultSize?: string;
   extraCharge?: number;
@@ -63,8 +64,10 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
         stepIndex: index,
         toppingLimit: item.toppingLimit,
         sauceLimit: item.sauceLimit,
+        maxDipping: item.maxDipping,
         size: item.size,
         itemName: item.itemName,
+        itemId: item.itemId, // Add itemId for pizza pricing lookups
         quantity: 1,
         availableSizes: item.availableSizes,
         defaultSize: item.defaultSize
@@ -74,7 +77,8 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
         return combo.items.flatMap((item) =>
           Array(item.quantity).fill(null).map(() => ({ 
             ...item, 
-            stepIndex: globalStepIndex++
+            stepIndex: globalStepIndex++,
+            itemId: item.itemId // Preserve itemId for pizza pricing lookups
           }))
         );
       })();
@@ -107,6 +111,21 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
 
   // Size selection state
   const [selectedSize, setSelectedSize] = useState<string>('');
+
+  // Function to fetch pizza menu item for pricing
+  const fetchPizzaMenuItem = async (itemId: string) => {
+    try {
+      const docRef = doc(db, 'menuItems', itemId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching pizza menu item:', error);
+      return null;
+    }
+  };
 
   // Dipping sauce state
   const [dippingSauces, setDippingSauces] = useState<Topping[]>([]);
@@ -316,7 +335,7 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
   };
 
   // Helper function to calculate extra charge for toppings using shared pool
-  const calculateToppingExtraCharge = (toppings: ToppingSide, stepIndex: number) => {
+  const calculateToppingExtraCharge = async (toppings: ToppingSide, stepIndex: number) => {
     const totalCount = calculateToppingCount(toppings);
     const totalLimit = getTotalToppingLimit();
     
@@ -333,6 +352,55 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
     
     if (extraToppings === 0) return 0;
     
+    // Check if this pizza uses flat rate pricing
+    const currentStepData = steps[stepIndex];
+    if (currentStepData?.type === 'pizza' && currentStepData?.itemId) {
+      const pizzaItem = await fetchPizzaMenuItem(currentStepData.itemId);
+      
+      if (pizzaItem?.pricingMode === 'flat' && pizzaItem?.flatRatePrice) {
+        const flatRate = pizzaItem.flatRatePrice;
+        const halfMultiplier = pizzaItem.halfPizzaMultiplier || 0.5;
+        
+        // For flat rate, we charge the cheapest extra toppings first
+        let extraCharge = 0;
+        let remainingExtras = extraToppings;
+        
+        // Count actual individual toppings (not equivalents)
+        const wholePizzaCount = (toppings.wholePizza || []).length;
+        const halfSideCount = (toppings.leftSide || []).length + (toppings.rightSide || []).length;
+        const halfSideEquivalents = Math.ceil(halfSideCount / 2);
+        
+        // Strategy: Use included toppings optimally, then charge for extras starting with cheapest
+        // If we have half-side toppings and they go over the limit, charge them first (cheaper)
+        if (halfSideCount > 0 && remainingExtras > 0) {
+          // Calculate how many half-side toppings should be charged
+          const halfSideEquivalentsUsed = Math.min(halfSideEquivalents, Math.max(0, availableToppings - wholePizzaCount));
+          const halfSideIncluded = halfSideEquivalentsUsed * 2; // Convert back to individual toppings
+          const halfSideExtras = Math.max(0, halfSideCount - halfSideIncluded);
+          
+          if (halfSideExtras > 0) {
+            const halfSideExtrasToCharge = Math.min(halfSideExtras, remainingExtras * 2);
+            extraCharge += halfSideExtrasToCharge * flatRate * halfMultiplier;
+            remainingExtras -= Math.ceil(halfSideExtrasToCharge / 2); // Convert back to equivalents
+          }
+        }
+        
+        // Then charge any remaining extras as whole pizza toppings (more expensive)
+        if (remainingExtras > 0) {
+          const wholePizzaIncluded = Math.min(wholePizzaCount, Math.max(0, availableToppings - halfSideEquivalents));
+          const wholePizzaExtras = Math.max(0, wholePizzaCount - wholePizzaIncluded);
+          
+          if (wholePizzaExtras > 0) {
+            const wholePizzaExtrasToCharge = Math.min(wholePizzaExtras, remainingExtras);
+            extraCharge += wholePizzaExtrasToCharge * flatRate;
+          }
+        }
+        
+        return extraCharge;
+      }
+    }
+    
+    // Original individual topping pricing logic
     // Combine all toppings from all sections and sort by addedOrder
     const allToppings: (Topping & { addedOrder?: number, section: string })[] = [];
     
@@ -468,7 +536,7 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
   };
 
   // Navigation handlers
-  const handleStepComplete = () => {
+  const handleStepComplete = async () => {
     const newDraft = [...draft];
     let extraCharge = 0;
 
@@ -479,7 +547,7 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
         rightSide: selectedToppings.rightSide
       };
       
-      extraCharge = calculateToppingExtraCharge(toppingsData, currentStep);
+      extraCharge = await calculateToppingExtraCharge(toppingsData, currentStep);
 
       newDraft[currentStep] = {
         ...step,
@@ -501,6 +569,7 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
         extraCharge: 0
       };
     } else if (step.type === 'dipping') {
+      // Use the configured maxDipping value, fallback to 0 if not set
       const dippingLimit = step.maxDipping || 0;
 
       // Convert quantity object to array for charging calculation
@@ -510,10 +579,10 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
       });
 
       // Only charge for sauces beyond the limit
-      extraCharge = dippingSauceArray
+      const extraCharge = dippingSauceArray
         .slice(dippingLimit)
         .reduce((acc, sauce) => acc + (sauce.price || 0), 0);
-
+      
       // Create sauce data lookup for display purposes
       const sauceData = Object.keys(selectedDippingSauces).reduce((acc, sauceId) => {
         const sauce = dippingSauces.find(s => s.id === sauceId);
@@ -535,7 +604,8 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
     
     // Fix: Replace the current step's extra charge instead of adding to it
     const oldExtraCharge = draft[currentStep]?.extraCharge || 0;
-    setTotalExtraCharges(prev => prev - oldExtraCharge + extraCharge);
+    const newTotalExtraCharges = totalExtraCharges - oldExtraCharge + extraCharge;
+    setTotalExtraCharges(newTotalExtraCharges);
     
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
@@ -553,6 +623,7 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
         isEditing: combo.isEditing,
         editingItemId: combo.editingItemId,
       };
+      
       onComplete(assembled);
       
       // Reset states
