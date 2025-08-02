@@ -73,9 +73,7 @@ export default function HomePage() {
   const handleOrderTypeSelect = (type: 'pickup' | 'delivery') => {
     setOrderType(type);
     updateCustomerInfo({ orderType: type });
-    if (type === 'delivery') {
-      navigate('/delivery-details');
-    }
+    // Don't navigate to delivery details immediately - let the user complete the flow first
   };
 
   const handlePickupTimeSelect = (time: 'asap' | 'scheduled') => {
@@ -88,6 +86,13 @@ export default function HomePage() {
 
   const handleContinue = () => {
     if (orderType === 'pickup') {
+      updateCustomerInfo({
+        orderType,
+        pickupTime: pickupTime || 'asap',
+        scheduledDateTime: pickupTime === 'scheduled' ? scheduledDateTime : undefined
+      });
+      navigate('/customer-info');
+    } else if (orderType === 'delivery') {
       updateCustomerInfo({
         orderType,
         pickupTime: pickupTime || 'asap',
@@ -208,11 +213,18 @@ export default function HomePage() {
         </div>
 
         {/* Pickup Time Selection */}
-        {orderType === 'pickup' && (
+        {orderType && (
           <>
             <div className="text-center mb-4">
-              <h3 className="text-lg font-bold text-gray-900 mb-1">Pickup Time</h3>
-              <p className="text-sm text-gray-600">When would you like to pick up your order?</p>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">
+                {orderType === 'pickup' ? 'Pickup Time' : 'Delivery Time'}
+              </h3>
+              <p className="text-sm text-gray-600">
+                {orderType === 'pickup' 
+                  ? 'When would you like to pick up your order?' 
+                  : 'When would you like your order delivered?'
+                }
+              </p>
             </div>
 
             <div className="grid grid-cols-1 gap-3 mb-4">
@@ -230,7 +242,7 @@ export default function HomePage() {
             {pickupTime === 'scheduled' && (
               <div className="card-ux p-5 mb-6">
                 <label htmlFor="scheduledTime" className="block text-sm font-semibold text-gray-900 mb-2">
-                  Select Pickup Date & Time
+                  Select {orderType === 'pickup' ? 'Pickup' : 'Delivery'} Date & Time
                 </label>
                 <input
                   type="datetime-local"

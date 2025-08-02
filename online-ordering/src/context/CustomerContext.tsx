@@ -4,6 +4,7 @@ interface CustomerInfo {
   fullName: string;
   phone: string;
   email?: string;
+  customerId?: string;
   orderType: 'pickup' | 'delivery' | null;
   pickupTime?: 'asap' | 'scheduled';
   scheduledDateTime?: string;
@@ -33,6 +34,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     const savedPickupTime = sessionStorage.getItem('pickupTime');
     const savedScheduledDateTime = sessionStorage.getItem('scheduledDateTime');
     const savedDeliveryAddress = sessionStorage.getItem('deliveryAddress');
+    const savedCustomerId = sessionStorage.getItem('customerId');
 
     const initialInfo: Partial<CustomerInfo> = {};
 
@@ -50,6 +52,9 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     }
     if (savedDeliveryAddress) {
       initialInfo.deliveryAddress = JSON.parse(savedDeliveryAddress);
+    }
+    if (savedCustomerId) {
+      initialInfo.customerId = savedCustomerId;
     }
 
     if (Object.keys(initialInfo).length > 0) {
@@ -74,6 +79,9 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
       if (info.deliveryAddress) {
         sessionStorage.setItem('deliveryAddress', JSON.stringify(info.deliveryAddress));
       }
+      if (info.customerId) {
+        sessionStorage.setItem('customerId', info.customerId);
+      }
       
       // Save the complete customer info
       sessionStorage.setItem('customerInfo', JSON.stringify(updated));
@@ -89,6 +97,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     sessionStorage.removeItem('pickupTime');
     sessionStorage.removeItem('scheduledDateTime');
     sessionStorage.removeItem('deliveryAddress');
+    sessionStorage.removeItem('customerId');
   };
 
   return (

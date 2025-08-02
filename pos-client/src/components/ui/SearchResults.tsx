@@ -91,11 +91,11 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                       {customer.email && (
                         <p className="text-red-100 text-xs lg:text-sm">{customer.email}</p>
                       )}
-                      {(customer.address.street || customer.address.city) && (
+                      {(customer.address?.street || customer.address?.city) && (
                         <p className="text-red-200 text-xs truncate">
-                          {customer.address.street && customer.address.city 
+                          {customer.address?.street && customer.address?.city 
                             ? `${customer.address.street}, ${customer.address.city}`
-                            : customer.address.street || customer.address.city
+                            : customer.address?.street || customer.address?.city
                           }
                         </p>
                       )}

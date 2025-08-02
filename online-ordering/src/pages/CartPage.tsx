@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import { db } from '../services/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useStore } from '../context/StoreContext';
+import { useCustomer } from '../context/CustomerContext';
 import { useTaxRate } from '../hooks/useTaxRate';
 import { cn } from '../utils/cn';
 
@@ -34,6 +35,7 @@ export default function CartPage() {
   const navigate = useNavigate();
   const { cartItems, removeFromCart, updateQuantity } = useCart();
   const { selectedStore } = useStore();
+  const { customerInfo } = useCustomer();
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [isAnimating, setIsAnimating] = useState<string | null>(null);
   const taxRate = useTaxRate();
@@ -181,21 +183,26 @@ export default function CartPage() {
   }, [selectedStore?.id]);
 
   useEffect(() => {
-    // Get order details from sessionStorage
-    const orderType = sessionStorage.getItem('orderType') as 'delivery' | 'pickup';
-    const deliveryAddress = sessionStorage.getItem('deliveryAddress');
-    const deliveryInstructions = sessionStorage.getItem('deliveryInstructions');
-    const scheduledTime = sessionStorage.getItem('scheduledTime');
-
-    if (orderType) {
-      setOrderDetails({
-        type: orderType,
-        address: deliveryAddress || '',
-        instructions: deliveryInstructions || '',
-        scheduledTime: scheduledTime || '',
-      });
+    // Get order details from customer context
+    if (customerInfo) {
+      const orderType = customerInfo.orderType as 'delivery' | 'pickup';
+      const deliveryAddress = customerInfo.deliveryAddress;
+      
+      if (orderType) {
+        let formattedAddress = '';
+        if (orderType === 'delivery' && deliveryAddress) {
+          formattedAddress = `${deliveryAddress.street}, ${deliveryAddress.city}, ${deliveryAddress.postalCode}`;
+        }
+        
+        setOrderDetails({
+          type: orderType,
+          address: formattedAddress,
+          instructions: customerInfo.deliveryAddress?.instructions || '',
+          scheduledTime: customerInfo.scheduledDateTime || '',
+        });
+      }
     }
-  }, []);
+  }, [customerInfo]);
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price + (item.extraCharges || 0)) * item.quantity, 0);
   const tax = subtotal * taxRate;
