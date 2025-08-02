@@ -517,9 +517,7 @@ export default function PizzaToppingDialog({
                             ? isExtra 
                               ? "bg-orange-50 border-orange-400 shadow-sm" 
                               : "bg-green-50 border-green-400 shadow-sm"
-                            : getTotalSelectedCount() >= toppingLimit
-                              ? "bg-orange-50 border-orange-300"
-                              : "bg-white hover:bg-gray-50 border-gray-200"
+                            : "bg-white hover:bg-gray-50 border-gray-200"
                         )}
                       >
                         {/* Selection indicator */}

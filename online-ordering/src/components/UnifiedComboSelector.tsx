@@ -846,10 +846,7 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
                   )}
                 >
                   <div className="text-center">
-                    <div className="font-medium text-sm mb-1">{topping.name}</div>
-                    <div className="text-xs text-gray-600">
-                      {topping.price > 0 ? `+$${topping.price.toFixed(2)}` : 'Included'}
-                    </div>
+                    <div className="font-bold text-sm">{topping.name}</div>
                   </div>
                 </button>
               );
@@ -906,10 +903,7 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
                   )}
                 >
                   <div className="text-center">
-                    <div className="font-medium text-sm mb-1">{sauce.name}</div>
-                    <div className="text-xs text-gray-600">
-                      {sauce.price > 0 ? `+$${sauce.price.toFixed(2)}` : 'Included'}
-                    </div>
+                    <div className="font-bold text-sm">{sauce.name}</div>
                   </div>
                 </button>
               );

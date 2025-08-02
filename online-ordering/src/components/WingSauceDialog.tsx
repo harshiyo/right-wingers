@@ -207,14 +207,26 @@ export const WingSauceDialog = ({ open, onClose, onSubmit, sauceLimit, wingName,
                       )}
                       
                       <div className="text-center">
-                        <span className="font-medium text-xs text-gray-900 leading-tight">{sauce.name}</span>
-                        <span className="text-xs text-gray-600 block mt-1">
-                          {isIncluded && <span className="text-green-600 font-bold">Included</span>}
-                          {isExtra && <span className="text-orange-600 font-bold">+${(sauce.price || 0).toFixed(2)}</span>}
-                          {!isSelected && (sauce.price || 0) > 0 && (
-                            <span>+${(sauce.price || 0).toFixed(2)}</span>
-                          )}
-                        </span>
+                        <span className="font-bold text-xs text-gray-900 leading-tight">{sauce.name}</span>
+                        <div className="mt-1">
+                          <span className={cn(
+                            "text-xs px-1.5 py-0.5 rounded-full",
+                            isSelected 
+                              ? isExtra 
+                                ? "bg-orange-100 text-orange-700" 
+                                : "bg-green-100 text-green-700"
+                              : selectedSauces.size >= effectiveSauceLimit
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-gray-100 text-gray-500"
+                          )}>
+                            {isSelected 
+                              ? (isExtra ? "Extra" : "Included") 
+                              : selectedSauces.size >= effectiveSauceLimit 
+                                ? "Extra" 
+                                : "Included"
+                            }
+                          </span>
+                        </div>
                       </div>
                     </button>
                   );

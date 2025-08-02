@@ -377,29 +377,30 @@ export const WingSauceDialog = ({ open, onClose, onSubmit, sauceLimit, wingName,
 
                         {/* Sauce Name */}
                         <p className={cn(
-                          "text-sm font-semibold leading-tight mb-2",
+                          "text-sm font-bold leading-tight mb-2",
                           isSelected ? "text-gray-800" : "text-gray-700"
                         )}>
                           {sauce.name}
                         </p>
 
-                        {/* Price */}
+                        {/* Status */}
                         <div className="flex flex-col items-center">
-                          <span className={cn(
-                            "text-sm font-bold",
-                            isSelected && isExtra ? "text-orange-600" : isSelected ? "text-green-600" : "text-gray-500"
-                          )}>
-                            +${(sauce.price || 0).toFixed(2)}
-                          </span>
                           <span className={cn(
                             "text-xs px-2 py-0.5 rounded-full mt-1 h-5 flex items-center justify-center",
                             isSelected 
                               ? isExtra 
                                 ? "bg-orange-100 text-orange-700" 
                                 : "bg-green-100 text-green-700"
-                              : "bg-transparent text-transparent"
+                              : selectedSauces.size >= effectiveSauceLimit
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-gray-100 text-gray-500"
                           )}>
-                            {isSelected ? (isExtra ? "Extra" : "Included") : "Included"}
+                            {isSelected 
+                              ? (isExtra ? "Extra" : "Included") 
+                              : selectedSauces.size >= effectiveSauceLimit 
+                                ? "Extra" 
+                                : "Included"
+                            }
                           </span>
                         </div>
                       </div>
