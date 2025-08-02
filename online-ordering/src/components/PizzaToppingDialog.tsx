@@ -232,32 +232,42 @@ export default function PizzaToppingDialog({
   };
 
   const getExtraCharge = () => {
-    const totalCount = getTotalSelectedCount();
-    const extraToppings = Math.max(0, totalCount - toppingLimit);
+    // Calculate total equivalent toppings
+    const wholePizzaCount = selectedToppings.wholePizza.size;
+    const halfSideCount = selectedToppings.leftSide.size + selectedToppings.rightSide.size;
+    const halfSideEquivalents = Math.ceil(halfSideCount / 2);
+    const totalEquivalents = wholePizzaCount + halfSideEquivalents;
+    
+    // If we're within the limit, no extra charge
+    if (totalEquivalents <= toppingLimit) {
+      return 0;
+    }
+    
+    // Calculate how many equivalents are extra
+    const extraEquivalents = totalEquivalents - toppingLimit;
     
     // Check if this pizza uses flat rate pricing
     if (pizzaItem?.pricingMode === 'flat' && pizzaItem?.flatRatePrice) {
       const flatRate = pizzaItem.flatRatePrice;
       const halfMultiplier = pizzaItem.halfPizzaMultiplier || 0.5;
       
-      // Calculate charges for whole pizza vs half pizza toppings
-      const wholePizzaCount = selectedToppings.wholePizza.size;
-      const halfSideCount = selectedToppings.leftSide.size + selectedToppings.rightSide.size;
-      const halfSideEquivalents = Math.ceil(halfSideCount / 2);
-      const totalEquivalents = wholePizzaCount + halfSideEquivalents;
-      const extraEquivalents = totalEquivalents - toppingLimit;
-      
       // For flat rate, we charge the cheapest extra toppings first
+      // Half-side toppings are cheaper (flatRate * halfMultiplier) than whole pizza toppings (flatRate)
       let extraCharge = 0;
       let remainingExtras = extraEquivalents;
       
+      // Count actual individual toppings (not equivalents)
+      const actualHalfSideToppings = halfSideCount;
+      const actualWholePizzaToppings = wholePizzaCount;
+      
       // Strategy: Use included toppings optimally, then charge for extras starting with cheapest
       // If we have half-side toppings and they go over the limit, charge them first (cheaper)
-      if (halfSideCount > 0 && remainingExtras > 0) {
+      if (actualHalfSideToppings > 0 && remainingExtras > 0) {
         // Calculate how many half-side toppings should be charged
+        // Each 2 half-side toppings = 1 equivalent, but we charge per individual topping
         const halfSideEquivalentsUsed = Math.min(halfSideEquivalents, Math.max(0, toppingLimit - wholePizzaCount));
         const halfSideIncluded = halfSideEquivalentsUsed * 2; // Convert back to individual toppings
-        const halfSideExtras = Math.max(0, halfSideCount - halfSideIncluded);
+        const halfSideExtras = Math.max(0, actualHalfSideToppings - halfSideIncluded);
         
         if (halfSideExtras > 0) {
           const halfSideExtrasToCharge = Math.min(halfSideExtras, remainingExtras * 2);
@@ -280,9 +290,68 @@ export default function PizzaToppingDialog({
       return extraCharge;
     }
     
-    // Default: Use individual topping prices from database or fallback to $1.50
-    // TODO: This should use actual topping prices when individual pricing is selected
-    return extraToppings * 1.5; // $1.50 per extra topping (fallback)
+    // Individual topping pricing logic - FIXED VERSION
+    let extraCharge = 0;
+    
+    // Calculate how many toppings are included vs extra
+    const totalIncluded = Math.min(totalEquivalents, toppingLimit);
+    const totalExtra = totalEquivalents - totalIncluded;
+    
+    if (totalExtra <= 0) {
+      return 0;
+    }
+    
+    // For individual pricing, we need to charge the actual topping prices
+    // Half-side toppings should be charged at half price
+    let remainingExtraEquivalents = totalExtra;
+    
+    // First, charge for extra whole pizza toppings (full price)
+    const wholePizzaIncluded = Math.min(wholePizzaCount, totalIncluded);
+    const wholePizzaExtra = wholePizzaCount - wholePizzaIncluded;
+    
+    if (wholePizzaExtra > 0 && remainingExtraEquivalents > 0) {
+      const wholePizzaToppings = Array.from(selectedToppings.wholePizza.values());
+      const toppingsToCharge = Math.min(wholePizzaExtra, remainingExtraEquivalents);
+      
+      // Charge the most recently added whole pizza toppings as extra
+      const extraWholeToppings = wholePizzaToppings.slice(-toppingsToCharge);
+      extraCharge += extraWholeToppings.reduce((sum, topping) => sum + (topping.price || 0), 0);
+      remainingExtraEquivalents -= toppingsToCharge;
+    }
+    
+    // Then, charge for extra half-side toppings (half price)
+    if (remainingExtraEquivalents > 0) {
+      const halfSideIncludedEquivalents = Math.min(halfSideEquivalents, totalIncluded - wholePizzaIncluded);
+      const halfSideIncludedToppings = halfSideIncludedEquivalents * 2;
+      const halfSideExtraToppings = halfSideCount - halfSideIncludedToppings;
+      
+      if (halfSideExtraToppings > 0) {
+        const leftSideToppings = Array.from(selectedToppings.leftSide.values());
+        const rightSideToppings = Array.from(selectedToppings.rightSide.values());
+        
+        // Calculate how many half-side toppings to charge as extra
+        const halfSideEquivalentsToCharge = Math.min(remainingExtraEquivalents, halfSideEquivalents - halfSideIncludedEquivalents);
+        const halfSideToppingsToCharge = halfSideEquivalentsToCharge * 2;
+        
+        // Distribute extra charges between left and right proportionally
+        const leftSideExtra = Math.min(leftSideToppings.length, Math.ceil(halfSideToppingsToCharge * (leftSideToppings.length / halfSideCount)));
+        const rightSideExtra = Math.min(rightSideToppings.length, halfSideToppingsToCharge - leftSideExtra);
+        
+        // Charge left side extras at half price
+        if (leftSideExtra > 0) {
+          const leftSideExtraToppings = leftSideToppings.slice(-leftSideExtra);
+          extraCharge += leftSideExtraToppings.reduce((sum, topping) => sum + ((topping.price || 0) / 2), 0);
+        }
+        
+        // Charge right side extras at half price
+        if (rightSideExtra > 0) {
+          const rightSideExtraToppings = rightSideToppings.slice(-rightSideExtra);
+          extraCharge += rightSideExtraToppings.reduce((sum, topping) => sum + ((topping.price || 0) / 2), 0);
+        }
+      }
+    }
+    
+    return extraCharge;
   };
 
   // Helper function to get exact list of extra toppings - matches POS client logic
@@ -314,13 +383,18 @@ export default function PizzaToppingDialog({
       const halfSideExtras = halfSideCount - actualHalfSideIncluded;
       let extrasMarked = 0;
       
-      // Mark extras from left side first, then right side
-      for (let i = Math.max(0, leftToppings.length - Math.ceil(halfSideExtras / 2)); i < leftToppings.length && extrasMarked < halfSideExtras; i++) {
+      // Calculate how many extras to mark from each side
+      const leftSideExtras = Math.min(leftToppings.length, Math.ceil(halfSideExtras / 2));
+      const rightSideExtras = Math.min(rightToppings.length, halfSideExtras - leftSideExtras);
+      
+      // Mark extras from left side
+      for (let i = Math.max(0, leftToppings.length - leftSideExtras); i < leftToppings.length && extrasMarked < halfSideExtras; i++) {
         extraToppings.add(leftToppings[i].id);
         extrasMarked++;
       }
       
-      for (let i = Math.max(0, rightToppings.length - Math.floor(halfSideExtras / 2)); i < rightToppings.length && extrasMarked < halfSideExtras; i++) {
+      // Mark extras from right side
+      for (let i = Math.max(0, rightToppings.length - rightSideExtras); i < rightToppings.length && extrasMarked < halfSideExtras; i++) {
         extraToppings.add(rightToppings[i].id);
         extrasMarked++;
       }
