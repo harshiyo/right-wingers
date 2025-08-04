@@ -135,45 +135,64 @@ const CustomerInfoCard = memo(({
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
-          <div className="p-3 bg-green-50 border-l-4 border-green-500 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <p className="font-bold text-green-800 text-sm">Welcome back!</p>
+        <div className="space-y-4">
+          {/* Enhanced Customer Status Card */}
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 p-4">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 opacity-10 rounded-full -mr-8 -mt-8"></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-green-600 rounded-full">
+                    <CheckCircle className="h-3 w-3 text-white" />
+                  </div>
+                  <p className="font-bold text-green-800 text-sm">
+                    {customer.orderCount > 0 ? 'Welcome back!' : 'New customer!'}
+                  </p>
                 </div>
-                <p className="text-lg font-bold text-gray-900">{customer.name}</p>
-                <p className="text-xs text-gray-600">Customer since {new Date(customer.lastOrderDate).getFullYear()}</p>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={onNavigateToCustomerLookup} 
+                  className="text-green-700 hover:bg-green-100 text-xs px-2 py-1"
+                >
+                  Not them?
+                </Button>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={onNavigateToCustomerLookup} 
-                className="text-green-700 hover:bg-green-100 text-xs px-2 py-1"
-              >
-                Not them?
-              </Button>
+              <div className="mb-3">
+                <p className="text-xl font-bold text-gray-900 mb-1">{customer.name}</p>
+                <p className="text-sm text-gray-600">
+                  {customer.orderCount > 0 
+                    ? `Customer since ${new Date(customer.lastOrderDate).getFullYear()}`
+                    : 'First time ordering'
+                  }
+                </p>
+              </div>
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <p className="text-blue-600 font-medium">Phone</p>
-              <p className="text-lg font-bold text-gray-900">{phone}</p>
+          {/* Enhanced Info Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-red-50 to-orange-50 border border-red-200 p-3">
+              <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-br from-red-400 to-orange-500 opacity-10 rounded-full -mr-4 -mt-4"></div>
+              <div className="relative">
+                <p className="text-red-600 font-medium text-xs mb-1">Phone</p>
+                <p className="text-lg font-bold text-gray-900">{phone}</p>
+              </div>
             </div>
-            <div className="p-2 bg-purple-50 rounded-lg">
-              <p className="text-purple-600 font-medium">Past Orders</p>
-              <p className="font-semibold text-gray-900 text-sm">{customer.orderCount}</p>
+            <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 p-3">
+              <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-br from-orange-400 to-amber-500 opacity-10 rounded-full -mr-4 -mt-4"></div>
+              <div className="relative">
+                <p className="text-orange-600 font-medium text-xs mb-1">Past Orders</p>
+                <p className="text-lg font-bold text-gray-900">{customer.orderCount}</p>
+              </div>
             </div>
           </div>
           
           {customer.orderCount > 0 && (
-            <div className="mt-3">
+            <div className="mt-4">
               <Button
                 onClick={onShowPreviousOrders}
-                variant="outline"
-                className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white border-0 font-semibold py-2 rounded-lg flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white border-0 font-semibold py-3 rounded-lg flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 <History className="h-4 w-4" />
                 View Previous Orders
@@ -512,7 +531,12 @@ const OrderTypePage = () => {
                 <Store className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
               </div>
               <h1 className="text-2xl lg:text-4xl font-bold bg-gradient-to-r from-red-800 to-red-600 bg-clip-text text-transparent">
-                {customer?.name ? `New Order for ${customer.name}` : `New Order for ${phone}`}
+                {customer?.name 
+                  ? customer.orderCount > 0 
+                    ? `Welcome back, ${customer.name}!` 
+                    : `New Order for ${customer.name}`
+                  : `New Order for ${phone}`
+                }
               </h1>
             </div>
             <p className="text-gray-600 text-base lg:text-lg max-w-2xl mx-auto px-4">

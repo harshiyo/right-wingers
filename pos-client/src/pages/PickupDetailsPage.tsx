@@ -83,45 +83,65 @@ const CustomerInfoCard = memo(({
   phone: string;
   onNavigateToCustomerLookup: () => void;
 }) => (
-  <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border border-gray-100 h-full flex flex-col">
-    <div className="flex items-center gap-2 mb-4 lg:mb-6">
+  <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 h-full flex flex-col">
+    <div className="flex items-center gap-2 mb-6">
       <div className="p-2 bg-gradient-to-br from-red-800 to-red-900 rounded-lg">
         <User className="h-5 w-5 text-white" />
       </div>
-      <h2 className="text-lg lg:text-xl font-bold text-gray-900">Customer Information</h2>
+      <h2 className="text-xl font-bold text-gray-900">Customer Information</h2>
     </div>
     
     <div className="flex-1 flex flex-col justify-center">
-      <div className="space-y-3">
-        <div className="p-3 bg-green-50 border-l-4 border-green-500 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <p className="font-bold text-green-800 text-sm">Welcome back!</p>
+      <div className="space-y-4">
+        {/* Enhanced Customer Status Card */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 p-4">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 opacity-10 rounded-full -mr-8 -mt-8"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-green-600 rounded-full">
+                  <CheckCircle className="h-3 w-3 text-white" />
+                </div>
+                <p className="font-bold text-green-800 text-sm">
+                  {customer.orderCount > 0 ? 'Welcome back!' : 'New customer!'}
+                </p>
               </div>
-              <p className="text-lg font-bold text-gray-900">{customer.name}</p>
-              <p className="text-xs text-gray-600">Customer since 2024</p>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={onNavigateToCustomerLookup}
+                className="text-green-700 hover:bg-green-100 text-xs px-2 py-1"
+              >
+                Not them?
+              </Button>
             </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={onNavigateToCustomerLookup}
-              className="text-green-700 hover:bg-green-100 text-xs px-2 py-1"
-            >
-              Not them?
-            </Button>
+            <div className="mb-3">
+              <p className="text-xl font-bold text-gray-900 mb-1">{customer.name}</p>
+              <p className="text-sm text-gray-600">
+                {customer.orderCount > 0 
+                  ? `Customer since ${new Date(customer.lastOrderDate).getFullYear()}`
+                  : 'First time ordering'
+                }
+              </p>
+            </div>
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-3 text-xs">
-          <div className="p-2 bg-blue-50 rounded-lg">
-            <p className="text-blue-600 font-medium">Phone</p>
-            <p className="text-lg font-bold text-gray-900">{phone}</p>
+        {/* Enhanced Info Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-red-50 to-orange-50 border border-red-200 p-3">
+            <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-br from-red-400 to-orange-500 opacity-10 rounded-full -mr-4 -mt-4"></div>
+            <div className="relative">
+              <p className="text-red-600 font-medium text-xs mb-1">Phone</p>
+              <p className="text-lg font-bold text-gray-900">{phone}</p>
+            </div>
           </div>
-          <div className="p-2 bg-purple-50 rounded-lg">
-            <p className="text-purple-600 font-medium">Order Type</p>
-            <p className="font-semibold text-gray-900 text-sm">Pickup</p>
+          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 p-3">
+            <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-br from-orange-400 to-amber-500 opacity-10 rounded-full -mr-4 -mt-4"></div>
+            <div className="relative">
+              <p className="text-orange-600 font-medium text-xs mb-1">Order Type</p>
+              <p className="text-lg font-bold text-gray-900">Pickup</p>
+            </div>
           </div>
         </div>
       </div>
