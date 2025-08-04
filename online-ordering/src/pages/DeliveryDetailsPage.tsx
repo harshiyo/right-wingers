@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Truck, MapPin, Home, ArrowRight, CheckCircle } from 'lucide-react';
 import { useCustomer } from '../context/CustomerContext';
+import AddressAutocomplete from '../components/AddressAutocomplete';
 
 interface DeliveryAddress {
   street: string;
@@ -17,16 +18,36 @@ export default function DeliveryDetailsPage() {
     city: customerInfo?.deliveryAddress?.city || '',
     postalCode: customerInfo?.deliveryAddress?.postalCode || ''
   });
+  const [fullAddress, setFullAddress] = useState(
+    customerInfo?.deliveryAddress ? 
+    `${customerInfo.deliveryAddress.street}, ${customerInfo.deliveryAddress.city}, ${customerInfo.deliveryAddress.postalCode}` : 
+    ''
+  );
 
-  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    const updatedAddress = { ...deliveryAddress, [id]: value };
+  const handleAddressSelect = (address: {
+    street: string;
+    city: string;
+    postalCode: string;
+    fullAddress: string;
+  }) => {
+    const updatedAddress = {
+      street: address.street,
+      city: address.city,
+      postalCode: address.postalCode
+    };
+    
     setDeliveryAddress(updatedAddress);
+    setFullAddress(address.fullAddress);
+    
     // Update customer info in real-time
     updateCustomerInfo({
       orderType: 'delivery',
       deliveryAddress: updatedAddress
     });
+  };
+
+  const handleAddressChange = (value: string) => {
+    setFullAddress(value);
   };
 
   const isAddressComplete = Boolean(
@@ -50,47 +71,20 @@ export default function DeliveryDetailsPage() {
       <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
         <div className="grid grid-cols-1 gap-3">
           <div>
-            <label htmlFor="street" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
+            <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
               <Home className="h-3.5 w-3.5" />
-              Street Address
+              Delivery Address
             </label>
-            <input 
-              id="street" 
-              type="text"
-              placeholder="123 Main Street, Apt 4B" 
-              value={deliveryAddress.street} 
+            <AddressAutocomplete
+              value={fullAddress}
               onChange={handleAddressChange}
-              className="w-full text-sm py-2 px-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-300 focus:border-transparent"
+              onAddressSelect={handleAddressSelect}
+              placeholder="Enter your delivery address"
+              className="w-full"
             />
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                City
-              </label>
-              <input 
-                id="city" 
-                type="text"
-                placeholder="Oakville" 
-                value={deliveryAddress.city} 
-                onChange={handleAddressChange}
-                className="w-full text-sm px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-300 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-1">
-                Postal Code
-              </label>
-              <input 
-                id="postalCode" 
-                type="text"
-                placeholder="L6H 1A1" 
-                value={deliveryAddress.postalCode} 
-                onChange={handleAddressChange}
-                className="w-full text-sm px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-300 focus:border-transparent"
-              />
-            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              Start typing to see address suggestions (Ontario, Canada only)
+            </p>
           </div>
         </div>
 
@@ -121,7 +115,7 @@ export default function DeliveryDetailsPage() {
         {!isAddressComplete && (
           <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-xs text-yellow-800 text-center">
-              Please fill in all address fields to continue.
+              Please select a complete address from the suggestions to continue.
             </p>
           </div>
         )}

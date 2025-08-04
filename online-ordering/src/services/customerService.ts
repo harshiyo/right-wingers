@@ -15,7 +15,10 @@ export interface Customer {
     street: string;
     city: string;
     postalCode: string;
+    lat?: number;
+    lon?: number;
   };
+  distanceFromStore?: number; // Distance in kilometers
   orderCount: number;
   lastOrderDate: string;
   storeId: string;
@@ -32,6 +35,7 @@ export interface Customer {
 export const findCustomerByPhone = async (phone: string): Promise<Customer | undefined> => {
   try {
     const cleanPhone = cleanPhoneNumber(phone);
+    
     const customersQuery = query(
       collection(db, 'customers'),
       where('phone', '==', cleanPhone)
@@ -40,9 +44,10 @@ export const findCustomerByPhone = async (phone: string): Promise<Customer | und
     
     if (!snapshot.empty) {
       const doc = snapshot.docs[0];
+      const customerData = doc.data();
       return {
         id: doc.id,
-        ...doc.data()
+        ...customerData
       } as Customer;
     }
     
@@ -62,7 +67,10 @@ export const createOrUpdateCustomer = async (customerData: {
     street: string;
     city: string;
     postalCode: string;
+    lat?: number;
+    lon?: number;
   };
+  distanceFromStore?: number;
   storeId: string;
 }): Promise<Customer> => {
   try {
@@ -90,6 +98,11 @@ export const createOrUpdateCustomer = async (customerData: {
         updateData.address = customerData.address;
       }
       
+      // Include distance if provided
+      if (customerData.distanceFromStore !== undefined) {
+        updateData.distanceFromStore = customerData.distanceFromStore;
+      }
+      
       await updateDoc(customerRef, updateData);
       
       return {
@@ -115,6 +128,11 @@ export const createOrUpdateCustomer = async (customerData: {
       // Only include address if all fields are provided
       if (customerData.address && customerData.address.street && customerData.address.city && customerData.address.postalCode) {
         newCustomerData.address = customerData.address;
+      }
+      
+      // Include distance if provided
+      if (customerData.distanceFromStore !== undefined) {
+        newCustomerData.distanceFromStore = customerData.distanceFromStore;
       }
       
       const docRef = await addDoc(collection(db, 'customers'), newCustomerData);

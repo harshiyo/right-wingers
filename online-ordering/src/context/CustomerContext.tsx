@@ -13,6 +13,8 @@ interface CustomerInfo {
     city: string;
     postalCode: string;
     instructions?: string;
+    lat?: number;
+    lon?: number;
   };
 }
 
