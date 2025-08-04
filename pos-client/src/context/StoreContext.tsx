@@ -26,6 +26,8 @@ interface Store {
   email: string;
   timezone: string;
   isActive: boolean;
+  latitude?: number;
+  longitude?: number;
   operatingHours: {
     monday: string;
     tuesday: string;

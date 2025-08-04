@@ -10,7 +10,10 @@ export interface Customer {
     street: string;
     city: string;
     postalCode: string;
+    lat?: number;
+    lon?: number;
   };
+  distanceFromStore?: number; // Distance in kilometers
   orderCount: number;
   lastOrderDate: string;
   storeId: string; // Store where customer was created/primarily shops
@@ -123,8 +126,35 @@ export const updateCustomerInFirebase = async (customerId: string, updates: Part
   }
 };
 
+// Calculate driving distance between two coordinates using Geoapify Routing API
+export const calculateDrivingDistance = async (lat1: number, lon1: number, lat2: number, lon2: number): Promise<number | null> => {
+  try {
+    const API_KEY = "34fdfa74334e4230b1153e219ddf8dcd";
+    const waypoints = `${lat1},${lon1}|${lat2},${lon2}`;
+    const params = new URLSearchParams({
+      waypoints: waypoints,
+      mode: 'drive',
+      apiKey: API_KEY
+    });
+
+    const response = await fetch(`https://api.geoapify.com/v1/routing?${params}`);
+    const data = await response.json();
+
+    if (data.features && data.features.length > 0) {
+      const feature = data.features[0];
+      const distance = feature.properties.distance; // Distance in meters
+      const distanceKm = distance / 1000; // Convert to kilometers
+      return distanceKm;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error calculating driving distance:', error);
+    return null;
+  }
+};
+
 // Update customer address specifically
-export const updateCustomerAddress = async (phone: string, address: { street: string; city: string; postalCode: string }) => {
+export const updateCustomerAddress = async (phone: string, address: { street: string; city: string; postalCode: string; lat?: number; lon?: number }, distanceFromStore?: number) => {
   try {
     // Find customer by phone first
     const customer = await findCustomerByPhone(phone);
@@ -133,9 +163,17 @@ export const updateCustomerAddress = async (phone: string, address: { street: st
       return false;
     }
 
-    // Update the customer's address
-    await updateCustomerInFirebase(customer.id, { address });
-    console.log('✅ Customer address updated successfully');
+    // Prepare update data
+    const updateData: any = { address };
+    
+    // Include distance if provided
+    if (distanceFromStore !== undefined) {
+      updateData.distanceFromStore = distanceFromStore;
+    }
+
+    // Update the customer's address and distance
+    await updateCustomerInFirebase(customer.id, updateData);
+    console.log('✅ Customer address and distance updated successfully');
     return true;
   } catch (error) {
     console.error('❌ Error updating customer address:', error);

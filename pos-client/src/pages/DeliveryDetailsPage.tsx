@@ -4,7 +4,9 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { TopBar } from '../components/layout/TopBar';
 import { Truck, MapPin, Home, ArrowRight, CheckCircle, User, Clock, Calendar } from 'lucide-react';
-import { Customer, updateCustomerAddress } from '../data/customers';
+import { Customer, updateCustomerAddress, calculateDrivingDistance, findCustomerByPhone } from '../data/customers';
+import { useStore } from '../context/StoreContext';
+import AddressAutocomplete from '../components/AddressAutocomplete';
 
 // Memoized customer info card component
 const CustomerInfoCard = memo(({ 
@@ -68,11 +70,31 @@ CustomerInfoCard.displayName = 'CustomerInfoCard';
 const AddressForm = memo(({ 
   deliveryAddress, 
   onChange, 
-  isComplete 
+  onAddressSelect,
+  onAddressChange,
+  fullAddress,
+  distance,
+  isLoadingDistance,
+  isCachedDistance,
+  isComplete,
+  deliveryTimeType,
+  setDeliveryTimeType,
+  scheduledDeliveryDateTime,
+  setScheduledDeliveryDateTime
 }: {
-  deliveryAddress: { street: string; city: string; postalCode: string };
+  deliveryAddress: { street: string; city: string; postalCode: string; lat?: number; lon?: number };
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onAddressSelect: (address: { street: string; city: string; postalCode: string; fullAddress: string; lat?: number; lon?: number }) => void;
+  onAddressChange: (value: string) => void;
+  fullAddress: string;
+  distance: number | null;
+  isLoadingDistance: boolean;
+  isCachedDistance: boolean;
   isComplete: boolean;
+  deliveryTimeType: 'asap' | 'scheduled';
+  setDeliveryTimeType: (type: 'asap' | 'scheduled') => void;
+  scheduledDeliveryDateTime: string;
+  setScheduledDeliveryDateTime: (datetime: string) => void;
 }) => (
   <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 h-full flex flex-col">
     <div className="flex items-center gap-2 mb-6">
@@ -88,69 +110,101 @@ const AddressForm = memo(({
           <div>
             <label htmlFor="street" className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
               <Home className="h-4 w-4" />
-              Street Address
+              Delivery Address
             </label>
-            <Input 
-              id="street" 
-              placeholder="123 Main Street, Apt 4B" 
-              value={deliveryAddress.street} 
-              onChange={onChange}
-              className="w-full text-base py-3"
+            <AddressAutocomplete
+              value={fullAddress}
+              onChange={onAddressChange}
+              onAddressSelect={onAddressSelect}
+              placeholder="Enter your delivery address"
+              className="w-full"
             />
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="city" className="block text-sm font-bold text-gray-700 mb-2">
-                City
-              </label>
-              <Input 
-                id="city" 
-                placeholder="Oakville" 
-                value={deliveryAddress.city} 
-                onChange={onChange}
-                className="w-full"
-              />
-            </div>
-            <div>
-              <label htmlFor="postalCode" className="block text-sm font-bold text-gray-700 mb-2">
-                Postal Code
-              </label>
-              <Input 
-                id="postalCode" 
-                placeholder="L6H 1A1" 
-                value={deliveryAddress.postalCode} 
-                onChange={onChange}
-                className="w-full"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Address Preview */}
-        {(deliveryAddress.street || deliveryAddress.city || deliveryAddress.postalCode) && (
-          <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-            <h3 className="font-bold text-green-800 mb-2 flex items-center gap-2 text-sm">
-              <CheckCircle className="h-4 w-4" />
-              Delivery Address Preview
-            </h3>
-            <p className="text-green-700 text-sm">
-              {deliveryAddress.street && <span>{deliveryAddress.street}<br /></span>}
-              {deliveryAddress.city && <span>{deliveryAddress.city}, </span>}
-              {deliveryAddress.postalCode && <span>{deliveryAddress.postalCode}</span>}
+            <p className="mt-1 text-xs text-gray-500">
+              Start typing to see address suggestions (Ontario, Canada only, 7+ characters)
             </p>
           </div>
-        )}
-
-        {/* Delivery Info */}
-        <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-          <h3 className="font-bold text-blue-800 mb-2 text-sm">Delivery Information</h3>
-          <ul className="text-sm text-blue-700 space-y-1">
-            <li>• Estimated delivery time: 30-45 minutes</li>
-            <li>• Delivery fee: $3.99 (free for orders over $30)</li>
-            <li>• We'll call when we arrive</li>
-          </ul>
         </div>
+
+                 {/* Distance Information */}
+         {isLoadingDistance && (
+           <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+             <p className="text-blue-700 text-sm flex items-center gap-1">
+               <MapPin className="h-3 w-3" />
+               Calculating distance...
+             </p>
+           </div>
+         )}
+         {distance !== null && !isNaN(distance) && !isLoadingDistance && (
+           <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+             <p className="text-blue-700 text-sm flex items-center gap-1">
+               <MapPin className="h-3 w-3" />
+               Distance: {distance.toFixed(1)} km
+               {isCachedDistance && (
+                 <span className="text-xs text-green-600 ml-1">(cached)</span>
+               )}
+             </p>
+           </div>
+         )}
+
+         {/* Delivery Time Selection */}
+         <div className="space-y-3">
+           <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2 text-sm">
+             <Clock className="h-4 w-4" />
+             When should we deliver?
+           </h3>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+             <button
+               className={`group relative rounded-lg border-2 p-4 transition-colors duration-200 focus:outline-none text-center h-full ${deliveryTimeType === 'asap' ? 'border-orange-600 bg-orange-50 shadow-lg' : 'border-gray-200 hover:border-orange-300 hover:shadow-md'}`}
+               onClick={() => setDeliveryTimeType('asap')}
+             >
+               <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-2 bg-gradient-to-br from-orange-600 to-orange-700">
+                 <Clock className="h-5 w-5 text-white" />
+               </div>
+               <h4 className="text-base font-bold text-gray-900 mb-1">ASAP</h4>
+               <p className="text-gray-600 text-xs">Delivered in 30-45 minutes</p>
+               {deliveryTimeType === 'asap' && (
+                 <div className="mt-2 flex items-center justify-center gap-1 text-orange-600">
+                   <CheckCircle className="h-3 w-3" />
+                   <span className="font-semibold text-xs">Selected!</span>
+                 </div>
+               )}
+             </button>
+             <button
+               className={`group relative rounded-lg border-2 p-4 transition-colors duration-200 focus:outline-none text-center h-full ${deliveryTimeType === 'scheduled' ? 'border-orange-600 bg-orange-50 shadow-lg' : 'border-gray-200 hover:border-orange-300 hover:shadow-md'}`}
+               onClick={() => setDeliveryTimeType('scheduled')}
+             >
+               <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-2 bg-gradient-to-br from-orange-600 to-orange-700">
+                 <Calendar className="h-5 w-5 text-white" />
+               </div>
+               <h4 className="text-base font-bold text-gray-900 mb-1">Schedule for Later</h4>
+               <p className="text-gray-600 text-xs">Choose specific date and time</p>
+               {deliveryTimeType === 'scheduled' && (
+                 <div className="mt-2 flex items-center justify-center gap-1 text-orange-600">
+                   <CheckCircle className="h-3 w-3" />
+                   <span className="font-semibold text-xs">Selected!</span>
+                 </div>
+               )}
+             </button>
+           </div>
+           {deliveryTimeType === 'scheduled' && (
+             <div className="mt-3 bg-orange-50 rounded-lg p-3 border border-orange-200">
+               <h4 className="font-bold text-orange-800 mb-2 flex items-center gap-2 text-xs">
+                 <Calendar className="h-3 w-3" />
+                 Schedule Delivery Time
+               </h4>
+               <Input
+                 type="datetime-local"
+                 value={scheduledDeliveryDateTime}
+                 onChange={e => setScheduledDeliveryDateTime(e.target.value)}
+                 min={new Date(Date.now() + 45 * 60 * 1000).toISOString().slice(0, 16)}
+                 className="w-full text-sm"
+               />
+               <p className="text-xs text-orange-600 mt-1">
+                 Minimum 45 minutes from now. Store hours: 11:00 AM - 10:00 PM
+               </p>
+             </div>
+           )}
+         </div>
 
         {!isComplete && (
           <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -169,26 +223,130 @@ AddressForm.displayName = 'AddressForm';
 const DeliveryDetailsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { currentStore } = useStore();
   
-  const { customer, phone } = location.state || {};
+  const { customer: initialCustomer, phone } = location.state || {};
 
-  const [deliveryAddress, setDeliveryAddress] = useState({
-    street: '', city: '', postalCode: '',
+  const [customer, setCustomer] = useState<Customer | null>(initialCustomer || null);
+  const [deliveryAddress, setDeliveryAddress] = useState<{
+    street: string;
+    city: string;
+    postalCode: string;
+    lat?: number;
+    lon?: number;
+  }>({
+    street: '', city: '', postalCode: '', lat: undefined, lon: undefined
   });
+  const [fullAddress, setFullAddress] = useState('');
+  const [distance, setDistance] = useState<number | null>(null);
+  const [isLoadingDistance, setIsLoadingDistance] = useState(false);
+  const [isCachedDistance, setIsCachedDistance] = useState(false);
   const [deliveryTimeType, setDeliveryTimeType] = useState<'asap' | 'scheduled'>('asap');
   const [scheduledDeliveryDateTime, setScheduledDeliveryDateTime] = useState('');
 
+  // Refresh customer data from database when component mounts or phone changes
   useEffect(() => {
-    if (!customer || !phone) {
-      navigate('/customer-lookup');
-      return;
-    }
-    if (customer.address) {
-      setDeliveryAddress(customer.address);
-    }
-  }, [customer, phone, navigate]);
+    const refreshCustomerData = async () => {
+      if (!phone) {
+        navigate('/customer-lookup');
+        return;
+      }
+
+      try {
+        // Fetch fresh customer data from database
+        const freshCustomer = await findCustomerByPhone(phone);
+        if (freshCustomer) {
+          setCustomer(freshCustomer);
+          
+          // Update delivery address with fresh data
+          if (freshCustomer.address) {
+            setDeliveryAddress(freshCustomer.address);
+            setFullAddress(`${freshCustomer.address.street}, ${freshCustomer.address.city}, ${freshCustomer.address.postalCode}`);
+            
+            // Set cached distance if available for this store
+            if (freshCustomer.distanceFromStore && freshCustomer.storeId === currentStore?.id) {
+              setDistance(freshCustomer.distanceFromStore);
+              setIsCachedDistance(true);
+            } else {
+              setDistance(null);
+              setIsCachedDistance(false);
+            }
+          }
+        } else {
+          // Customer not found, redirect to customer lookup
+          navigate('/customer-lookup');
+        }
+      } catch (error) {
+        console.error('Error refreshing customer data:', error);
+        // If refresh fails, use the initial customer data
+        if (initialCustomer) {
+          setCustomer(initialCustomer);
+          if (initialCustomer.address) {
+            setDeliveryAddress(initialCustomer.address);
+            setFullAddress(`${initialCustomer.address.street}, ${initialCustomer.address.city}, ${initialCustomer.address.postalCode}`);
+            
+            if (initialCustomer.distanceFromStore && initialCustomer.storeId === currentStore?.id) {
+              setDistance(initialCustomer.distanceFromStore);
+              setIsCachedDistance(true);
+            }
+          }
+        }
+      }
+    };
+
+    refreshCustomerData();
+  }, [phone, navigate, currentStore, initialCustomer]);
   
   // Memoized handlers
+  const handleAddressSelect = useCallback(async (address: {
+    street: string;
+    city: string;
+    postalCode: string;
+    fullAddress: string;
+    lat?: number;
+    lon?: number;
+  }) => {
+    const updatedAddress = {
+      street: address.street,
+      city: address.city,
+      postalCode: address.postalCode,
+      lat: address.lat,
+      lon: address.lon
+    };
+    
+    setDeliveryAddress(updatedAddress);
+    setFullAddress(address.fullAddress);
+    setIsCachedDistance(false);
+    
+    // Calculate new distance if we have coordinates for both store and customer address
+    if (currentStore && address.lat && address.lon) {
+      const storeLat = currentStore.latitude;
+      const storeLon = currentStore.longitude;
+      
+      if (storeLat && storeLon) {
+        setIsLoadingDistance(true);
+        const distanceKm = await calculateDrivingDistance(
+          storeLat,
+          storeLon,
+          address.lat,
+          address.lon
+        );
+        setDistance(distanceKm);
+        setIsLoadingDistance(false);
+      } else {
+        setDistance(null);
+        setIsLoadingDistance(false);
+      }
+    } else {
+      setDistance(null);
+      setIsLoadingDistance(false);
+    }
+  }, [currentStore]);
+
+  const handleAddressChange = useCallback((value: string) => {
+    setFullAddress(value);
+  }, []);
+
   const handleDeliveryAddressChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     setDeliveryAddress(prev => ({ ...prev, [id]: value }));
@@ -208,16 +366,19 @@ const DeliveryDetailsPage = () => {
       if (phone && (
         deliveryAddress.street !== customer?.address?.street ||
         deliveryAddress.city !== customer?.address?.city ||
-        deliveryAddress.postalCode !== customer?.address?.postalCode
+        deliveryAddress.postalCode !== customer?.address?.postalCode ||
+        deliveryAddress.lat !== customer?.address?.lat ||
+        deliveryAddress.lon !== customer?.address?.lon
       )) {
         console.log('Updating customer address in database...');
-        await updateCustomerAddress(phone, deliveryAddress);
+        await updateCustomerAddress(phone, deliveryAddress, distance || undefined);
       }
 
       // Update the customer object with the new address for immediate use
       const updatedCustomer = {
         ...customer,
-        address: deliveryAddress
+        address: deliveryAddress,
+        distanceFromStore: distance
       };
 
       navigate('/menu', { 
@@ -227,7 +388,8 @@ const DeliveryDetailsPage = () => {
           orderType: 'delivery', 
           deliveryAddress,
           deliveryTimeType,
-          scheduledDeliveryDateTime
+          scheduledDeliveryDateTime,
+          distance
         } 
       });
     } catch (error) {
@@ -237,17 +399,19 @@ const DeliveryDetailsPage = () => {
         state: { 
           customer: {
             ...customer,
-            address: deliveryAddress
+            address: deliveryAddress,
+            distanceFromStore: distance
           }, 
           phone, 
           orderType: 'delivery', 
           deliveryAddress,
           deliveryTimeType,
-          scheduledDeliveryDateTime
+          scheduledDeliveryDateTime,
+          distance
         } 
       });
     }
-  }, [navigate, customer, phone, deliveryAddress, deliveryTimeType, scheduledDeliveryDateTime]);
+  }, [navigate, customer, phone, deliveryAddress, deliveryTimeType, scheduledDeliveryDateTime, distance]);
 
   // Memoized derived state
   const isDetailsComplete = useMemo(() => 
@@ -267,6 +431,7 @@ const DeliveryDetailsPage = () => {
         customerInfo={customer}
         orderType="Delivery"
         currentStep="details"
+        onQuickAddClick={() => {}}
       />
       <div className="flex-1 overflow-y-auto p-4 pt-6">
         <div className="w-full max-w-6xl mx-auto space-y-6">
@@ -297,77 +462,25 @@ const DeliveryDetailsPage = () => {
 
             {/* Delivery Address Form */}
             <div className="lg:col-span-2">
-              <AddressForm
-                deliveryAddress={deliveryAddress}
-                onChange={handleDeliveryAddressChange}
-                isComplete={isDetailsComplete}
-              />
+                             <AddressForm
+                 deliveryAddress={deliveryAddress}
+                 onChange={handleDeliveryAddressChange}
+                 onAddressSelect={handleAddressSelect}
+                 onAddressChange={handleAddressChange}
+                 fullAddress={fullAddress}
+                 distance={distance}
+                 isLoadingDistance={isLoadingDistance}
+                 isCachedDistance={isCachedDistance}
+                 isComplete={isDetailsComplete}
+                 deliveryTimeType={deliveryTimeType}
+                 setDeliveryTimeType={setDeliveryTimeType}
+                 scheduledDeliveryDateTime={scheduledDeliveryDateTime}
+                 setScheduledDeliveryDateTime={setScheduledDeliveryDateTime}
+               />
             </div>
           </div>
 
-          {/* Delivery Time Selection */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-100 h-full flex flex-col">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 bg-gradient-to-br from-orange-600 to-orange-700 rounded-lg">
-                  <Clock className="h-5 w-5 text-white" />
-                </div>
-                <h2 className="text-lg font-bold text-gray-900">When should we deliver?</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
-                <button
-                  className={`group relative rounded-lg border-2 p-4 transition-colors duration-200 focus:outline-none text-center h-full ${deliveryTimeType === 'asap' ? 'border-orange-600 bg-orange-50 shadow-lg' : 'border-gray-200 hover:border-orange-300 hover:shadow-md'}`}
-                  onClick={() => setDeliveryTimeType('asap')}
-                >
-                  <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-2 bg-gradient-to-br from-orange-600 to-orange-700">
-                    <Clock className="h-6 w-6 text-white" />
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-1">ASAP</h3>
-                  <p className="text-gray-600 mb-2 text-sm">Delivered in 30-45 minutes</p>
-                  {deliveryTimeType === 'asap' && (
-                    <div className="mt-3 flex items-center justify-center gap-2 text-orange-600">
-                      <CheckCircle className="h-4 w-4" />
-                      <span className="font-semibold text-sm">Selected!</span>
-                    </div>
-                  )}
-                </button>
-                <button
-                  className={`group relative rounded-lg border-2 p-4 transition-colors duration-200 focus:outline-none text-center h-full ${deliveryTimeType === 'scheduled' ? 'border-orange-600 bg-orange-50 shadow-lg' : 'border-gray-200 hover:border-orange-300 hover:shadow-md'}`}
-                  onClick={() => setDeliveryTimeType('scheduled')}
-                >
-                  <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-2 bg-gradient-to-br from-orange-600 to-orange-700">
-                    <Calendar className="h-6 w-6 text-white" />
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-1">Schedule for Later</h3>
-                  <p className="text-gray-600 mb-2 text-sm">Choose specific date and time</p>
-                  {deliveryTimeType === 'scheduled' && (
-                    <div className="mt-3 flex items-center justify-center gap-2 text-orange-600">
-                      <CheckCircle className="h-4 w-4" />
-                      <span className="font-semibold text-sm">Selected!</span>
-                    </div>
-                  )}
-                </button>
-              </div>
-              {deliveryTimeType === 'scheduled' && (
-                <div className="mt-4 bg-orange-50 rounded-lg p-4 border border-orange-200">
-                  <h3 className="font-bold text-orange-800 mb-3 flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    Schedule Delivery Time
-                  </h3>
-                  <Input
-                    type="datetime-local"
-                    value={scheduledDeliveryDateTime}
-                    onChange={e => setScheduledDeliveryDateTime(e.target.value)}
-                    min={new Date(Date.now() + 45 * 60 * 1000).toISOString().slice(0, 16)}
-                    className="w-full"
-                  />
-                  <p className="text-xs text-orange-600 mt-2">
-                    Minimum 45 minutes from now. Store hours: 11:00 AM - 10:00 PM
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+          
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4">
