@@ -3,7 +3,7 @@ import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection, query, orderBy, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db, storage } from '../services/firebase';
 import { ref, deleteObject } from 'firebase/storage';
-import { Plus } from 'lucide-react';
+import { Plus, Tag, Grid3X3, Sparkles, Utensils } from 'lucide-react';
 import { AddMenuItemDialog } from '../components/AddMenuItemDialog';
 import { EditMenuItemDialog } from '../components/EditMenuItemDialog';
 import { SortableMenuItem } from '../components/SortableMenuItem';
@@ -116,22 +116,127 @@ const Menu = () => {
   };
 
   if (!categoriesSnapshot || !menuItemsSnapshot) {
-    return <div className="p-6">Loading...</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
+        <div className="flex items-center gap-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+          <span className="text-lg text-gray-600">Loading menu...</span>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-card-foreground">Menu Management</h1>
-        <Button 
-          onClick={() => setIsAddDialogOpen(true)}
-          className="px-4 py-2 rounded-md text-white bg-[#800000] hover:bg-red-800 flex items-center disabled:bg-gray-400"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Add Menu Item
-        </Button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+      {/* Header Section */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-8">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">Menu Management</h1>
+              <p className="text-lg text-gray-600">Organize and customize your restaurant menu items</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-r from-[#800000] to-red-700 rounded-xl">
+                <Utensils className="h-8 w-8 text-white" />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+          <div className="bg-gradient-to-r from-[#800000] to-red-700 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-lg">
+                  <Utensils className="h-5 w-5 text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-white">Menu Items</h2>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium text-white">
+                  {filteredItems.length} items in {selectedCategory?.name || 'All'}
+                </span>
+                <Button 
+                  onClick={() => setIsAddDialogOpen(true)}
+                  className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg flex items-center gap-2 transition-all"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Menu Item
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6">
+            {/* Category Tabs */}
+            <div className="mb-6">
+              <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                  {categories.map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => setSelectedCategoryId(category.id)}
+                      className={`${
+                        selectedCategoryId === category.id
+                          ? 'border-red-600 text-red-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200`}
+                    >
+                      {category.name}
+                    </button>
+                  ))}
+                </nav>
+              </div>
+            </div>
+
+            {/* Menu Items Grid */}
+            {filteredItems.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Utensils className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No menu items found</h3>
+                <p className="text-gray-500">
+                  {selectedCategory 
+                    ? `No items in the "${selectedCategory.name}" category.` 
+                    : 'Create your first menu item to get started!'}
+                </p>
+                <Button 
+                  onClick={() => setIsAddDialogOpen(true)}
+                  className="mt-4 px-6 py-3 bg-gradient-to-r from-[#800000] to-red-700 hover:from-[#700000] hover:to-red-800 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-all duration-200"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Add Menu Item
+                </Button>
+              </div>
+            ) : (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext items={filteredItems} strategy={rectSortingStrategy}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    {filteredItems.map(item => (
+                      <SortableMenuItem
+                        key={item.id}
+                        item={item}
+                        onEdit={setEditingItem}
+                        onDelete={handleDeleteItem}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Dialogs */}
       <AddMenuItemDialog 
         open={isAddDialogOpen}
         onClose={() => setIsAddDialogOpen(false)}
@@ -145,45 +250,6 @@ const Menu = () => {
         item={editingItem}
         categories={categories}
       />
-
-      <div className="bg-white p-6 rounded-xl shadow-md">
-        <div className="border-b border-gray-200 mb-4">
-          <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-            {categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategoryId(category.id)}
-                className={`${
-                  selectedCategoryId === category.id
-                    ? 'border-[#800000] text-[#800000]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-              >
-                {category.name}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext items={filteredItems} strategy={rectSortingStrategy}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {filteredItems.map(item => (
-                <SortableMenuItem
-                  key={item.id}
-                  item={item}
-                  onEdit={setEditingItem}
-                  onDelete={handleDeleteItem}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-      </div>
     </div>
   );
 };

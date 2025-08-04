@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Edit, Trash2, Shield, Store, User as UserIcon, Mail, Phone, MapPin } from 'lucide-react';
+import { Users, UserPlus, Edit, Trash2, Shield, Store, User as UserIcon, Mail, Phone, MapPin, Building2 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Dialog, DialogContent } from '../components/ui/Dialog';
 import { Input } from '../components/ui/Input';
@@ -134,413 +134,462 @@ export const UserManagement = () => {
   // Show loading state while stores are being fetched
   if (loadingStores) {
     return (
-      <div className="p-8">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading user management...</div>
+          <div className="text-lg text-gray-600">Loading user management...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-          <p className="text-gray-600 mt-2">Manage franchise staff and access control</p>
-        </div>
-        <Button 
-          onClick={() => setShowCreateDialog(true)}
-          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-        >
-          <UserPlus className="h-4 w-4 mr-2" />
-          Add New User
-        </Button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Shield className="h-6 w-6 text-purple-600" />
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+      {/* Header Section */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-8">
             <div>
-              <div className="text-2xl font-bold text-gray-900">
-                {users.filter(u => u.role === 'master_admin').length}
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">User Management</h1>
+              <p className="text-lg text-gray-600">Manage franchise staff and access control</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-r from-[#800000] to-red-700 rounded-xl">
+                <Users className="h-8 w-8 text-white" />
               </div>
-              <div className="text-sm text-gray-600">Master Admins</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Store className="h-6 w-6 text-blue-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">
-                {users.filter(u => u.role === 'store_admin').length}
-              </div>
-              <div className="text-sm text-gray-600">Store Admins</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <UserIcon className="h-6 w-6 text-green-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">
-                {users.filter(u => u.role === 'employee').length}
-              </div>
-              <div className="text-sm text-gray-600">Employees</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <Users className="h-6 w-6 text-red-600" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">{users.length}</div>
-              <div className="text-sm text-gray-600">Total Users</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Store className="h-5 w-5 text-gray-600" />
-            <span className="font-medium text-gray-700">Filter by Store:</span>
-            <Select value={filterStore} onChange={(e) => setFilterStore(e.target.value)}>
-              <option value="all">All Stores</option>
-              {stores.map(store => (
-                <option key={store.id} value={store.id}>{store.name}</option>
-              ))}
-            </Select>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header with Actions */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Staff Management</h2>
+            <p className="text-gray-600">Manage your franchise staff and permissions</p>
+          </div>
+          <Button 
+            onClick={() => setShowCreateDialog(true)}
+            className="bg-gradient-to-r from-[#800000] to-red-700 hover:from-red-800 hover:to-red-900 text-white"
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Add New User
+          </Button>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl">
+                <Shield className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {users.filter(u => u.role === 'master_admin').length}
+                </div>
+                <div className="text-sm text-gray-600">Master Admins</div>
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <UserIcon className="h-5 w-5 text-gray-600" />
-            <span className="font-medium text-gray-700">Filter by Role:</span>
-            <Select value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
-              <option value="all">All Roles</option>
-              <option value="master_admin">Master Admin</option>
-              <option value="store_admin">Store Admin</option>
-              <option value="employee">Employee</option>
-            </Select>
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl">
+                <Store className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {users.filter(u => u.role === 'store_admin').length}
+                </div>
+                <div className="text-sm text-gray-600">Store Admins</div>
+              </div>
+            </div>
           </div>
 
-          <div className="ml-auto text-sm text-gray-600">
-            Showing {filteredUsers.length} of {users.length} users
-            {stores.length > 0 && (
-              <span className="ml-2 text-green-600">• {stores.length} stores available</span>
-            )}
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-xl">
+                <UserIcon className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {users.filter(u => u.role === 'employee').length}
+                </div>
+                <div className="text-sm text-gray-600">Employees</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-r from-[#800000] to-red-700 rounded-xl">
+                <Users className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{users.length}</div>
+                <div className="text-sm text-gray-600">Total Users</div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Users Table */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left py-4 px-6 font-medium text-gray-900">User</th>
-                <th className="text-left py-4 px-6 font-medium text-gray-900">Role</th>
-                <th className="text-left py-4 px-6 font-medium text-gray-900">Store</th>
-                <th className="text-left py-4 px-6 font-medium text-gray-900">Contact</th>
-                <th className="text-left py-4 px-6 font-medium text-gray-900">Last Login</th>
-                <th className="text-left py-4 px-6 font-medium text-gray-900">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((user) => {
-                const IconComponent = getRoleIcon(user.role);
-                return (
-                  <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${getRoleColor(user.role)}`}>
-                          <IconComponent className="h-5 w-5" />
+        {/* Filters */}
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-8">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <Store className="h-5 w-5 text-red-600" />
+              </div>
+              <span className="font-medium text-gray-700">Filter by Store:</span>
+              <Select 
+                value={filterStore} 
+                onChange={(e) => setFilterStore(e.target.value)}
+                className="focus:ring-red-500 focus:border-red-500"
+              >
+                <option value="all">All Stores</option>
+                {stores.map(store => (
+                  <option key={store.id} value={store.id}>{store.name}</option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <UserIcon className="h-5 w-5 text-red-600" />
+              </div>
+              <span className="font-medium text-gray-700">Filter by Role:</span>
+              <Select 
+                value={filterRole} 
+                onChange={(e) => setFilterRole(e.target.value)}
+                className="focus:ring-red-500 focus:border-red-500"
+              >
+                <option value="all">All Roles</option>
+                <option value="master_admin">Master Admin</option>
+                <option value="store_admin">Store Admin</option>
+                <option value="employee">Employee</option>
+              </Select>
+            </div>
+
+            <div className="ml-auto text-sm text-gray-600">
+              <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
+                {filteredUsers.length} of {users.length} users
+              </span>
+              {stores.length > 0 && (
+                <span className="ml-2 text-green-600">• {stores.length} stores available</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Users Table */}
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gradient-to-r from-[#800000] to-red-700 text-white">
+                <tr>
+                  <th className="text-left py-4 px-6 font-medium">User</th>
+                  <th className="text-left py-4 px-6 font-medium">Role</th>
+                  <th className="text-left py-4 px-6 font-medium">Store</th>
+                  <th className="text-left py-4 px-6 font-medium">Contact</th>
+                  <th className="text-left py-4 px-6 font-medium">Last Login</th>
+                  <th className="text-left py-4 px-6 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((user) => {
+                  const IconComponent = getRoleIcon(user.role);
+                  return (
+                    <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${getRoleColor(user.role)}`}>
+                            <IconComponent className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900">{user.name}</div>
+                            <div className="text-sm text-gray-600">{user.email}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-medium text-gray-900">{user.name}</div>
-                          <div className="text-sm text-gray-600">{user.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleColor(user.role)}`}>
-                        {user.role.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-900">
-                          {getStoreName(user.assignedStoreId)}
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleColor(user.role)}`}>
+                          {user.role.replace('_', ' ')}
                         </span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      {user.phone && (
+                      </td>
+                      <td className="py-4 px-6">
                         <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-900">{user.phone}</span>
+                          <MapPin className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-900">
+                            {getStoreName(user.assignedStoreId)}
+                          </span>
                         </div>
-                      )}
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className="text-sm text-gray-600">
-                        {user.lastLogin || 'Never'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(user)}
-                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        {user.role !== 'master_admin' && (
+                      </td>
+                      <td className="py-4 px-6">
+                        {user.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm text-gray-900">{user.phone}</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="text-sm text-gray-600">
+                          {user.lastLogin || 'Never'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDeleteUser(user.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => openEditDialog(user)}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Edit className="h-4 w-4" />
                           </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                          {user.role !== 'master_admin' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteUser(user.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      {/* Create User Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-md w-full p-0 bg-white rounded-2xl border shadow-2xl [&>button]:hidden">
-          <div className="bg-gradient-to-r from-blue-800 to-blue-900 p-6 text-white">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-lg">
-                <UserPlus className="h-6 w-6" />
-              </div>
-              <div>
+        {/* Create User Dialog */}
+        {showCreateDialog && (
+          <div 
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+            style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.4)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)'
+            }}
+          >
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="bg-gradient-to-r from-[#800000] to-red-700 p-6 text-white">
                 <h2 className="text-2xl font-bold">Create New User</h2>
-                <p className="text-blue-100">Add a new staff member to the system</p>
+                <p className="text-red-100 mt-1">Add a new staff member to the system</p>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Basic Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Full Name (e.g., John Smith)"
+                    className="w-full focus:ring-red-500 focus:border-red-500"
+                  />
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="Email Address"
+                    className="w-full focus:ring-red-500 focus:border-red-500"
+                  />
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="Phone Number"
+                    className="w-full focus:ring-red-500 focus:border-red-500"
+                  />
+                </div>
+
+                {/* Role and Store Assignment */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Role & Permissions</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                      <Select
+                        value={formData.role}
+                        onChange={(e) => setFormData({ ...formData, role: e.target.value as User['role'] })}
+                        className="w-full focus:ring-red-500 focus:border-red-500"
+                      >
+                        <option value="employee">Employee</option>
+                        <option value="store_admin">Store Admin</option>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Assign Store</label>
+                      <Select
+                        value={formData.assignedStoreId}
+                        onChange={(e) => setFormData({ ...formData, assignedStoreId: e.target.value })}
+                        className="w-full focus:ring-red-500 focus:border-red-500"
+                      >
+                        <option value="">Select Store</option>
+                        {stores.map(store => (
+                          <option key={store.id} value={store.id}>{store.name}</option>
+                        ))}
+                      </Select>
+                      {stores.length === 0 && (
+                        <p className="text-sm text-amber-600 mt-1">
+                          ⚠️ No stores available. Please create stores first in Store Management.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Security */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Security</h3>
+                  <Input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Enter password"
+                    className="w-full focus:ring-red-500 focus:border-red-500"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowCreateDialog(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleCreateUser}
+                    className="bg-gradient-to-r from-[#800000] to-red-700 hover:from-red-800 hover:to-red-900 text-white"
+                    disabled={!formData.name || !formData.email || !formData.password}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Create User
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
+        )}
 
-          <div className="p-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter full name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-              <Input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="Enter email address"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-              <Input
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="Enter phone number"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-              <Select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as User['role'] })}
-              >
-                <option value="employee">Employee</option>
-                <option value="store_admin">Store Admin</option>
-              </Select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Assign Store</label>
-              <Select
-                value={formData.assignedStoreId}
-                onChange={(e) => setFormData({ ...formData, assignedStoreId: e.target.value })}
-              >
-                <option value="">Select Store</option>
-                {stores.map(store => (
-                  <option key={store.id} value={store.id}>{store.name}</option>
-                ))}
-              </Select>
-              {stores.length === 0 && (
-                <p className="text-sm text-amber-600 mt-1">
-                  ⚠️ No stores available. Please create stores first in Store Management.
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <Input
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Enter password"
-              />
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowCreateDialog(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreateUser}
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
-                disabled={!formData.name || !formData.email || !formData.password}
-              >
-                Create User
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit User Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-md w-full p-0 bg-white rounded-2xl border shadow-2xl [&>button]:hidden">
-          <div className="bg-gradient-to-r from-green-800 to-green-900 p-6 text-white">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-lg">
-                <Edit className="h-6 w-6" />
-              </div>
-              <div>
+        {/* Edit User Dialog */}
+        {showEditDialog && (
+          <div 
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+            style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.4)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)'
+            }}
+          >
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="bg-gradient-to-r from-[#800000] to-red-700 p-6 text-white">
                 <h2 className="text-2xl font-bold">Edit User</h2>
-                <p className="text-green-100">Update staff member information</p>
+                <p className="text-red-100 mt-1">Update staff member information</p>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Basic Information */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Full Name (e.g., John Smith)"
+                    className="w-full focus:ring-red-500 focus:border-red-500"
+                  />
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="Email Address"
+                    className="w-full focus:ring-red-500 focus:border-red-500"
+                  />
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="Phone Number"
+                    className="w-full focus:ring-red-500 focus:border-red-500"
+                  />
+                </div>
+
+                {/* Role and Store Assignment */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Role & Permissions</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                      <Select
+                        value={formData.role}
+                        onChange={(e) => setFormData({ ...formData, role: e.target.value as User['role'] })}
+                        className="w-full focus:ring-red-500 focus:border-red-500"
+                      >
+                        <option value="employee">Employee</option>
+                        <option value="store_admin">Store Admin</option>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Assign Store</label>
+                      <Select
+                        value={formData.assignedStoreId}
+                        onChange={(e) => setFormData({ ...formData, assignedStoreId: e.target.value })}
+                        className="w-full focus:ring-red-500 focus:border-red-500"
+                      >
+                        <option value="">Select Store</option>
+                        {stores.map(store => (
+                          <option key={store.id} value={store.id}>{store.name}</option>
+                        ))}
+                      </Select>
+                      {stores.length === 0 && (
+                        <p className="text-sm text-amber-600 mt-1">
+                          ⚠️ No stores available. Please create stores first in Store Management.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Security */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Security</h3>
+                  <Input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder="Leave blank to keep current password"
+                    className="w-full focus:ring-red-500 focus:border-red-500"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowEditDialog(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleEditUser}
+                    className="bg-gradient-to-r from-[#800000] to-red-700 hover:from-red-800 hover:to-red-900 text-white"
+                    disabled={!formData.name || !formData.email}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Update User
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
-
-          <div className="p-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter full name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-              <Input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="Enter email address"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-              <Input
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="Enter phone number"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-              <Select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as User['role'] })}
-              >
-                <option value="employee">Employee</option>
-                <option value="store_admin">Store Admin</option>
-              </Select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Assign Store</label>
-              <Select
-                value={formData.assignedStoreId}
-                onChange={(e) => setFormData({ ...formData, assignedStoreId: e.target.value })}
-              >
-                <option value="">Select Store</option>
-                {stores.map(store => (
-                  <option key={store.id} value={store.id}>{store.name}</option>
-                ))}
-              </Select>
-              {stores.length === 0 && (
-                <p className="text-sm text-amber-600 mt-1">
-                  ⚠️ No stores available. Please create stores first in Store Management.
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <Input
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Leave blank to keep current password"
-              />
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowEditDialog(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleEditUser}
-                className="flex-1 bg-green-600 hover:bg-green-700"
-                disabled={!formData.name || !formData.email}
-              >
-                Update User
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+        )}
+      </div>
     </div>
   );
 }; 

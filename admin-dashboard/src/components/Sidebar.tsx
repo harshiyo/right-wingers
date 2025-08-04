@@ -22,10 +22,13 @@ import {
   Shield,
   Megaphone,
   Package2,
+  Sparkles,
+  Zap,
 } from 'lucide-react';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
+import logo from '../assets/logo.png';
 
 type ColorType = 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'yellow' | 'indigo' | 'pink' | 'teal' | 'violet' | 'gray';
 
@@ -193,88 +196,97 @@ export const Sidebar = () => {
   });
 
   const CountBadge = ({ count }: { count: number }) => (
-    <span className="ml-auto inline-flex items-center justify-center bg-red-600 text-white text-xs font-medium px-2.5 py-1 rounded-full min-w-[20px]">
+    <span className="ml-auto inline-flex items-center justify-center bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-medium px-2.5 py-1 rounded-full min-w-[20px] shadow-sm">
       {count}
     </span>
   );
 
   return (
-    <aside className="w-64 h-full bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 shadow-2xl flex flex-col fixed">
-      {/* Header */}
-      <div className="h-16 flex items-center justify-center relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-800 opacity-90"></div>
+    <aside className="w-64 h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 shadow-2xl flex flex-col fixed border-r border-gray-700/50">
+      {/* Enhanced Header with Logo */}
+      <div className="h-20 flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-[#800000] via-red-700 to-red-600 opacity-95"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
         <div className="relative z-10 text-center">
-          <div className="font-bold text-xl text-white">Right Wingers</div>
-          <div className="text-xs text-red-100 font-medium">Admin Panel</div>
+          <div className="flex items-center justify-center">
+            <img src={logo} alt="Right Wingers Logo" className="w-20 h-20 object-contain" />
+          </div>
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 overflow-y-auto">
-        <ul className="space-y-2">
+      {/* Enhanced Navigation */}
+      <nav className="flex-1 px-4 py-6 overflow-y-auto">
+        <div className="space-y-1">
           {filteredNavLinks.map(({ id, to, text, icon: Icon, badge, color = 'gray' }) => (
-            <li key={id}>
-              <NavLink
-                to={to}
-                end={to === '/'}
-                className={({ isActive }) =>
-                  `group flex items-center p-3 rounded-xl font-medium transition-all duration-200 relative overflow-hidden ${
-                    isActive
-                      ? 'bg-white text-gray-900 shadow-lg transform scale-105'
-                      : 'text-gray-300 hover:text-white hover:bg-white/10 hover:scale-105'
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    {/* Background gradient for active state */}
-                    {isActive && (
-                      <div className={`absolute inset-0 bg-gradient-to-r ${colorClasses[color]} opacity-10 rounded-xl`}></div>
-                    )}
-                    
-                    {/* Icon with gradient background */}
-                    <div className={`relative z-10 p-2 rounded-lg mr-3 ${
+            <NavLink
+              key={id}
+              to={to}
+              end={to === '/'}
+              className={({ isActive }) =>
+                `group flex items-center p-3 rounded-xl font-medium transition-all duration-300 relative overflow-hidden ${
+                  isActive
+                    ? 'bg-white text-gray-900 shadow-lg transform scale-105 border border-white/20'
+                    : 'text-gray-300 hover:text-white hover:bg-white/10 hover:scale-105 hover:shadow-md'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {/* Enhanced background gradient for active state */}
+                  {isActive && (
+                    <div className={`absolute inset-0 bg-gradient-to-r ${colorClasses[color]} opacity-20 rounded-xl`}></div>
+                  )}
+                  
+                  {/* Enhanced icon with gradient background */}
+                  <div className={`relative z-10 p-2.5 rounded-lg mr-3 transition-all duration-300 ${
+                    isActive 
+                      ? `bg-gradient-to-br ${colorClasses[color]} shadow-lg` 
+                      : 'bg-white/10 group-hover:bg-white/20 group-hover:shadow-md'
+                  }`}>
+                    <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-gray-300 group-hover:text-white'}`} />
+                  </div>
+                  
+                  {/* Enhanced text */}
+                  <span className="relative z-10 flex-1 font-medium">{text}</span>
+                  
+                  {/* Enhanced badge */}
+                  {badge && (
+                    <span className={`relative z-10 px-2.5 py-1 text-xs font-bold rounded-full transition-all duration-300 ${
                       isActive 
-                        ? `bg-gradient-to-br ${colorClasses[color]} shadow-md` 
-                        : 'bg-white/10 group-hover:bg-white/20'
-                    } transition-all duration-200`}>
-                      <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-gray-300 group-hover:text-white'}`} />
-                    </div>
-                    
-                    {/* Text */}
-                    <span className="relative z-10 flex-1">{text}</span>
-                    
-                    {/* Badge */}
-                    {badge && (
-                      <span className={`relative z-10 px-2 py-1 text-xs font-bold rounded-full ${
-                        isActive 
-                          ? 'bg-red-100 text-red-800' 
-                          : 'bg-red-500 text-white'
-                      } ml-2`}>
-                        {badge}
-                      </span>
-                    )}
+                        ? 'bg-red-100 text-red-800 shadow-sm' 
+                        : 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-sm'
+                    } ml-2`}>
+                      {badge}
+                    </span>
+                  )}
 
-                    {/* Hover glow effect */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl"></div>
-                  </>
-                )}
-              </NavLink>
-            </li>
+                  {/* Enhanced hover glow effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"></div>
+                  
+                  {/* Active indicator */}
+                  {isActive && (
+                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-white to-white/50 rounded-l-full"></div>
+                  )}
+                </>
+              )}
+            </NavLink>
           ))}
-        </ul>
+        </div>
       </nav>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-700">
-        <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-lg p-3 border border-blue-500/30">
+      {/* Enhanced Footer */}
+      <div className="p-4 border-t border-gray-700/50">
+        <div className="bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-red-600/20 rounded-xl p-4 border border-blue-500/30 backdrop-blur-sm">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-sm">A</span>
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-purple-500 to-red-500 rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-white font-bold text-sm">{currentUser?.name?.charAt(0)?.toUpperCase() || 'A'}</span>
             </div>
             <div className="flex-1">
-              <div className="text-sm font-medium text-white">Admin User</div>
-              <div className="text-xs text-gray-400">Administrator</div>
+              <div className="text-sm font-semibold text-white">{currentUser?.name || 'Admin User'}</div>
+              <div className="text-xs text-gray-300 flex items-center gap-1">
+                <Zap className="h-3 w-3 text-yellow-400" />
+                {currentUser?.role === 'master_admin' ? 'Master Admin' : 'Store Admin'}
+              </div>
             </div>
           </div>
         </div>

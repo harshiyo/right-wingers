@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import { Plus, Edit, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, ChevronLeft, ChevronRight, Tag, Grid3X3, Sparkles, Utensils } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 
@@ -224,246 +224,318 @@ const Toppings = () => {
   if (error) return <p>Error: {error.message}</p>;
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-card-foreground">Topping Management</h1>
-        <Button 
-          onClick={handleCreateDefaults}
-          disabled={isCreatingDefaults}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-        >
-          <Plus className="h-5 w-5" />
-          {isCreatingDefaults ? 'Creating...' : 'Create Defaults'}
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Form Column */}
-        <div className="md:col-span-1">
-          <div className="bg-white p-6 rounded-xl shadow-md">
-            <h2 className="text-xl font-semibold mb-4">{editingTopping ? 'Edit Topping' : 'Add New Topping'}</h2>
-            <form onSubmit={handleAddOrUpdateTopping} className="space-y-4">
-              <Input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Pepperoni"
-                required
-              />
-              <Input
-                type="number"
-                step="0.01"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="e.g., 1.50"
-              />
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
-                >
-                  <option value="">Select Category</option>
-                  {toppingCategories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+      {/* Header Section */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-8">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">Topping Management</h1>
+              <p className="text-lg text-gray-600">Customize your menu with delicious toppings and ingredients</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-r from-[#800000] to-red-700 rounded-xl">
+                <Utensils className="h-8 w-8 text-white" />
               </div>
-
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700">Dietary Options</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={isVegetarian}
-                      onChange={(e) => setIsVegetarian(e.target.checked)}
-                      className="h-4 w-4 text-[#800000] border-gray-300 rounded focus:ring-[#800000]"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">🌱 Vegetarian</span>
-                  </label>
-                  
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={isVegan}
-                      onChange={(e) => setIsVegan(e.target.checked)}
-                      className="h-4 w-4 text-[#800000] border-gray-300 rounded focus:ring-[#800000]"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">🌿 Vegan</span>
-                  </label>
-                  
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={isGlutenFree}
-                      onChange={(e) => setIsGlutenFree(e.target.checked)}
-                      className="h-4 w-4 text-[#800000] border-gray-300 rounded focus:ring-[#800000]"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">🌾 Gluten-Free</span>
-                  </label>
-                  
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={isKeto}
-                      onChange={(e) => setIsKeto(e.target.checked)}
-                      className="h-4 w-4 text-[#800000] border-gray-300 rounded focus:ring-[#800000]"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">🥩 Keto</span>
-                  </label>
-                </div>
-              </div>
-              <div className="flex gap-2 pt-2">
-                <Button type="submit" disabled={isSaving} className="px-4 py-2 rounded-md text-white bg-[#800000] hover:bg-red-800 flex items-center disabled:bg-gray-400 w-full justify-center">
-                  <Plus className="h-5 w-5 mr-2" />
-                  {isSaving ? 'Saving...' : (editingTopping ? 'Update Topping' : 'Add Topping')}
-                </Button>
-                {editingTopping && (
-                  <Button type="button" onClick={cancelEdit} variant="secondary">
-                    Cancel
-                  </Button>
-                )}
-              </div>
-            </form>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* List Column */}
-        <div className="md:col-span-2">
-          <div className="bg-white p-6 rounded-xl shadow-md">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Available Toppings</h2>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span>
-                  Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredToppings.length)} - {Math.min(currentPage * itemsPerPage, filteredToppings.length)} of {filteredToppings.length}
-                </span>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Add/Edit Form */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+              <div className="bg-gradient-to-r from-[#800000] to-red-700 px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-lg">
+                    <Plus className="h-5 w-5 text-white" />
+                  </div>
+                  <h2 className="text-xl font-bold text-white">
+                    {editingTopping ? 'Edit Topping' : 'Create New Topping'}
+                  </h2>
+                </div>
               </div>
-            </div>
-
-            {/* Filters */}
-            <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search toppings..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-
-              {/* Category Filter */}
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-              >
-                <option value="">All Categories</option>
-                {toppingCategories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-
-              {/* Items per page */}
-              <select
-                value={itemsPerPage}
-                onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#800000] focus:border-transparent"
-              >
-                <option value={5}>5 per page</option>
-                <option value={10}>10 per page</option>
-                <option value={20}>20 per page</option>
-                <option value={50}>50 per page</option>
-              </select>
-            </div>
-
-            {loading ? (
-              <p>Loading toppings...</p>
-            ) : paginatedToppings.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">
-                  {filteredToppings.length === 0 
-                    ? (searchQuery || categoryFilter ? 'No toppings match your filters.' : 'No toppings found.') 
-                    : 'No toppings on this page.'}
-                </p>
-              </div>
-            ) : (
-              <>
-                <ul className="space-y-2">
-                  {paginatedToppings.map(topping => (
-                    <li key={topping.id} className="flex items-center justify-between p-4 bg-[#f9f9f9] rounded-lg border border-gray-200">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-gray-800">{topping.name}</span>
-                          {topping.price !== undefined && (topping.price ?? 0) > 0 && (
-                            <span className="text-sm text-gray-500">${(topping.price ?? 0).toFixed(2)}</span>
-                          )}
-                          {topping.category && (
-                            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                              {topping.category}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex gap-1">
-                          {topping.isVegetarian && <span className="text-xs">🌱</span>}
-                          {topping.isVegan && <span className="text-xs">🌿</span>}
-                          {topping.isGlutenFree && <span className="text-xs">🌾</span>}
-                          {topping.isKeto && <span className="text-xs">🥩</span>}
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button onClick={() => handleEdit(topping)} variant="ghost" size="icon">
-                          <Edit className="h-5 w-5" />
-                        </Button>
-                        <Button onClick={() => handleDelete(topping.id)} variant="ghost" size="icon">
-                          <Trash2 className="h-5 w-5 text-destructive" />
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
-                  <div className="mt-6 flex items-center justify-center space-x-2">
-                    <Button
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1}
-                      variant="outline"
-                      size="sm"
+              
+              <div className="p-6">
+                <form onSubmit={handleAddOrUpdateTopping} className="space-y-6">
+                  <div className="space-y-2">
+                    <label htmlFor="toppingName" className="block text-sm font-semibold text-gray-700">
+                      Topping Name
+                    </label>
+                    <Input
+                      type="text"
+                      id="toppingName"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g., Pepperoni"
+                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-colors"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="toppingPrice" className="block text-sm font-semibold text-gray-700">
+                      Price
+                    </label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      id="toppingPrice"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      placeholder="e.g., 1.50"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-colors"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="toppingCategory" className="block text-sm font-semibold text-gray-700">
+                      Category
+                    </label>
+                    <select
+                      id="toppingCategory"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)} 
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-colors"
                     >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-
-                    {getPageNumbers().map((page) => (
-                      <Button
-                        key={page}
-                        onClick={() => handlePageChange(page)}
-                        variant={currentPage === page ? "default" : "outline"}
-                        size="sm"
-                        className={currentPage === page ? "bg-[#800000] hover:bg-red-800" : ""}
+                      <option value="">Select Category</option>
+                      {toppingCategories.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <label className="block text-sm font-semibold text-gray-700">Dietary Options</label>
+                    <div className="space-y-3">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={isVegetarian}
+                          onChange={(e) => setIsVegetarian(e.target.checked)}
+                          className="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                        />
+                        <span className="ml-3 text-sm font-medium text-gray-700">🌱 Vegetarian</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={isVegan}
+                          onChange={(e) => setIsVegan(e.target.checked)}
+                          className="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                        />
+                        <span className="ml-3 text-sm font-medium text-gray-700">🌿 Vegan</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={isGlutenFree}
+                          onChange={(e) => setIsGlutenFree(e.target.checked)}
+                          className="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                        />
+                        <span className="ml-3 text-sm font-medium text-gray-700">🌾 Gluten-Free</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={isKeto}
+                          onChange={(e) => setIsKeto(e.target.checked)}
+                          className="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                        />
+                        <span className="ml-3 text-sm font-medium text-gray-700">🥩 Keto</span>
+                      </label>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3 pt-4">
+                    {editingTopping && (
+                      <Button 
+                        type="button" 
+                        onClick={cancelEdit} 
+                        variant="secondary"
+                        className="flex-1 px-6 py-3 rounded-xl font-medium"
                       >
-                        {page}
+                        Cancel
                       </Button>
-                    ))}
-
-                    <Button
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                      variant="outline"
-                      size="sm"
+                    )}
+                    <Button 
+                      type="submit" 
+                      disabled={isSaving || !name.trim()} 
+                      className="flex-1 px-6 py-3 rounded-xl font-medium bg-gradient-to-r from-[#800000] to-red-700 hover:from-[#700000] hover:to-red-800 text-white shadow-md hover:shadow-lg transition-all duration-200"
                     >
-                      <ChevronRight className="h-4 w-4" />
+                      {isSaving ? 'Saving...' : (editingTopping ? 'Update Topping' : 'Create Topping')}
                     </Button>
                   </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          {/* Toppings List */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+              <div className="bg-gradient-to-r from-[#800000] to-red-700 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white/20 rounded-lg">
+                      <Utensils className="h-5 w-5 text-white" />
+                    </div>
+                    <h2 className="text-xl font-bold text-white">Toppings</h2>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium text-white">
+                      {paginatedToppings.length} toppings
+                    </span>
+                    <Button 
+                      onClick={handleCreateDefaults}
+                      disabled={isCreatingDefaults}
+                      className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg flex items-center gap-2 transition-all"
+                    >
+                      <Plus className="h-4 w-4" />
+                      {isCreatingDefaults ? 'Creating...' : 'Create Defaults'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-6">
+                {loading && (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+                    <span className="ml-3 text-gray-600">Loading toppings...</span>
+                  </div>
                 )}
-              </>
-            )}
+                
+                {!loading && (
+                  <>
+                    {/* Search and Filters */}
+                    <div className="mb-6 space-y-4">
+                      <div className="flex items-center gap-4">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          <input
+                            type="text"
+                            placeholder="Search toppings..."
+                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-colors"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                          />
+                        </div>
+                        <select
+                          value={categoryFilter}
+                          onChange={(e) => setCategoryFilter(e.target.value)}
+                          className="px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-colors"
+                        >
+                          <option value="">All Categories</option>
+                          {toppingCategories.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={itemsPerPage}
+                          onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                          className="px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-colors"
+                        >
+                          <option value={5}>5 per page</option>
+                          <option value={10}>10 per page</option>
+                          <option value={20}>20 per page</option>
+                        </select>
+                      </div>
+                    </div>
+                    
+                    {/* Pagination Info */}
+                    <div className="flex justify-between items-center mb-4 text-sm text-gray-600">
+                      <span>
+                        Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredToppings.length)} of {filteredToppings.length} toppings
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          disabled={currentPage === 1}
+                          className="px-3 py-1 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Previous
+                        </button>
+                        <span className="px-3 py-1 bg-red-100 text-red-700 rounded-lg">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          disabled={currentPage === totalPages}
+                          className="px-3 py-1 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {paginatedToppings.length === 0 && (
+                      <div className="text-center py-12">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Utensils className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No toppings found</h3>
+                        <p className="text-gray-500">Create your first topping to get started!</p>
+                      </div>
+                    )}
+                    
+                    {paginatedToppings.length > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {paginatedToppings.map(topping => (
+                          <div key={topping.id} className="group relative bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-200 p-4 hover:shadow-lg transition-all duration-200 hover:border-red-300">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 bg-gradient-to-br from-red-100 to-red-200 rounded-xl flex items-center justify-center">
+                                  <Utensils className="h-6 w-6 text-red-600" />
+                                </div>
+                                                                 <div>
+                                   <h3 className="font-semibold text-gray-900">{topping.name}</h3>
+                                   <p className="text-sm text-gray-500">${(topping.price ?? 0).toFixed(2)}</p>
+                                   {topping.category && (
+                                    <span className="inline-block px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full mt-1">
+                                      {topping.category}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                <Button 
+                                  onClick={() => handleEdit(topping)} 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="w-8 h-8 rounded-lg hover:bg-red-100 hover:text-red-600"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  onClick={() => handleDelete(topping.id)} 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="w-8 h-8 rounded-lg hover:bg-red-100 hover:text-red-600"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                            {/* Dietary badges */}
+                            {(topping.isVegetarian || topping.isVegan || topping.isGlutenFree || topping.isKeto) && (
+                              <div className="flex flex-wrap gap-1 mt-3">
+                                {topping.isVegetarian && <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">🌱 Veg</span>}
+                                {topping.isVegan && <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">🌿 Vegan</span>}
+                                {topping.isGlutenFree && <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">🌾 GF</span>}
+                                {topping.isKeto && <span className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded-full">🥩 Keto</span>}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
