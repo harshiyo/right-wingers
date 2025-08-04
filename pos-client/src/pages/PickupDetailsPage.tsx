@@ -97,27 +97,32 @@ const CustomerInfoCard = memo(({
         <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 p-4">
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 opacity-10 rounded-full -mr-8 -mt-8"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-green-600 rounded-full">
-                  <CheckCircle className="h-3 w-3 text-white" />
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-600 rounded-full shadow-sm">
+                  <CheckCircle className="h-4 w-4 text-white" />
                 </div>
-                <p className="font-bold text-green-800 text-sm">
-                  {customer.orderCount > 0 ? 'Welcome back!' : 'New customer!'}
-                </p>
+                <div>
+                  <p className="font-bold text-green-800 text-base leading-tight">
+                    {customer.orderCount > 0 ? 'Welcome back!' : 'New customer!'}
+                  </p>
+                  <p className="text-xs text-green-600 font-medium mt-0.5">
+                    {customer.orderCount > 0 ? 'We\'re glad to see you again' : 'Let\'s get you started'}
+                  </p>
+                </div>
               </div>
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={onNavigateToCustomerLookup}
-                className="text-green-700 hover:bg-green-100 text-xs px-2 py-1"
+                className="text-green-700 hover:bg-green-100 text-xs px-3 py-1.5 font-medium"
               >
                 Not them?
               </Button>
             </div>
-            <div className="mb-3">
-              <p className="text-xl font-bold text-gray-900 mb-1">{customer.name}</p>
-              <p className="text-sm text-gray-600">
+            <div className="mb-4">
+              <p className="text-2xl font-bold text-gray-900 mb-2 leading-tight">{customer.name}</p>
+              <p className="text-sm text-gray-600 font-medium">
                 {customer.orderCount > 0 
                   ? `Customer since ${new Date(customer.lastOrderDate).getFullYear()}`
                   : 'First time ordering'
@@ -129,18 +134,18 @@ const CustomerInfoCard = memo(({
         
         {/* Enhanced Info Grid */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-red-50 to-orange-50 border border-red-200 p-3">
+          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-red-50 to-orange-50 border border-red-200 p-4">
             <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-br from-red-400 to-orange-500 opacity-10 rounded-full -mr-4 -mt-4"></div>
             <div className="relative">
-              <p className="text-red-600 font-medium text-xs mb-1">Phone</p>
-              <p className="text-lg font-bold text-gray-900">{phone}</p>
+              <p className="text-red-600 font-semibold text-xs mb-2 uppercase tracking-wide">Phone</p>
+              <p className="text-lg font-bold text-gray-900 leading-tight">{phone}</p>
             </div>
           </div>
-          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 p-3">
+          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 p-4">
             <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-br from-orange-400 to-amber-500 opacity-10 rounded-full -mr-4 -mt-4"></div>
             <div className="relative">
-              <p className="text-orange-600 font-medium text-xs mb-1">Order Type</p>
-              <p className="text-lg font-bold text-gray-900">Pickup</p>
+              <p className="text-orange-600 font-semibold text-xs mb-2 uppercase tracking-wide">Order Type</p>
+              <p className="text-lg font-bold text-gray-900 leading-tight">Pickup</p>
             </div>
           </div>
         </div>
