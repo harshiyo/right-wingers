@@ -27,8 +27,8 @@ setPersistence(auth, browserLocalPersistence)
     console.error("Error setting auth persistence:", error);
   });
 
-// Connect to emulators in development
-if (import.meta.env.DEV) {
+// Connect to emulators only if explicitly enabled via environment variable
+if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true') {
   try {
     connectAuthEmulator(auth, "http://localhost:9099");
     connectFirestoreEmulator(db, "localhost", 8080);
@@ -37,4 +37,6 @@ if (import.meta.env.DEV) {
   } catch (error) {
     console.error("Error connecting to Firebase emulators: ", error);
   }
+} else {
+  console.log("Connected to real Firebase database");
 }

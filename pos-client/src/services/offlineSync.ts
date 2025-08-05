@@ -1,4 +1,4 @@
-import { openDB, IDBPDatabase, DBSchema } from 'idb';
+import { openDB, IDBPDatabase, DBSchema, deleteDB } from 'idb';
 
 // Define the offline database schema
 interface OfflineDB extends DBSchema {
@@ -150,9 +150,17 @@ class OfflineSyncService {
 
   private async initDB() {
     try {
-      this.db = await openDB<OfflineDB>('rightwingers-pos', 1, {
+      // Try to delete the existing database first to avoid version conflicts
+      try {
+        await deleteDB('rightwingers-pos');
+        console.log('🗑️ Deleted old IndexedDB database');
+      } catch (error) {
+        // Ignore errors if database doesn't exist
+      }
+
+      this.db = await openDB<OfflineDB>('rightwingers-pos', 2, {
         upgrade(db, oldVersion, newVersion, transaction) {
-          console.log('🔧 Upgrading IndexedDB schema...');
+          console.log(`🔧 Upgrading IndexedDB schema from version ${oldVersion} to ${newVersion}...`);
           
           // Create orders store
           if (!db.objectStoreNames.contains('orders')) {
@@ -223,9 +231,11 @@ class OfflineSyncService {
       });
 
       this.initialized = true;
-      console.log('💾 OfflineSync database initialized');
+      console.log('💾 OfflineSync database initialized successfully');
     } catch (error) {
       console.error('Failed to initialize IndexedDB:', error);
+      // Set initialized to true anyway to prevent infinite waiting
+      this.initialized = true;
     }
   }
 
@@ -253,6 +263,9 @@ class OfflineSyncService {
 
   // Cache menu data for offline use
   async cacheMenuData(storeId: string, menuItems: any[]) {
+    // Wait for database to be initialized
+    await this.waitForInitialization();
+    
     if (!this.db || !this.initialized) {
       console.warn('Database not ready for caching menu data');
       return;
@@ -278,6 +291,9 @@ class OfflineSyncService {
 
   // Cache toppings data
   async cacheToppingsData(toppings: any[]) {
+    // Wait for database to be initialized
+    await this.waitForInitialization();
+    
     if (!this.db || !this.initialized) {
       console.warn('Database not ready for caching toppings');
       return;
@@ -302,6 +318,9 @@ class OfflineSyncService {
 
   // Cache sauces data
   async cacheSaucesData(sauces: any[]) {
+    // Wait for database to be initialized
+    await this.waitForInitialization();
+    
     if (!this.db || !this.initialized) {
       console.warn('Database not ready for caching sauces');
       return;
@@ -326,6 +345,9 @@ class OfflineSyncService {
 
   // Cache categories data
   async cacheCategoriesData(categories: any[]) {
+    // Wait for database to be initialized
+    await this.waitForInitialization();
+    
     if (!this.db || !this.initialized) {
       console.warn('Database not ready for caching categories');
       return;
@@ -350,6 +372,9 @@ class OfflineSyncService {
 
   // Cache combos data
   async cacheCombosData(combos: any[]) {
+    // Wait for database to be initialized
+    await this.waitForInitialization();
+    
     if (!this.db || !this.initialized) {
       console.warn('Database not ready for caching combos');
       return;
@@ -366,7 +391,7 @@ class OfflineSyncService {
       }
       
       await tx.done;
-      console.log(`🍽️ Cached ${combos.length} combos`);
+      console.log(`🍕 Cached ${combos.length} combos`);
     } catch (error) {
       console.error('Failed to cache combos:', error);
     }
@@ -728,6 +753,25 @@ class OfflineSyncService {
     ]);
 
     console.log('🗑️ All offline data cleared');
+  }
+
+  // Wait for database initialization
+  private async waitForInitialization(): Promise<void> {
+    let attempts = 0;
+    const maxAttempts = 100; // 10 seconds max wait
+    
+    while (!this.initialized && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+    
+    if (!this.initialized) {
+      console.warn('Database initialization timeout - proceeding anyway');
+      // Force initialization to prevent infinite waiting
+      this.initialized = true;
+    } else {
+      console.log('✅ Database initialization confirmed');
+    }
   }
 }
 

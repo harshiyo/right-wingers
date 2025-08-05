@@ -494,8 +494,8 @@ const JobStatus = () => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
               <div className="space-y-3">
-                {jobStatuses.slice(0, 5).map((job) => (
-                  <div key={job.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
+                {jobStatuses.slice(0, 5).map((job, index) => (
+                  <div key={`${job.id}-${index}`} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
                     <div className="flex items-center gap-3">
                       {getJobTypeIcon(job.type)}
                       <div>
@@ -538,8 +538,8 @@ const JobStatus = () => {
 
               {/* Queue Items */}
               <div className="space-y-3">
-                {queueItems.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                {queueItems.map((item, index) => (
+                  <div key={`${item.id}-${index}`} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                     <div className="flex items-center gap-3">
                       {getJobTypeIcon(item.jobType)}
                       <div>
@@ -731,8 +731,8 @@ const JobStatus = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedJobStatuses.map((job) => (
-                        <tr key={job.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      {paginatedJobStatuses.map((job, index) => (
+                        <tr key={`${job.id}-${index}`} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-2">
                               {getJobTypeIcon(job.type)}
