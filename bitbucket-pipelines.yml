@@ -1,9 +1,9 @@
-#  Template NodeJS build
+#  Template NodeJS build for POS Monorepo
 
-#  This template allows you to validate your NodeJS code.
+#  This template allows you to validate your NodeJS code in a monorepo structure.
 #  The workflow allows running tests and code linting on the default branch.
 
-image: node:16
+image: node:18
 
 pipelines:
   default:
@@ -13,12 +13,70 @@ pipelines:
             caches:
               - node
             script:
-              - npm install
+              - npm run install:all
               - npm test
         - step:
             name: Code linting
-            script:
-              - npm install eslint
-              - npx eslint .
             caches:
               - node
+            script:
+              - npm run install:all
+              - npm run test:lint
+        - step:
+            name: E2E Tests
+            caches:
+              - node
+            script:
+              - npm run install:all
+              - npm run install:browsers
+              - npm run test:e2e
+  branches:
+    main:
+      - parallel:
+          - step:
+              name: Build and Test
+              caches:
+                - node
+              script:
+                - npm run install:all
+                - npm test
+          - step:
+              name: Code linting
+              caches:
+                - node
+              script:
+                - npm run install:all
+                - npm run test:lint
+          - step:
+              name: E2E Tests
+              caches:
+                - node
+              script:
+                - npm run install:all
+                - npm run install:browsers
+                - npm run test:e2e
+  pull-requests:
+    '**':
+      - parallel:
+          - step:
+              name: Build and Test
+              caches:
+                - node
+              script:
+                - npm run install:all
+                - npm test
+          - step:
+              name: Code linting
+              caches:
+                - node
+              script:
+                - npm run install:all
+                - npm run test:lint
+          - step:
+              name: E2E Tests
+              caches:
+                - node
+              script:
+                - npm run install:all
+                - npm run install:browsers
+                - npm run test:e2e

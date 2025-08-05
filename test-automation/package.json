@@ -1,0 +1,22 @@
+{
+  "name": "pos-test-automation",
+  "version": "1.0.0",
+  "description": "Test automation framework for POS system",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report",
+    "install:browsers": "playwright install",
+    "test:all": "npm run test:unit && npm run test:e2e",
+    "test:unit": "cd .. && npm run test:unit",
+    "test:lint": "cd .. && npm run test:lint",
+    "test:build": "cd .. && npm run test:build"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.42.1",
+    "@types/node": "^24.0.3",
+    "typescript": "~5.8.3"
+  }
+} 
