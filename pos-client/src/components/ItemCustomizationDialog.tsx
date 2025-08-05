@@ -6,6 +6,7 @@ import { db } from '../services/firebase';
 import { Button } from './ui/Button';
 import { cn } from '../utils/cn';
 import { Input } from './ui/Input';
+import { getToppingImage } from '../utils/toppingImageMap';
 
 // --- Interfaces --- //
 export interface CartItem {
@@ -315,12 +316,42 @@ export const ItemCustomizationDialog = ({ open, onClose, item, onAddToCart }: It
                     <p className="text-sm text-gray-400 mt-2">Try selecting "All" or different dietary options.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
                     {filteredToppings.map(topping => (
-                      <label key={topping.id} className={cn("flex flex-col items-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 text-center min-h-[80px]", selectedToppings.has(topping.id) ? "bg-green-100 border-green-500" : "bg-gray-50 hover:border-gray-400", itemType === 'pizza' && !!item?.maxToppings && !selectedToppings.has(topping.id) && selectedToppings.size >= (item.maxToppings || 0) ? 'opacity-50 cursor-not-allowed' : '')}>
+                      <label key={topping.id} className={cn("flex flex-col items-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 text-center min-h-[100px]", selectedToppings.has(topping.id) ? "bg-green-100 border-green-500" : "bg-gray-50 hover:border-gray-400", itemType === 'pizza' && !!item?.maxToppings && !selectedToppings.has(topping.id) && selectedToppings.size >= (item.maxToppings || 0) ? 'opacity-50 cursor-not-allowed' : '')}>
                         <input type="checkbox" checked={selectedToppings.has(topping.id)} onChange={() => handleToppingToggle(topping)} className="h-4 w-4 rounded text-green-600 focus:ring-green-500 mb-2" disabled={itemType === 'pizza' && !!item?.maxToppings && !selectedToppings.has(topping.id) && selectedToppings.size >= (item.maxToppings || 0)}/>
+                        
+                        {/* Topping Image */}
+                        {(() => {
+                          const imagePath = getToppingImage(topping.name);
+                          return imagePath ? (
+                            <div className="w-10 h-10 mb-2 flex items-center justify-center">
+                              <img 
+                                src={imagePath} 
+                                alt={topping.name}
+                                className="w-full h-full object-contain"
+                                onError={(e) => {
+                                  // Fallback to text if image fails to load
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  target.nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                              <div className="hidden text-xs text-gray-500 font-medium text-center">
+                                {topping.name}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-10 h-10 mb-2 flex items-center justify-center bg-gray-100 rounded-lg">
+                              <span className="text-xs text-gray-500 font-medium text-center">
+                                {topping.name}
+                              </span>
+                            </div>
+                          );
+                        })()}
+                        
                         <div className="flex-1 min-w-0 w-full">
-                          <div className="font-medium text-gray-800 text-sm leading-tight mb-1">{topping.name}</div>
+                          <div className="font-medium text-gray-800 text-xs leading-tight mb-1">{topping.name}</div>
                           <div className="flex justify-center gap-1 mb-1">
                             {topping.isVegetarian && <span className="text-xs">🌱</span>}
                             {topping.isVegan && <span className="text-xs">🌿</span>}

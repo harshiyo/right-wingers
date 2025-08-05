@@ -3,6 +3,7 @@ import { collection, query, orderBy, getDocs, doc, getDoc } from 'firebase/fires
 import { db } from '../services/firebase';
 import { X, ChevronLeft, Check, Edit2, Pizza, Drumstick, Coffee, Utensils } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { getToppingImage } from '../utils/toppingImageMap';
 
 
 interface Topping {
@@ -922,7 +923,7 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
                   key={topping.id}
                   onClick={() => handleToppingToggle(topping)}
                   className={cn(
-                    "p-3 rounded-lg border-2 transition-all hover:shadow-md",
+                    "p-3 rounded-lg border-2 transition-all hover:shadow-md flex flex-col items-center min-h-[100px]",
                     isSelected
                       ? isIncluded
                         ? "border-green-500 bg-green-50"
@@ -930,8 +931,37 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
                       : "border-gray-200 hover:border-gray-300"
                   )}
                 >
+                  {/* Topping Image */}
+                  {(() => {
+                    const imagePath = getToppingImage(topping.name);
+                    return imagePath ? (
+                      <div className="w-10 h-10 mb-2 flex items-center justify-center">
+                        <img 
+                          src={imagePath} 
+                          alt={topping.name}
+                          className="w-full h-full object-contain"
+                          onError={(e) => {
+                            // Fallback to text if image fails to load
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.nextElementSibling?.classList.remove('hidden');
+                          }}
+                        />
+                        <div className="hidden text-xs text-gray-500 font-medium text-center">
+                          {topping.name}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-10 h-10 mb-2 flex items-center justify-center bg-gray-100 rounded-lg">
+                        <span className="text-xs text-gray-500 font-medium text-center">
+                          {topping.name}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                  
                   <div className="text-center">
-                    <div className="font-bold text-sm">{topping.name}</div>
+                    <div className="font-bold text-xs">{topping.name}</div>
                   </div>
                 </button>
               );

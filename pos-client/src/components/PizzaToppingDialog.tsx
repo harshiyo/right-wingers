@@ -4,6 +4,7 @@ import { useCollection } from 'react-firebase-hooks/firestore';
 import { db } from '../services/firebase';
 import { Button } from './ui/Button';
 import { cn } from '../utils/cn';
+import { getToppingImage } from '../utils/toppingImageMap';
 
 interface Topping {
   id: string;
@@ -766,7 +767,7 @@ export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizz
                 <p className="text-sm text-gray-400">Try adjusting your filters</p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
                 {filteredToppings.map((topping) => {
                   const isSelected = currentSelection.has(topping.id);
                   const extraToppingsSet = getExtraToppings();
@@ -781,7 +782,7 @@ export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizz
                       key={topping.id}
                       onClick={() => handleToppingToggle(topping)}
                       className={cn(
-                        "group relative p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-lg text-center box-border min-h-[120px]",
+                        "group relative p-3 rounded-xl border-2 transition-all duration-200 hover:shadow-lg text-center box-border min-h-[140px] flex flex-col",
                         isSelected 
                           ? isExtra 
                             ? "border-orange-400 bg-orange-50 shadow-md" 
@@ -808,9 +809,38 @@ export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizz
                       </div>
 
                       {/* Topping Content */}
-                      <div>
+                      <div className="flex flex-col items-center h-full">
+                        {/* Topping Image */}
+                        {(() => {
+                          const imagePath = getToppingImage(topping.name);
+                          return imagePath ? (
+                            <div className="w-12 h-12 mb-2 flex items-center justify-center">
+                              <img 
+                                src={imagePath} 
+                                alt={topping.name}
+                                className="w-full h-full object-contain"
+                                onError={(e) => {
+                                  // Fallback to text if image fails to load
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  target.nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                              <div className="hidden text-xs text-gray-500 font-medium text-center">
+                                {topping.name}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-12 h-12 mb-2 flex items-center justify-center bg-gray-100 rounded-lg">
+                              <span className="text-xs text-gray-500 font-medium text-center">
+                                {topping.name}
+                              </span>
+                            </div>
+                          );
+                        })()}
+
                         {/* Dietary Icons */}
-                        <div className="flex justify-center gap-1 mb-2">
+                        <div className="flex justify-center gap-1 mb-1">
                           {topping.isVegetarian && <span className="text-xs">🌱</span>}
                           {topping.isVegan && <span className="text-xs">🌿</span>}
                           {topping.isGlutenFree && <span className="text-xs">🌾</span>}
@@ -819,14 +849,14 @@ export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizz
 
                         {/* Topping Name */}
                         <p className={cn(
-                          "text-sm font-bold leading-tight mb-2",
+                          "text-xs font-bold leading-tight mb-1 text-center",
                           isSelected ? "text-gray-800" : "text-gray-700"
                         )}>
                           {topping.name}
                         </p>
 
                         {/* Status Indicator */}
-                        <div className="flex flex-col items-center">
+                        <div className="flex flex-col items-center mt-auto">
                           <span className={cn(
                             "text-xs px-2 py-0.5 rounded-full h-5 flex items-center justify-center",
                             isSelected 
