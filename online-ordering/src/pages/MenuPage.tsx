@@ -404,6 +404,7 @@ export default function MenuPage() {
       // Regular items: add directly to cart
       addToCart({
         id: menuItem.id,
+        baseId: menuItem.id,
         name: menuItem.name,
         price: menuItem.price,
         quantity: 1,

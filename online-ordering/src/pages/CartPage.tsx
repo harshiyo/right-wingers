@@ -103,60 +103,66 @@ export default function CartPage() {
         }
 
         // Add extra charge info for this specific step
-        if (step.extraCharge && step.extraCharge > 0) {
+        if (step.extraCharge > 0) {
           details.push(`  [EXTRA] +$${step.extraCharge.toFixed(2)}`);
         }
       });
     } 
-    // Handle non-combo items (only if it's NOT a combo)
+    // Handle non-combo items (individual pizzas, wings, etc.)
     else if (!item.isCombo) {
+      // For individual items, don't add a header since the item name is already shown
       // Check customizations object first
       if (item.customizations && typeof item.customizations === 'object') {
         if (item.customizations.size) {
-          details.push(`Size: ${item.customizations.size}`);
+          details.push(`  Size: ${item.customizations.size}`);
         }
         if (item.customizations.toppings) {
           const t = item.customizations.toppings;
           if (t.wholePizza && t.wholePizza.length > 0) {
-            details.push(`Whole: ${t.wholePizza.map((topping: any) => topping.name).join(', ')}`);
+            details.push(`  Whole: ${t.wholePizza.map((topping: any) => topping.name).join(', ')}`);
           }
           if (t.leftSide && t.leftSide.length > 0) {
-            details.push(`Left: ${t.leftSide.map((topping: any) => topping.name).join(', ')}`);
+            details.push(`  Left: ${t.leftSide.map((topping: any) => topping.name).join(', ')}`);
           }
           if (t.rightSide && t.rightSide.length > 0) {
-            details.push(`Right: ${t.rightSide.map((topping: any) => topping.name).join(', ')}`);
+            details.push(`  Right: ${t.rightSide.map((topping: any) => topping.name).join(', ')}`);
           }
         }
         if (item.customizations.sauces && item.customizations.sauces.length > 0) {
-          details.push(`Sauces: ${item.customizations.sauces.map((sauce: any) => sauce.name).join(', ')}`);
+          details.push(`  Sauces: ${item.customizations.sauces.map((sauce: any) => sauce.name).join(', ')}`);
         }
         if (item.customizations.instructions && item.customizations.instructions.length > 0) {
-          details.push(`Instructions: ${item.customizations.instructions.join(', ')}`);
+          details.push(`  Instructions: ${item.customizations.instructions.join(', ')}`);
         }
       }
-      // Check direct properties (fallback)
+      // Check direct properties (fallback for older format)
       else {
         if (item.toppings) {
           const t = item.toppings;
           if (t.wholePizza && t.wholePizza.length > 0) {
-            details.push(`Whole: ${t.wholePizza.map((topping: any) => topping.name).join(', ')}`);
+            details.push(`  Whole: ${t.wholePizza.map((topping: any) => topping.name).join(', ')}`);
           }
           if (t.leftSide && t.leftSide.length > 0) {
-            details.push(`Left: ${t.leftSide.map((topping: any) => topping.name).join(', ')}`);
+            details.push(`  Left: ${t.leftSide.map((topping: any) => topping.name).join(', ')}`);
           }
           if (t.rightSide && t.rightSide.length > 0) {
-            details.push(`Right: ${t.rightSide.map((topping: any) => topping.name).join(', ')}`);
+            details.push(`  Right: ${t.rightSide.map((topping: any) => topping.name).join(', ')}`);
           }
         }
         if (item.sauces && Array.isArray(item.sauces) && item.sauces.length > 0) {
-          details.push(`Sauces: ${item.sauces.map((sauce: any) => sauce.name).join(', ')}`);
+          details.push(`  Sauces: ${item.sauces.map((sauce: any) => sauce.name).join(', ')}`);
         }
         if (item.size) {
-          details.push(`Size: ${item.size.charAt(0).toUpperCase() + item.size.slice(1)}`);
+          details.push(`  Size: ${item.size.charAt(0).toUpperCase() + item.size.slice(1)}`);
         }
         if (item.instructions && Array.isArray(item.instructions) && item.instructions.length > 0) {
-          details.push(`Instructions: ${item.instructions.join(', ')}`);
+          details.push(`  Instructions: ${item.instructions.join(', ')}`);
         }
+      }
+      
+      // Add extra charge info for individual items
+      if (item.extraCharges > 0) {
+        details.push(`  [EXTRA] +$${item.extraCharges.toFixed(2)}`);
       }
     }
 
@@ -274,7 +280,7 @@ export default function CartPage() {
         name: item.name,
         price: item.price,
         quantity: item.quantity,
-        extraCharges: item.extraCharges,
+        extraCharges: item.extraCharges && item.extraCharges > 0 ? item.extraCharges : undefined,
         options
       };
     }),

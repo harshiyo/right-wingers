@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Package, Truck, Clock, Calendar, ChevronLeft, CheckCircle2, User, Phone } from 'lucide-react';
+import { Package, Truck, Clock, Calendar, ChevronLeft, CheckCircle2, User, Phone, MapPin, Store, ShoppingCart } from 'lucide-react';
 import { useCustomer } from '../context/CustomerContext';
 import { useCart } from '../context/CartContext';
 import { useStore } from '../context/StoreContext';
@@ -15,6 +15,7 @@ interface OrderItem {
 
 interface OrderDetails {
   orderId: string;
+  orderNumber: string;
   orderType: 'pickup' | 'delivery';
   items: OrderItem[];
   subtotal: number;
@@ -35,9 +36,9 @@ interface OrderDetails {
 export default function ConfirmationPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { customerInfo } = useCustomer();
+  const { customerInfo, clearCustomerInfo } = useCustomer();
   const { clearCart } = useCart();
-  const { selectedStore } = useStore();
+  const { selectedStore, clearSelectedStore } = useStore();
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [deliveryFee, setDeliveryFee] = useState(0);
@@ -71,139 +72,190 @@ export default function ConfirmationPage() {
     navigate('/');
   };
 
+  const handlePlaceAnotherOrder = () => {
+    clearCustomerInfo();
+    clearSelectedStore();
+    navigate('/store-selection');
+  };
+
   if (!orderDetails || !orderId) return null;
 
   return (
-    <div className="container mx-auto p-4 bg-gray-50">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-gray-50">
+      {/* Background decorative elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-green-200/30 to-blue-200/30 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-red-200/20 to-orange-200/20 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-purple-200/10 to-pink-200/10 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 py-6 relative z-10">
         {/* Success Message */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 text-green-500">
-            <CheckCircle2 className="w-full h-full" />
+          <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-xl">
+            <CheckCircle2 className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Order Confirmed!</h1>
-          <p className="text-gray-600">Your order has been successfully placed.</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-3">Order Confirmed!</h1>
+          <p className="text-gray-600 text-lg">Your order has been successfully placed.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Left Column */}
+        {/* Order Details Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Left Column - Order Info */}
           <div className="space-y-4">
-            {/* Order Details */}
-            <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
-              <h2 className="text-lg font-semibold mb-4">Order Details</h2>
-              <div className="space-y-4">
-                <div>
-                  <div className="text-sm text-gray-600">Order ID</div>
-                  <div className="font-medium">{orderId}</div>
+            {/* Order Details Card */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/60">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg">
+                  <ShoppingCart className="w-6 h-6 text-white" />
                 </div>
-                <div>
-                  <div className="text-sm text-gray-600">Order Type</div>
-                  <div className="font-medium">{orderDetails?.orderType === 'pickup' ? 'Pickup' : 'Delivery'}</div>
+                <h2 className="text-xl font-bold text-gray-900">Order Details</h2>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center">
+                    <span className="text-sm font-semibold text-gray-600">#</span>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Order Number</p>
+                    <p className="font-semibold text-gray-900">{orderDetails.orderNumber}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-orange-100 to-red-100 rounded-lg flex items-center justify-center">
+                    {orderDetails?.orderType === 'pickup' ? (
+                      <Package className="w-4 h-4 text-orange-600" />
+                    ) : (
+                      <Truck className="w-4 h-4 text-red-600" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Order Type</p>
+                    <p className="font-semibold text-gray-900">
+                      {orderDetails?.orderType === 'pickup' ? 'Pickup' : 'Delivery'}
+                    </p>
+                  </div>
                 </div>
                 {orderDetails?.pickupTime && (
-                  <div>
-                    <div className="text-sm text-gray-600">Pickup Time</div>
-                    <div className="font-medium">
-                      {orderDetails.pickupTime.type === 'asap' ? (
-                        'Ready in 15-25 minutes'
-                      ) : (
-                        new Date(orderDetails.pickupTime.scheduledTime!).toLocaleString()
-                      )}
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center">
+                      <Clock className="w-4 h-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Pickup Time</p>
+                      <p className="font-semibold text-gray-900">
+                        {orderDetails.pickupTime.type === 'asap' ? (
+                          'Ready in 15-25 minutes'
+                        ) : (
+                          new Date(orderDetails.pickupTime.scheduledTime!).toLocaleString()
+                        )}
+                      </p>
                     </div>
                   </div>
                 )}
                 {orderDetails?.deliveryAddress && (
-                  <div>
-                    <div className="text-sm text-gray-600">Delivery Address</div>
-                    <div className="font-medium">
-                      {orderDetails.deliveryAddress.street}<br />
-                      {orderDetails.deliveryAddress.city}, {orderDetails.deliveryAddress.postalCode}
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-orange-100 to-red-100 rounded-lg flex items-center justify-center">
+                      <MapPin className="w-4 h-4 text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Delivery Address</p>
+                      <p className="font-semibold text-gray-900">
+                        {orderDetails.deliveryAddress.street}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {orderDetails.deliveryAddress.city}, {orderDetails.deliveryAddress.postalCode}
+                      </p>
                     </div>
                   </div>
                 )}
+                {customerInfo && (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-white/80 rounded-lg flex items-center justify-center">
+                        <User className="w-4 h-4 text-gray-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Customer Name</p>
+                        <p className="font-semibold text-gray-900">{customerInfo.fullName}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-white/80 rounded-lg flex items-center justify-center">
+                        <Phone className="w-4 h-4 text-gray-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Customer Phone</p>
+                        <p className="font-semibold text-gray-900">{customerInfo.phone}</p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
-            </div>
-
-            {/* Store Information */}
-            <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
-              <h2 className="text-lg font-semibold mb-4">Store Information</h2>
-              {selectedStore && (
-                <>
-                  <h3 className="font-medium">{selectedStore.name}</h3>
-                  <p className="text-gray-600">{selectedStore.address}</p>
-                  <p className="text-gray-600">{selectedStore.phone}</p>
-                </>
-              )}
-            </div>
-
-            {/* Customer Information */}
-            <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
-              <h2 className="text-lg font-semibold mb-4">Customer Information</h2>
-              {customerInfo && (
-                <>
-                  <div className="flex items-center gap-2 mb-2">
-                    <User className="h-4 w-4 text-gray-600" />
-                    <span>{customerInfo.fullName}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-gray-600" />
-                    <span>{customerInfo.phone}</span>
-                  </div>
-                </>
-              )}
             </div>
           </div>
 
-          {/* Right Column */}
+          {/* Right Column - Store Info and Pricing Summary */}
           <div className="space-y-4">
-            {/* Order Summary */}
-            <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
-              <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
-              <div className="space-y-4">
-                {orderDetails?.items.map((item, index) => (
-                  <div key={index} className="flex justify-between">
-                    <div>
-                      <div className="font-medium">{item.name}</div>
-                      <div className="text-sm text-gray-600">Quantity: {item.quantity}</div>
-                    </div>
-                    <div className="text-right">
-                      <div>${item.total.toFixed(2)}</div>
-                    </div>
+            {/* Store Information Card */}
+            {selectedStore && (
+              <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/60">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 bg-gradient-to-br from-gray-600 to-gray-700 rounded-2xl flex items-center justify-center shadow-lg">
+                    <Store className="w-6 h-6 text-white" />
                   </div>
-                ))}
-                <div className="pt-4 border-t">
+                  <h2 className="text-xl font-bold text-gray-900">Store Information</h2>
+                </div>
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-gray-900">{selectedStore.name}</h3>
+                  <p className="text-gray-600">{selectedStore.address}</p>
+                  <p className="text-gray-600">{selectedStore.phone}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Pricing Summary Card */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/60">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-red-700 rounded-2xl flex items-center justify-center shadow-lg">
+                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">Order Summary</h2>
+              </div>
+              <div className="space-y-4">
+                <div className="pt-4 space-y-3">
                   <div className="flex justify-between text-gray-600">
                     <span>Subtotal</span>
-                    <span>${orderDetails?.subtotal.toFixed(2)}</span>
+                    <span className="font-medium">${orderDetails?.subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Tax (13%)</span>
-                    <span>${orderDetails?.tax.toFixed(2)}</span>
+                    <span className="font-medium">${orderDetails?.tax.toFixed(2)}</span>
                   </div>
                   {orderDetails?.orderType === 'delivery' && (
                     <div className="flex justify-between text-gray-600">
                       <span>Delivery Fee</span>
-                      <span>${deliveryFee.toFixed(2)}</span>
+                      <span className="font-medium">${deliveryFee.toFixed(2)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-lg font-semibold mt-2 pt-2 border-t">
-                    <span>Total</span>
-                    <span>${orderDetails?.total.toFixed(2)}</span>
+                  <div className="flex justify-between text-xl font-bold pt-3 border-t border-gray-200">
+                    <span className="text-gray-900">Total</span>
+                    <span className="text-red-600">${orderDetails?.total.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={() => navigate('/menu')}
-                className="w-full py-3 bg-gradient-to-r from-red-800 to-red-900 hover:from-red-900 hover:to-red-950 text-white rounded-lg shadow-lg hover:shadow-xl transition-colors duration-200 font-bold"
-              >
-                Place Another Order
-              </button>
-            </div>
           </div>
+        </div>
+
+        {/* Action Button - Full Width at Bottom */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/60">
+          <button
+            onClick={handlePlaceAnotherOrder}
+            className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] text-lg"
+          >
+            Place Another Order
+          </button>
         </div>
       </div>
     </div>

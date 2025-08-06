@@ -58,9 +58,30 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     localStorage.setItem('cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  // Simple addToCart - just append to array (same as POS client)
+  // Smart addToCart - check for existing items and combine them
   const addToCart = (item: CartItem) => {
-    setCartItems(prevItems => [...prevItems, item]);
+    setCartItems(prevItems => {
+      // For items without customizations, check if we already have the same item
+      if (!item.customizations && item.baseId) {
+        const existingItem = prevItems.find(existing => 
+          existing.baseId === item.baseId && 
+          !existing.customizations &&
+          existing.price === item.price
+        );
+        
+        if (existingItem) {
+          // Update quantity of existing item
+          return prevItems.map(existing =>
+            existing.id === existingItem.id
+              ? { ...existing, quantity: existing.quantity + item.quantity }
+              : existing
+          );
+        }
+      }
+      
+      // For items with customizations or no existing match, add as new item
+      return [...prevItems, item];
+    });
   };
 
   const removeFromCart = (itemId: string) => {

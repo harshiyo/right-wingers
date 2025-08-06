@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { MapPin } from 'lucide-react';
 
 interface AddressAutocompleteProps {
@@ -197,33 +198,40 @@ export default function AddressAutocomplete({
           onKeyDown={handleKeyDown}
           onFocus={() => suggestions.length > 0 && setIsOpen(true)}
           placeholder={placeholder}
-          className="w-full pl-10 pr-3 py-2 text-sm rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-300 focus:border-transparent"
+          className="w-full pl-10 pr-3 py-4 text-base rounded-xl border border-gray-200 focus:ring-2 focus:ring-red-300 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm"
         />
       </div>
 
-      {/* Suggestions dropdown */}
-      {isOpen && suggestions.length > 0 && (
+      {/* Suggestions dropdown using Portal */}
+      {isOpen && suggestions.length > 0 && createPortal(
         <div
           ref={suggestionsRef}
-          className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50"
+          className="fixed bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto z-[9999]"
+          style={{
+            top: inputRef.current ? inputRef.current.getBoundingClientRect().bottom + 4 : 0,
+            left: inputRef.current ? inputRef.current.getBoundingClientRect().left : 0,
+            width: inputRef.current ? inputRef.current.offsetWidth : 'auto',
+            maxWidth: inputRef.current ? inputRef.current.offsetWidth : 'auto'
+          }}
         >
           {suggestions.map((suggestion, index) => (
             <div
               key={`${suggestion.lat}-${suggestion.lon}-${index}`}
-              className={`px-3 py-2 cursor-pointer hover:bg-gray-50 ${
+              className={`px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors duration-200 ${
                 index === selectedIndex ? 'bg-red-50 border-red-200' : ''
-              }`}
+              } ${index === 0 ? 'rounded-t-xl' : ''} ${index === suggestions.length - 1 ? 'rounded-b-xl' : ''}`}
               onClick={() => handleSuggestionSelect(suggestion)}
             >
               <div className="text-sm font-medium text-gray-900">
                 {suggestion.formatted}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-500 mt-1">
                 {suggestion.city}, {suggestion.state}
               </div>
             </div>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

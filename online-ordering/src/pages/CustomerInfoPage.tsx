@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Phone, Home, ArrowRight, CheckCircle, MapPin } from 'lucide-react';
+import { User, Phone, Home, ArrowRight, CheckCircle, MapPin, Store as StoreIcon } from 'lucide-react';
 import { useCustomer } from '../context/CustomerContext';
 import { useStore } from '../context/StoreContext';
 import { createOrUpdateCustomer, findCustomerByPhone } from '../services/customerService';
@@ -307,136 +307,162 @@ export default function CustomerInfoPage() {
   };
 
   return (
-    <div className="max-w-xl mx-auto p-4">
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-        <div className="grid grid-cols-1 gap-3">
-          <div>
-            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
-              <User className="h-3.5 w-3.5" />
-              Full Name
-            </label>
-            <input 
-              id="fullName" 
-              type="text"
-              placeholder="John Smith" 
-              value={formInfo.fullName} 
-              onChange={handleInputChange}
-              className="w-full text-sm py-2 px-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-300 focus:border-transparent"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
-              <Phone className="h-3.5 w-3.5" />
-              Phone Number
-            </label>
-            <input 
-              id="phone" 
-              type="tel"
-              placeholder="123-456-7890" 
-              value={formInfo.phone} 
-              onChange={handlePhoneChange}
-              maxLength={12}
-              className="w-full text-sm py-2 px-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-300 focus:border-transparent"
-            />
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-gray-50">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-40 h-40 bg-gradient-to-br from-red-200 to-orange-200 rounded-full opacity-30 blur-2xl"></div>
+        <div className="absolute top-40 right-20 w-32 h-32 bg-gradient-to-br from-orange-200 to-yellow-200 rounded-full opacity-40 blur-2xl"></div>
+        <div className="absolute bottom-40 left-20 w-36 h-36 bg-gradient-to-br from-yellow-200 to-red-100 rounded-full opacity-35 blur-2xl"></div>
+        <div className="absolute bottom-20 right-10 w-28 h-28 bg-gradient-to-br from-red-100 to-pink-100 rounded-full opacity-45 blur-2xl"></div>
+      </div>
 
-          {customerInfo?.orderType === 'delivery' && (
+      <div className="max-w-2xl mx-auto px-4 py-6 relative z-10">
+        {/* Header Section */}
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 mb-3 drop-shadow-sm">Customer Information</h2>
+          <p className="text-lg text-gray-600">Please provide your details to continue</p>
+        </div>
+
+        {/* Main Form Card */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 mb-6 shadow-xl border border-white/60">
+          <div className="grid grid-cols-1 gap-6">
+            {/* Full Name Input */}
             <div>
-                           <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
-               <Home className="h-3.5 w-3.5" />
-               Delivery Address
-               {isAddressAutoPopulated && (
-                 <span className="text-xs text-green-600 ml-1">(saved)</span>
-               )}
-             </label>
-              <AddressAutocomplete
-                value={fullAddress}
-                onChange={handleAddressChange}
-                onAddressSelect={handleAddressSelect}
-                placeholder="Enter your delivery address"
-                className="w-full"
+              <label htmlFor="fullName" className="block text-base font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-red-700 rounded-lg flex items-center justify-center">
+                  <User className="h-4 w-4 text-white" />
+                </div>
+                Full Name
+              </label>
+              <input 
+                id="fullName" 
+                type="text"
+                placeholder="Enter your full name" 
+                value={formInfo.fullName} 
+                onChange={handleInputChange}
+                className="w-full text-base py-4 px-4 rounded-xl border border-gray-200 focus:ring-2 focus:ring-red-300 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm"
               />
-                             <p className="mt-1 text-xs text-gray-500">
-                 {isAddressAutoPopulated ? 
-                   "Address loaded from your previous order. Type to change address." :
-                   "Start typing to see address suggestions (Ontario, Canada only, 7+ characters)"
-                 }
-               </p>
             </div>
-          )}
-                 </div>
+            
+            {/* Phone Number Input */}
+            <div>
+              <label htmlFor="phone" className="block text-base font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-orange-600 to-orange-700 rounded-lg flex items-center justify-center">
+                  <Phone className="h-4 w-4 text-white" />
+                </div>
+                Phone Number
+              </label>
+              <input 
+                id="phone" 
+                type="tel"
+                placeholder="123-456-7890" 
+                value={formInfo.phone} 
+                onChange={handlePhoneChange}
+                maxLength={12}
+                className="w-full text-base py-4 px-4 rounded-xl border border-gray-200 focus:ring-2 focus:ring-red-300 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm"
+              />
+            </div>
 
-         {/* Welcome Back Message */}
-         {showWelcomeBack && (
-           <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-             <p className="text-xs text-green-800 text-center">
-               Welcome back! Your address and distance have been loaded from your previous order.
-             </p>
-           </div>
-         )}
-
-         {/* Store Address Preview */}
-        {selectedStore && (
-          <div className="mt-4 bg-blue-50 rounded-lg p-3 border border-blue-200">
-            <h3 className="font-medium text-blue-800 mb-1 flex items-center gap-1.5 text-sm">
-              <CheckCircle className="h-3.5 w-3.5" />
-              Store Information
-            </h3>
-            <p className="text-blue-700 text-sm">
-              <strong>{selectedStore.name}</strong><br />
-              {selectedStore.address}<br />
-              Phone: {selectedStore.phone}
-            </p>
-                         {isLoadingDistance && (
-               <div className="mt-2 pt-2 border-t border-blue-200">
-                 <p className="text-blue-700 text-sm flex items-center gap-1">
-                   <MapPin className="h-3 w-3" />
-                   Calculating distance...
-                 </p>
-               </div>
-             )}
-             {distance !== null && !isNaN(distance) && !isLoadingDistance && (
-               <div className="mt-2 pt-2 border-t border-blue-200">
-                 <p className="text-blue-700 text-sm flex items-center gap-1">
-                   <MapPin className="h-3 w-3" />
-                   Distance: {distance.toFixed(1)} km
-                   {isCachedDistance && (
-                     <span className="text-xs text-green-600 ml-1">(cached)</span>
-                   )}
-                 </p>
-               </div>
-             )}
-            {distance !== null && isNaN(distance) && (
-              <div className="mt-2 pt-2 border-t border-blue-200">
-                <p className="text-blue-700 text-sm flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  Distance: Unable to calculate
+            {/* Delivery Address Section */}
+            {customerInfo?.orderType === 'delivery' && (
+              <div className="relative">
+                <label className="block text-base font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
+                    <Home className="h-4 w-4 text-white" />
+                  </div>
+                  Delivery Address
+                  {isAddressAutoPopulated && (
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-2">Saved</span>
+                  )}
+                </label>
+                <div className="relative z-10">
+                  <AddressAutocomplete
+                    value={fullAddress}
+                    onChange={handleAddressChange}
+                    onAddressSelect={handleAddressSelect}
+                    placeholder="Enter your delivery address"
+                    className="w-full"
+                  />
+                </div>
+                <p className="mt-2 text-sm text-gray-600">
+                  {isAddressAutoPopulated ? 
+                    "Address loaded from your previous order. Type to change address." :
+                    "Start typing your address to see suggestions"
+                  }
                 </p>
               </div>
             )}
           </div>
-        )}
 
-        {!isInfoComplete && (
-          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-xs text-yellow-800 text-center">
-              Please provide your full name and a valid phone number to continue.
-            </p>
+          {/* Welcome Back Message */}
+          {showWelcomeBack && (
+            <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <p className="text-sm text-green-800">
+                  Welcome back! Your address and distance have been loaded from your previous order.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Store Information Card */}
+        {selectedStore && (
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 mb-6 shadow-xl border border-white/60 relative z-0">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
+                <StoreIcon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Store Information</h3>
+                <p className="text-sm text-gray-600">{selectedStore.name}</p>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 text-sm">
+                <MapPin className="h-4 w-4 text-gray-500" />
+                <span className="text-gray-700">{selectedStore.address}</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <Phone className="h-4 w-4 text-gray-500" />
+                <span className="text-gray-700">{selectedStore.phone}</span>
+              </div>
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Continue Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleContinue}
-          disabled={!isInfoComplete || !isDeliveryAddressComplete || isSaving}
-          className="px-6 py-2 bg-gradient-to-r from-red-800 to-red-900 hover:from-red-900 hover:to-red-950 text-white rounded-lg shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center gap-2 text-sm"
-        >
-          {isSaving ? 'Saving...' : 'Continue to Menu'}
-          <ArrowRight className="h-4 w-4" />
-        </button>
+        {/* Validation Message */}
+        {!isInfoComplete && (
+          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-xs font-bold">!</span>
+              </div>
+              <p className="text-sm text-yellow-800">
+                Please provide your full name and a valid phone number to continue.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Continue Button */}
+        <div className="relative">
+          <button
+            onClick={handleContinue}
+            disabled={!isInfoComplete || !isDeliveryAddressComplete || isSaving}
+            className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-5 px-6 rounded-2xl shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center gap-3 text-lg relative overflow-hidden group"
+          >
+            {/* Button glow effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-red-600 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+            
+            <span>{isSaving ? 'Saving...' : 'Continue to Menu'}</span>
+            <ArrowRight className="w-6 h-6" />
+          </button>
+          {/* Button shadow */}
+          <div className="absolute inset-0 bg-red-900/20 rounded-2xl blur-lg -z-10"></div>
+        </div>
       </div>
     </div>
   );
