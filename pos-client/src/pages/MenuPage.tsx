@@ -325,7 +325,7 @@ const CartPanel = ({
         ) : (
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {cartItems.map(item => (
-              <div key={item.id} className="flex items-start gap-4 text-left p-3 bg-white rounded-lg shadow-sm">
+              <div key={item.id} className="flex items-start gap-4 text-left p-3 bg-white rounded-lg shadow-sm border-2 border-red-700">
                 <img src={item.imageUrl} alt={item.name} className="w-20 h-20 object-cover rounded-md" />
                 <div className="flex-1">
                                   <h4 className="font-bold text-gray-900">{item.name}</h4>
@@ -358,7 +358,7 @@ const CartPanel = ({
                           {/* Size display */}
                           {item.customizations.size && (
                             <div className="mb-1">
-                              <span className="text-xs font-medium text-green-600">📏 Size: {item.customizations.size}</span>
+                              <span className="text-xs font-medium text-green-600">Size: {item.customizations.size}</span>
                             </div>
                           )}
                           {item.customizations.toppings && (
@@ -366,27 +366,27 @@ const CartPanel = ({
                               {/* Whole pizza toppings */}
                               {item.customizations.toppings.wholePizza && item.customizations.toppings.wholePizza.length > 0 && (
                                 <div>
-                                  <span className="text-xs font-medium text-gray-600">🍕 Toppings</span>
+                                  <span className="text-xs font-medium text-gray-600">Toppings</span>
                                   <div className="text-xs text-gray-700">
-                                    • {item.customizations.toppings.wholePizza.map((t: any) => t.name).join(', ')}
+                                    {item.customizations.toppings.wholePizza.map((t: any) => t.name).join(', ')}
                                   </div>
                                 </div>
                               )}
                               {/* Left side */}
                               {item.customizations.toppings.leftSide && item.customizations.toppings.leftSide.length > 0 && (
                                 <div>
-                                  <span className="text-xs font-medium text-blue-600">← Left Side</span>
+                                  <span className="text-xs font-medium text-blue-600">Left Side</span>
                                   <div className="text-xs text-gray-700">
-                                    • {item.customizations.toppings.leftSide.map((t: any) => t.name).join(', ')}
+                                    {item.customizations.toppings.leftSide.map((t: any) => t.name).join(', ')}
                                   </div>
                                 </div>
                               )}
                               {/* Right side */}
                               {item.customizations.toppings.rightSide && item.customizations.toppings.rightSide.length > 0 && (
                                 <div>
-                                  <span className="text-xs font-medium text-blue-600">Right Side →</span>
+                                  <span className="text-xs font-medium text-blue-600">Right Side</span>
                                   <div className="text-xs text-gray-700">
-                                    • {item.customizations.toppings.rightSide.map((t: any) => t.name).join(', ')}
+                                    {item.customizations.toppings.rightSide.map((t: any) => t.name).join(', ')}
                                   </div>
                                 </div>
                               )}
@@ -401,7 +401,7 @@ const CartPanel = ({
                             <div className="mt-1">
                               <span className="text-xs font-medium text-purple-600">Instructions</span>
                               <div className="text-xs text-gray-700">
-                                • {getPizzaInstructionLabels(item.customizations.instructions).join(', ')}
+                                {getPizzaInstructionLabels(item.customizations.instructions).join(', ')}
                               </div>
                             </div>
                           )}
@@ -413,9 +413,9 @@ const CartPanel = ({
                         <div>
                           {item.customizations.sauces && item.customizations.sauces.length > 0 && (
                             <div>
-                              <span className="text-xs font-medium text-gray-600">🍗 Sauces</span>
+                              <span className="text-xs font-medium text-gray-600">Sauces</span>
                               <div className="text-xs text-gray-700">
-                                • {item.customizations.sauces.map((s: any) => s.name).join(', ')}
+                                {item.customizations.sauces.map((s: any) => s.name).join(', ')}
                               </div>
                             </div>
                           )}
@@ -424,7 +424,7 @@ const CartPanel = ({
                             <div className="mt-1">
                               <span className="text-xs font-medium text-purple-600">Instructions</span>
                               <div className="text-xs text-gray-700">
-                                • {getWingInstructionLabels(item.customizations.instructions).join(', ')}
+                                {getWingInstructionLabels(item.customizations.instructions).join(', ')}
                               </div>
                             </div>
                           )}
@@ -441,7 +441,7 @@ const CartPanel = ({
                       {/* Reordered item customizations */}
                       {item.customizations.isReorder && item.customizations.displayCustomizations && (
                         <div className="mt-2">
-                          <span className="text-xs font-medium text-blue-600">🔄 Reordered Item</span>
+                          <span className="text-xs font-medium text-blue-600">Reordered Item</span>
                           <div className="flex flex-wrap gap-1 mt-1">
                             {item.customizations.displayCustomizations
                               .filter((customization: any) => typeof customization === 'string' && customization.trim())
@@ -480,27 +480,27 @@ const CartPanel = ({
                             <div className="font-semibold text-gray-800 mb-1">
                               {step.type === 'pizza' && (
                                 <>
-                                  🍕 Pizza {++pizzaCount}
+                                  Pizza {++pizzaCount}
                                   {step.isHalfAndHalf && <span className="text-blue-600 text-xs ml-1">(Half & Half)</span>}
                                   {step.size && <span className="text-green-600 text-xs ml-1">({step.size})</span>}
                                 </>
                               )}
                               {step.type === 'wings' && (
                                 <>
-                                  🍗 Wings {step.size && <span className="text-green-600 text-xs ml-1">({step.size})</span>}
+                                  Wings {step.size && <span className="text-green-600 text-xs ml-1">({step.size})</span>}
                                 </>
                               )}
                               {step.type === 'side' && (
-                                <>🍟 {step.itemName || 'Side'} {step.size && <span className="text-green-600 text-xs ml-1">({step.size})</span>}</>
+                                <>{step.itemName || 'Side'} {step.size && <span className="text-green-600 text-xs ml-1">({step.size})</span>}</>
                               )}
                               {step.type === 'drink' && (
-                                <>🥤 {step.itemName || 'Drink'} {step.size && <span className="text-green-600 text-xs ml-1">({step.size})</span>}</>
+                                <>{step.itemName || 'Drink'} {step.size && <span className="text-green-600 text-xs ml-1">({step.size})</span>}</>
                               )}
-                              {step.type === 'dipping' && step.selectedDippingSauces && (
+                              {step.type === 'dipping' && (
                                 <>
                                   {Object.entries(step.selectedDippingSauces).map(([sauceId, quantity]: [string, any]) => (
                                     <div key={sauceId}>
-                                      🥄 {quantity}x {sauceId === 'unknown' ? 'Dipping Sauce' : 
+                                      {quantity}x {sauceId === 'unknown' ? 'Dipping Sauce' : 
                                         // Find sauce name from the stored data or fallback
                                         (() => {
                                           // If we have sauce data in the step, use it
@@ -520,26 +520,26 @@ const CartPanel = ({
                             {step.toppings && step.toppings.wholePizza && step.toppings.wholePizza.length > 0 && (
                               <div>
                                 <span className="text-xs font-medium text-gray-600">Whole Pizza</span>
-                                <div className="text-xs text-gray-700">• {step.toppings.wholePizza.map((t: any) => t.name).join(', ')}</div>
+                                <div className="text-xs text-gray-700">{step.toppings.wholePizza.map((t: any) => t.name).join(', ')}</div>
                               </div>
                             )}
                             {step.toppings && step.toppings.leftSide && step.toppings.leftSide.length > 0 && (
                               <div>
-                                <span className="text-xs font-medium text-blue-600">← Left Side</span>
-                                <div className="text-xs text-gray-700">• {step.toppings.leftSide.map((t: any) => t.name).join(', ')}</div>
+                                <span className="text-xs font-medium text-blue-600">Left Side</span>
+                                <div className="text-xs text-gray-700">{step.toppings.leftSide.map((t: any) => t.name).join(', ')}</div>
                               </div>
                             )}
                             {step.toppings && step.toppings.rightSide && step.toppings.rightSide.length > 0 && (
                               <div>
-                                <span className="text-xs font-medium text-blue-600">Right Side →</span>
-                                <div className="text-xs text-gray-700">• {step.toppings.rightSide.map((t: any) => t.name).join(', ')}</div>
+                                <span className="text-xs font-medium text-blue-600">Right Side</span>
+                                <div className="text-xs text-gray-700">{step.toppings.rightSide.map((t: any) => t.name).join(', ')}</div>
                               </div>
                             )}
                             {/* Sauces */}
                             {step.sauces && step.sauces.length > 0 && (
                               <div>
                                 <span className="text-xs font-medium text-gray-600">Sauces</span>
-                                <div className="text-xs text-gray-700">• {step.sauces.map((s: any) => s.name).join(', ')}</div>
+                                <div className="text-xs text-gray-700">{step.sauces.map((s: any) => s.name).join(', ')}</div>
                               </div>
                             )}
                             {/* Instructions for each combo step */}
@@ -547,7 +547,7 @@ const CartPanel = ({
                               <div className="mt-1">
                                 <span className="text-xs font-medium text-purple-600">Instructions</span>
                                 <div className="text-xs text-gray-700">
-                                  • {(step.type === 'wings'
+                                  {(step.type === 'wings'
                                     ? getWingInstructionLabels(step.instructions)
                                     : getPizzaInstructionLabels(step.instructions)
                                   ).join(', ')}
