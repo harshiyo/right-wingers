@@ -110,8 +110,8 @@ export default function StoreSelectionPage() {
           <div className="bg-white/60 rounded-xl p-4 border border-gray-200">
             <p className="text-gray-800 text-sm leading-relaxed">
               <strong>Quick Options:</strong><br />
-              • <strong>Let us find the nearest store:</strong> Click "Use my location" below<br />
-              • <strong>Choose your preferred store:</strong> Scroll down and select from our locations
+              <strong>Let us find the nearest store:</strong> Click "Use my location" below<br />
+              <strong>Choose your preferred store:</strong> Scroll down and select from our locations
             </p>
           </div>
         </div>
