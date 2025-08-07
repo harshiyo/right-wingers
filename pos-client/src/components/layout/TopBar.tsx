@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   LogOut, User, ShoppingCart, Truck, MapPin, CheckCircle, Search, Sun, Moon
 } from 'lucide-react';

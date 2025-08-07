@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { offlineSync } from '../services/offlineSync';
 import { useStore } from '../context/StoreContext';
-import { collection, addDoc, doc, getDoc, runTransaction } from 'firebase/firestore';
+import { collection, addDoc, doc, runTransaction } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
 export interface OfflineOrder {

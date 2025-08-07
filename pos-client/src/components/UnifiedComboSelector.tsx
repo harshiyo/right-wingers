@@ -156,7 +156,7 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
           match = combo.items[idx];
         } else {
           // Fallback to type matching if direct index doesn't work
-          match = combo.items.find((item, i) => {
+          match = combo.items.find((item) => {
             if (item.type !== step.type) return false;
             if (item.type === 'pizza' && step.size && item.size) {
               return item.size === step.size && item.itemName === step.itemName;
@@ -339,18 +339,18 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
   };
 
   // Helper function to calculate remaining toppings in the shared pool
-  const getRemainingToppings = () => {
-    const totalLimit = getTotalToppingLimit();
-    const usedToppings = getTotalUsedToppings();
-    const currentStepToppings = step.type === 'pizza' ? 
-      calculateToppingCount({
-        wholePizza: selectedToppings.wholePizza,
-        leftSide: selectedToppings.leftSide,
-        rightSide: selectedToppings.rightSide
-      }) : 0;
-    
-    return Math.max(0, totalLimit - usedToppings - currentStepToppings);
-  };
+  // const getRemainingToppings = () => {
+  //   const totalLimit = getTotalToppingLimit();
+  //   const usedToppings = getTotalUsedToppings();
+  //   const currentStepToppings = step.type === 'pizza' ? 
+  //     calculateToppingCount({
+  //       wholePizza: selectedToppings.wholePizza,
+  //       leftSide: selectedToppings.leftSide,
+  //       rightSide: selectedToppings.rightSide
+  //     }) : 0;
+  //   
+  //   return Math.max(0, totalLimit - usedToppings - currentStepToppings);
+  // };
 
   // Helper function to calculate topping count (half-side toppings count as 0.5)
   const calculateToppingCount = (toppings: ToppingSide) => {
@@ -498,9 +498,9 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
   };
 
   // Item names
-  const pizzaName = step.type === 'pizza' ? `${combo.name} - Pizza ${pizzaNumber}` : '';
-  const wingName = step.type === 'wings' ? `${combo.name} - Wings ${wingNumber}` : '';
-  const itemName = step.itemName || step.type.charAt(0).toUpperCase() + step.type.slice(1);
+  // const pizzaName = step.type === 'pizza' ? `${combo.name} - Pizza ${pizzaNumber}` : '';
+  // const wingName = step.type === 'wings' ? `${combo.name} - Wings ${wingNumber}` : '';
+  // const itemName = step.itemName || step.type.charAt(0).toUpperCase() + step.type.slice(1);
 
   // Pizza customization handlers
   const handleToppingToggle = (topping: Topping) => {
@@ -1033,7 +1033,7 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
 
           {/* Dipping Sauces Grid - Individual items with quantity controls */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {dippingSauces.map((sauce, sauceIndex) => {
+            {dippingSauces.map((sauce) => {
               const currentQuantity = selectedDippingSauces[sauce.id] || 0;
               
               // Create a flat array of all selected sauces in order for proper included/extra calculation

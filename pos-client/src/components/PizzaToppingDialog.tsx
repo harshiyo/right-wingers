@@ -61,7 +61,7 @@ export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizz
   const [toppingsSnapshot, loadingToppings] = useCollection(
     query(collection(db, 'toppings'), orderBy('name'))
   );
-  const [instructionTilesSnapshot, loadingInstructions] = useCollection(
+  const [instructionTilesSnapshot] = useCollection(
     query(collection(db, 'pizzaInstructions'), orderBy('sortOrder'))
   );
   const toppings = toppingsSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Topping)) || [];
@@ -201,8 +201,8 @@ export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizz
           // Calculate what the new equivalent count would be
           const newLeftCount = newSelections.leftSide.size + 1;
           const newRightCount = newSelections.rightSide.size;
-          const newHalfSideEquivalents = Math.ceil((newLeftCount + newRightCount) / 2);
-          const newTotalEquivalents = currentWholePizzaCount + newHalfSideEquivalents;
+          // const newHalfSideEquivalents = Math.ceil((newLeftCount + newRightCount) / 2);
+          // const newTotalEquivalents = currentWholePizzaCount + newHalfSideEquivalents;
           // Allow addition regardless of limit (will be charged as extra if over)
           leftMap.set(topping.id, topping);
           
@@ -236,8 +236,8 @@ export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizz
           // Calculate what the new equivalent count would be
           const newLeftCount = newSelections.leftSide.size;
           const newRightCount = newSelections.rightSide.size + 1;
-          const newHalfSideEquivalents = Math.ceil((newLeftCount + newRightCount) / 2);
-          const newTotalEquivalents = currentWholePizzaCount + newHalfSideEquivalents;
+          // const newHalfSideEquivalents = Math.ceil((newLeftCount + newRightCount) / 2);
+          // const newTotalEquivalents = currentWholePizzaCount + newHalfSideEquivalents;
           // Allow addition regardless of limit (will be charged as extra if over)
           rightMap.set(topping.id, topping);
           
@@ -310,7 +310,7 @@ export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizz
       
       // Count actual individual toppings (not equivalents)
       const actualHalfSideToppings = halfSideCount;
-      const actualWholePizzaToppings = wholePizzaCount;
+      // const actualWholePizzaToppings = wholePizzaCount;
       
       // Strategy: Use included toppings optimally, then charge for extras starting with cheapest
       // If we have half-side toppings and they go over the limit, charge them first (cheaper)
@@ -512,11 +512,11 @@ export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizz
   };
 
   const currentSelection = getCurrentSelection();
-  const currentLimit = getCurrentLimit();
+  // const currentLimit = getCurrentLimit();
 
   // Get unique categories and dietary filters
-  const categories = ['All', ...Array.from(new Set(toppings.map(t => t.category).filter((cat): cat is string => Boolean(cat))))];
-  const dietaryFilters = ['All', 'Vegetarian', 'Vegan', 'Gluten-Free', 'Keto'];
+  // const categories = ['All', ...Array.from(new Set(toppings.map(t => t.category).filter((cat): cat is string => Boolean(cat))))];
+  // const dietaryFilters = ['All', 'Vegetarian', 'Vegan', 'Gluten-Free', 'Keto'];
 
   // Filter toppings based on active category and dietary filter
   const filteredToppings = toppings.filter(topping => {

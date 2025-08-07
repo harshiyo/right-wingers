@@ -23,7 +23,7 @@ interface SizeSelectDialogProps {
   comboSummaryPanel?: React.ReactNode;
 }
 
-export const SizeSelectDialog = ({ open, onClose, onSubmit, availableSizes, defaultSize, itemName, dialogTitle, sizePrices, navigationProps, existingSelections, comboSummaryPanel }: SizeSelectDialogProps) => {
+export const SizeSelectDialog = ({ open, onClose, onSubmit, availableSizes, defaultSize, itemName, sizePrices, navigationProps, existingSelections, comboSummaryPanel }: SizeSelectDialogProps) => {
   const [selectedSize, setSelectedSize] = useState(defaultSize || (availableSizes[0] || ''));
 
   useEffect(() => {

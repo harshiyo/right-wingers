@@ -248,7 +248,7 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
     return true;
   };
 
-  const checkPermission = (resource: string, action: string, storeId?: string): boolean => {
+  const checkPermission = (_resource: string, _action: string, _storeId?: string): boolean => {
     if (!currentUser) {
       return false;
     }

@@ -37,7 +37,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   const [suggestions, setSuggestions] = useState<GeoapifySuggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const fetchSuggestions = async (text: string) => {
     const meaningfulChars = text.replace(/\s/g, '').length;

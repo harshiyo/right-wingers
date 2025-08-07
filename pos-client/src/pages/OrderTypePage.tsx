@@ -4,10 +4,10 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { TopBar } from '../components/layout/TopBar';
 import { PreviousOrdersDialog } from '../components/PreviousOrdersDialog';
-import { Package, Truck, Store, Clock, MapPin, CheckCircle, User, ArrowRight, History } from 'lucide-react';
+import { Package, Truck, Store, Clock, CheckCircle, User, History } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { Customer } from '../data/customers';
-import { getPreviousOrdersForCustomer, PreviousOrder } from '../data/previousOrders';
+
 import { useCart } from '../context/CartContext';
 
 // Define Order interface to match PreviousOrdersDialog

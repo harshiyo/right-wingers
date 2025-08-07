@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Download, Printer, Calendar, DollarSign, Package, Truck, Users, Search } from 'lucide-react';
+import { X, Printer, Calendar, DollarSign, Package, Truck, Users, Search } from 'lucide-react';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useStore } from '../../context/StoreContext';

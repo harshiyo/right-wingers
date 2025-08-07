@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import MenuPage from './pages/MenuPage';
 import CheckoutPage from './pages/CheckoutPage';
@@ -25,7 +24,7 @@ function AppContent() {
   const { currentStore } = useStore();
   
   // Cache menu data for the current store
-  const { isLoading: cacheLoading, error: cacheError } = useMenuCache(currentStore?.id || '');
+  const { error: cacheError } = useMenuCache(currentStore?.id || '');
 
   if (cacheError) {
     console.error('Menu cache error:', cacheError);

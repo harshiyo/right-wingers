@@ -1,6 +1,6 @@
 // ✅ Redesigned Order Notification Dialog Component
-import React, { useState, useEffect } from 'react';
-import { Clock, Package, CheckCircle, Filter, Download, ChevronDown, Phone, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Clock, Package, CheckCircle, ChevronDown, X } from 'lucide-react';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useStore } from '../../context/StoreContext';

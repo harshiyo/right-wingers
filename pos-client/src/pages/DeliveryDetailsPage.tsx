@@ -93,8 +93,6 @@ CustomerInfoCard.displayName = 'CustomerInfoCard';
 
 // Memoized address form component
 const AddressForm = memo(({ 
-  deliveryAddress, 
-  onChange, 
   onAddressSelect,
   onAddressChange,
   fullAddress,

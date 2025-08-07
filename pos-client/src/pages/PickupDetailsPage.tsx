@@ -261,6 +261,7 @@ const PickupDetailsPage = () => {
         customerInfo={customer}
         orderType="Pickup"
         currentStep="details"
+        onQuickAddClick={() => {}}
       />
       <div className="flex-1 overflow-y-auto p-3 lg:p-4 pt-4 lg:pt-6">
         <div className="w-full max-w-7xl mx-auto space-y-4 lg:space-y-6">

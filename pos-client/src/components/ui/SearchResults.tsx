@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, UserPlus, Search } from 'lucide-react';
+import { Users, UserPlus } from 'lucide-react';
 import { Customer } from '../../data/customers';
 
 interface SearchResultsProps {

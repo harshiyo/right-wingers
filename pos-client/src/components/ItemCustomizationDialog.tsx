@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection, query, orderBy } from 'firebase/firestore';

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { X, Globe } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface OrderNotificationProps {
   orderId: string;

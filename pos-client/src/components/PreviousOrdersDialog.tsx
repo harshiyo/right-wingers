@@ -1,7 +1,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from './ui/Dialog';
 import { Button } from './ui/Button';
-import { Clock, ShoppingBag, ArrowRight, X, User, Phone, Calendar } from 'lucide-react';
+import { Clock, ShoppingBag, ArrowRight, User, Calendar } from 'lucide-react';
 
 // Use the same order interface as modify order functionality
 interface Order {

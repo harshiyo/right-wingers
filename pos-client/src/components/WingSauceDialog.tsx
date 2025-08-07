@@ -54,7 +54,7 @@ export const WingSauceDialog = ({ open, onClose, onSubmit, sauceLimit, wingName,
   const [selectedSauces, setSelectedSauces] = useState<Map<string, Sauce>>(new Map());
   
   // Wing instruction tiles
-  const [instructionTilesSnapshot, loadingInstructions] = useCollection(
+  const [instructionTilesSnapshot] = useCollection(
     query(collection(db, 'wingInstructions'), orderBy('sortOrder'))
   );
   const instructionTiles = instructionTilesSnapshot?.docs
@@ -121,11 +121,11 @@ export const WingSauceDialog = ({ open, onClose, onSubmit, sauceLimit, wingName,
   // Calculate real-time sauce usage for shared pool display
   const currentlySelectedIncluded = Math.min(selectedSauces.size, sharedSauceInfo?.remainingSauces || sauceLimit);
   const realTimeUsedSauces = (sharedSauceInfo?.usedSauces || 0) + currentlySelectedIncluded;
-  const realTimeRemainingSauces = Math.max(0, (sharedSauceInfo?.totalLimit || sauceLimit) - realTimeUsedSauces);
+  // const realTimeRemainingSauces = Math.max(0, (sharedSauceInfo?.totalLimit || sauceLimit) - realTimeUsedSauces);
 
   // Use shared sauce info if available, otherwise fall back to individual sauce limit
   const effectiveSauceLimit = sharedSauceInfo ? sharedSauceInfo.remainingSauces : sauceLimit;
-  const includedSauces = Math.min(selectedSauces.size, effectiveSauceLimit);
+  // const includedSauces = Math.min(selectedSauces.size, effectiveSauceLimit);
   const extraSauces = Math.max(0, selectedSauces.size - effectiveSauceLimit);
   const extraCharge = Array.from(selectedSauces.values())
     .slice(effectiveSauceLimit)
@@ -333,7 +333,7 @@ export const WingSauceDialog = ({ open, onClose, onSubmit, sauceLimit, wingName,
                 {filteredSauces.map((sauce) => {
                   const isSelected = selectedSauces.has(sauce.id);
                   const selectedIndex = Array.from(selectedSauces.keys()).indexOf(sauce.id);
-                  const isIncluded = isSelected && selectedIndex < effectiveSauceLimit;
+                  // const isIncluded = isSelected && selectedIndex < effectiveSauceLimit;
                   const isExtra = isSelected && selectedIndex >= effectiveSauceLimit;
                   
                   return (

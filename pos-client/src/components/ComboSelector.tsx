@@ -1,4 +1,3 @@
-import React from 'react';
 import { UnifiedComboSelector } from './UnifiedComboSelector';
 
 interface ComboItem {

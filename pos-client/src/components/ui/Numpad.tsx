@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from './Button';
-import { Delete, Hash, Phone, X } from 'lucide-react';
+import { Delete, Phone, X } from 'lucide-react';
 
 interface NumpadProps {
   onNumberClick: (number: string) => void;

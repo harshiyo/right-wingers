@@ -13,7 +13,7 @@ import { PizzaToppingDialog } from '../components/PizzaToppingDialog';
 import { WingSauceDialog } from '../components/WingSauceDialog';
 import { SizeSelectDialog } from '../components/SizeSelectDialog';
 import { useCart } from '../context/CartContext';
-import { Customer } from '../data/customers';
+
 
 interface Category {
   id: string;

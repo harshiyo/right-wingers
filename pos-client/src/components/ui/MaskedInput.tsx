@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import { forwardRef } from 'react';
 import { Input, InputProps } from './Input';
 
 export const MaskedInput = forwardRef<HTMLInputElement, InputProps>((props, ref) => (

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { PhoneInput } from './ui/PhoneInput';
+import { Button } from './ui/Button';
 import { X } from 'lucide-react';
 import { Customer } from '../data/customers';
+import { useStore } from '../context/StoreContext';
 
 interface CustomerFormDialogProps {
   open: boolean;
@@ -13,6 +14,7 @@ interface CustomerFormDialogProps {
 }
 
 export const CustomerFormDialog = ({ open, onClose, onSubmit, initialPhone = '' }: CustomerFormDialogProps) => {
+  const { currentStore } = useStore();
   const [formData, setFormData] = useState({
     name: '',
     phone: initialPhone,
@@ -65,6 +67,7 @@ export const CustomerFormDialog = ({ open, onClose, onSubmit, initialPhone = '' 
           city: formData.city.trim() || 'City not provided',
           postalCode: formData.postalCode.trim() || 'N/A',
         },
+        storeId: currentStore?.id || 'store_001',
       });
       handleClose();
     }

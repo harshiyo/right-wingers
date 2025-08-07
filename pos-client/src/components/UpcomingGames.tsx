@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Trophy, MapPin } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Calendar, Clock, Trophy } from 'lucide-react';
 
 interface Game {
   id: string;

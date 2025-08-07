@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import { Button } from './ui/Button';
+
 import { ItemCustomizationDialog } from './ItemCustomizationDialog';
 
 // Types for combo and cart
@@ -39,7 +39,7 @@ export const ComboCustomizationDialog = ({ open, onClose, combo, onAddToCart }: 
   // Flatten the combo components into a step list (e.g., 2 pizzas = 2 steps)
   // Each step will have type, itemId, itemName, maxToppings, maxSauces, and a clear name
   const steps = combo
-    ? combo.components.flatMap((comp, idx) =>
+    ? combo.components.flatMap((comp) =>
         Array(comp.quantity)
           .fill(null)
           .map((_, i) => ({

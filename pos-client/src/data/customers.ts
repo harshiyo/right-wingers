@@ -1,5 +1,4 @@
-import { collection, addDoc, query, where, getDocs, orderBy, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../services/firebase';
+
 
 export interface Customer {
   id: string;

@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { searchCustomers, Customer, saveCustomerToFirebase } from '../data/customers';
-import { Button } from '../components/ui/Button';
 import { PhoneInput } from '../components/ui/PhoneInput';
 import { Numpad } from '../components/ui/Numpad';
 import { SearchResults } from '../components/ui/SearchResults';
 import { TopBar } from '../components/layout/TopBar';
-import { Search, Phone, MapPin, Calendar, ShoppingBag, Edit, UserPlus, Sparkles, Users, Clock, X } from 'lucide-react';
+import { Search, Sparkles, Clock } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 
 // Lazy load the CustomerFormDialog to improve initial load time
