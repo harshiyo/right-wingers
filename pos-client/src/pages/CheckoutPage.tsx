@@ -153,7 +153,6 @@ const OrderSummary = memo(({
     
     // Size
     if (item.customizations.size) {
-      console.log('🔍 DEBUG: Adding size:', item.customizations.size);
       details.push(`Size: ${item.customizations.size}`);
     }
     
@@ -192,11 +191,9 @@ const OrderSummary = memo(({
     
     // Wing sauces (handle both array of objects and simple arrays)
     if (item.customizations.sauces && item.customizations.sauces.length > 0) {
-      console.log('🔍 DEBUG: Processing sauces:', item.customizations.sauces);
       const sauceNames = item.customizations.sauces
         .map((s: any) => s.name || s)
         .filter((name: any) => name && name !== '' && name !== 0 && name !== '0');
-      console.log('🔍 DEBUG: Filtered sauce names:', sauceNames);
       if (sauceNames.length > 0) {
         details.push(`Sauces: ${sauceNames.join(', ')}`);
       }
@@ -274,13 +271,10 @@ const OrderSummary = memo(({
       });
     }
     
-    console.log('🔍 DEBUG: Final details array for', item.name, ':', details);
     const filteredDetails = details.filter(detail => detail != null && detail !== '' && String(detail).trim() !== '0');
     if (!Array.isArray(filteredDetails) || filteredDetails.length === 0) return [];
     return filteredDetails;
   };
-
-  console.log('CART ITEMS:', JSON.stringify(cartItems, null, 2));
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Items List - Scrollable */}
@@ -373,8 +367,6 @@ const OrderSummary = memo(({
     Extra charges: +${item.extraCharges.toFixed(2)}
   </p>
 )}
-{/* Debug: Show extra charges even if 0 for dipping combos */}
-{item.isCombo && console.log(`🔍 COMBO EXTRA CHARGES DEBUG: ${item.name} - extraCharges: ${item.extraCharges}, type: ${typeof item.extraCharges}`)}
 
                 </div>
               </div>
@@ -614,10 +606,8 @@ const CheckoutPage = () => {
   const subtotal = useMemo(() => {
     const total = cartItems.reduce((sum: number, item: CartItem) => {
       const itemTotal = (item.price + (item.extraCharges || 0)) * item.quantity;
-      console.log(`🧮 SUBTOTAL DEBUG: ${item.name} - Base: $${item.price}, Extra: $${item.extraCharges || 0}, Qty: ${item.quantity}, Total: $${itemTotal}`);
       return sum + itemTotal;
     }, 0);
-    console.log(`🧮 TOTAL SUBTOTAL: $${total}`);
     return total;
   }, [cartItems]);
   
@@ -866,7 +856,6 @@ const CheckoutPage = () => {
           if (appliedDiscountCode) {
             try {
               await DiscountCodeService.applyDiscountCode(appliedDiscountCode.id);
-              console.log('✅ Discount code applied successfully');
             } catch (error) {
               console.error('Error applying discount code:', error);
             }
@@ -1111,7 +1100,6 @@ const CheckoutPage = () => {
             ...orderData,
             items: itemsToSend
           };
-          console.log('[KITCHEN] Sending FULL ORDER to kitchen:', JSON.stringify(fullOrderData, null, 2));
         } else if (modificationType === 'modified') {
           const modifiedItems = (itemsToSend as any[]).filter(item => item.isUpdated);
           // Find removed items
@@ -1128,7 +1116,6 @@ const CheckoutPage = () => {
             ...orderData,
             items: [...modifiedItems, ...removedItems]
           };
-          console.log('[KITCHEN] Sending ONLY MODIFIED ITEMS to kitchen:', JSON.stringify(partialOrderData, null, 2));
         }
       }
       // --- END LOGGING ---
@@ -1151,7 +1138,6 @@ const CheckoutPage = () => {
         // Save order (handles both online and offline)
         const cleanedOrderData = deepRemoveUndefined(orderData);
         const orderId = await createOrder(cleanedOrderData);
-        console.log('Order created successfully:', orderId);
         setShowOrderSuccess(true); // Show success modal
       }
 

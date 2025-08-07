@@ -157,7 +157,6 @@ export class DiscountCodeService {
         updatedAt: new Date().toISOString()
       });
       
-      console.log('✅ Discount code usage incremented');
     } catch (error) {
       console.error('Error applying discount code:', error);
       throw error;

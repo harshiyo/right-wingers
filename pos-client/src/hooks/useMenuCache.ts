@@ -24,8 +24,6 @@ export function useMenuCache(storeId: string) {
         await new Promise(resolve => setTimeout(resolve, 100));
 
         if (navigator.onLine) {
-          console.log('🔄 Fetching and caching menu data...');
-
           // Fetch all menu-related data in parallel
           const [menuSnapshot, toppingsSnapshot, saucesSnapshot, categoriesSnapshot, combosSnapshot] = await Promise.all([
             getDocs(collection(db, 'menuItems')),
@@ -53,9 +51,8 @@ export function useMenuCache(storeId: string) {
             offlineSync.cacheCombosData(combos),
           ]);
 
-          console.log(`✅ Cached ${menuItems.length} menu items for store ${storeId}`);
         } else {
-          console.log('📴 Offline - using cached data');
+          // Using cached data
         }
 
       } catch (err) {

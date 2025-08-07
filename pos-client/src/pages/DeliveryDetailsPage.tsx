@@ -395,7 +395,6 @@ const DeliveryDetailsPage = () => {
         deliveryAddress.lat !== customer?.address?.lat ||
         deliveryAddress.lon !== customer?.address?.lon
       )) {
-        console.log('Updating customer address in database...');
         await updateCustomerAddress(phone, deliveryAddress, distance || undefined);
       }
 

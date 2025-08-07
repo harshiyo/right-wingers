@@ -131,8 +131,6 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
         ...doc.data()
       } as Order));
       setOrders(ordersData);
-      // Log all orders in JSON format for debugging
-      console.log('All Orders:', JSON.stringify(ordersData, null, 2));
     });
 
     return () => unsubscribe();

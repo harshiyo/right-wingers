@@ -821,8 +821,6 @@ const MenuPage = () => {
     };
 
   const handleAddCustomizedComboToCart = (customizedCombo: any) => {
-    console.log(`📦 ADDING COMBO TO CART:`, customizedCombo);
-
     const comboItem = {
       id: customizedCombo.isEditing ? customizedCombo.editingItemId : customizedCombo.comboId + '-' + Date.now(),
       baseId: customizedCombo.comboId,
@@ -834,8 +832,6 @@ const MenuPage = () => {
       extraCharges: parseFloat((customizedCombo.extraCharges || 0).toFixed(2)),
       isCombo: true,
     };
-    
-    console.log(`📦 COMBO ITEM CREATED:`, comboItem);
 
     if (customizedCombo.isEditing) {
       // Replace the existing combo
@@ -852,15 +848,6 @@ const MenuPage = () => {
   };
 
   const handleEditCartItem = (cartItem: CartItem) => {
-    console.log('🔧 Editing cart item:', {
-      id: cartItem.id,
-      baseId: cartItem.baseId,
-      name: cartItem.name,
-      isCombo: cartItem.isCombo,
-      customizations: cartItem.customizations,
-      hasCustomizations: !!cartItem.customizations,
-      customizationType: cartItem.customizations?.type
-    });
     
     setEditingCartItem(cartItem);
     
@@ -905,12 +892,7 @@ const MenuPage = () => {
           );
         }
         
-        console.log('🍕 Looking for pizza item:', {
-          searchingForBaseId: cartItem.baseId,
-          foundOriginalItem: !!originalItem,
-          originalItemName: originalItem?.name,
-          fallbackUsed: cartItem.baseId !== originalItem?.id
-        });
+
         
         if (originalItem) {
           setCustomizingPizza({
@@ -940,12 +922,7 @@ const MenuPage = () => {
           );
         }
         
-        console.log('🍗 Looking for wing item:', {
-          searchingForBaseId: cartItem.baseId,
-          foundOriginalItem: !!originalItem,
-          originalItemName: originalItem?.name,
-          fallbackUsed: cartItem.baseId !== originalItem?.id
-        });
+
         
         if (originalItem) {
           setCustomizingWing({
@@ -964,20 +941,11 @@ const MenuPage = () => {
         // If not found by baseId, try to find by category
         if (!originalItem) {
           const category = cartItem.customizations.type === 'side' ? 'Sides' : 
-                          cartItem.customizations.type === 'drink' ? 'Drinks' : 
-                          cartItem.category;
+                          cartItem.customizations.type === 'drink' ? 'Drinks' : '';
           originalItem = menuItems.find(item => 
             item.category === category && item.sizePricing
           );
         }
-        
-        console.log('🥤 Looking for side/drink item:', {
-          searchingForBaseId: cartItem.baseId,
-          type: cartItem.customizations.type,
-          foundOriginalItem: !!originalItem,
-          originalItemName: originalItem?.name,
-          fallbackUsed: cartItem.baseId !== originalItem?.id
-        });
         
         if (originalItem) {
           setSizingItem(originalItem);

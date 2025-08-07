@@ -20,8 +20,6 @@ interface OnlineOrder {
 // Function to automatically print receipt for online orders
 const printOnlineOrderReceipt = async (orderId: string) => {
   try {
-    console.log('🖨️ Auto-printing receipt for online order:', orderId);
-    
     // Fetch complete order data from Firebase
     const orderDoc = await getDoc(doc(db, 'orders', orderId));
     if (!orderDoc.exists()) {
@@ -57,7 +55,6 @@ const printOnlineOrderReceipt = async (orderId: string) => {
     // Call electron print function
     if ((window as any).electronAPI && (window as any).electronAPI.printReceipt) {
       await (window as any).electronAPI.printReceipt(receiptOrder, 'new');
-      console.log('✅ Receipt printed successfully for order:', orderId);
     } else {
       console.warn('⚠️ Electron API not available - running in web mode');
     }
@@ -97,12 +94,10 @@ export const NotificationsContainer = () => {
     const unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
       if (isInitialLoad) {
         // On initial load, mark all existing orders as processed but don't notify/print
-        console.log('📊 Initial load - marking existing orders as processed:', snapshot.docs.length);
         setProcessedOrders(prev => {
           const newProcessed = new Set(prev);
           snapshot.docs.forEach(doc => {
             newProcessed.add(doc.id);
-            console.log('✅ Marked as processed (existing):', doc.id);
           });
           return newProcessed;
         });
@@ -122,7 +117,6 @@ export const NotificationsContainer = () => {
           // Check if we've already processed this order
           setProcessedOrders(prev => {
             if (prev.has(order.id)) {
-              console.log('🔄 Order already processed, skipping:', order.id);
               return prev; // Don't process again
             }
             
@@ -139,7 +133,6 @@ export const NotificationsContainer = () => {
             
             // Automatically print receipt in electron environment
             if ((window as any).electronAPI) {
-              console.log('🔔 New online order received - auto-printing receipt:', order.id);
               printOnlineOrderReceipt(order.id);
             }
             

@@ -115,11 +115,9 @@ export const ItemCustomizationDialog = ({ open, onClose, item, onAddToCart }: It
   const sauces = saucesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sauce)) || [];
 
   // --- Determine item type --- //
-  console.log('item.type in dialog:', item.type);
   const itemType = getItemType(item);
   // If wings and maxSauces is undefined, default to 1
   const maxSauces = itemType === 'wings' ? (item?.maxSauces ?? 1) : item?.maxSauces;
-  console.log('ItemCustomizationDialog itemType:', itemType, 'item:', item);
 
   // --- State Management --- //
   const [selectedSize, setSelectedSize] = useState<SizeOption>(SIZES[1]);
@@ -235,7 +233,6 @@ export const ItemCustomizationDialog = ({ open, onClose, item, onAddToCart }: It
   };
 
   // --- Render --- //
-  console.log('RENDER: itemType', itemType, 'item', item);
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl flex flex-col max-h-[95vh]">

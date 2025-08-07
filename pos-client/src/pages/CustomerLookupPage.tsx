@@ -166,8 +166,6 @@ const CustomerLookupPage = () => {
       // Save to Firebase first
       const savedCustomer = await saveCustomerToFirebase(newCustomerData);
       
-      console.log('✅ New customer saved:', savedCustomer);
-      
       // Navigate to order page with the saved customer
       navigate('/order', { 
         state: { 

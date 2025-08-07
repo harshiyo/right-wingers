@@ -12,17 +12,11 @@ export const PaperOutNotification: React.FC = () => {
   const [showNotification, setShowNotification] = useState(false);
 
   useEffect(() => {
-    console.log('🧾 PaperOutNotification: Setting up listeners...');
-    console.log('🧾 electronAPI available:', !!(window as any).electronAPI);
-    console.log('🧾 onPaperStatusChanged available:', !!(window as any).electronAPI?.onPaperStatusChanged);
-
     if (!(window as any).electronAPI?.onPaperStatusChanged) {
-      console.log('🧾 Paper status listener not available - running in web mode');
       return; // Not in Electron environment
     }
 
     const handlePaperStatusChanged = (_event: any, data: PaperStatusEvent) => {
-      console.log('🧾 Paper status event received in component:', data);
       setNotification(data);
       setShowNotification(true);
 
@@ -35,12 +29,10 @@ export const PaperOutNotification: React.FC = () => {
     };
 
     // Listen for paper status changes
-    console.log('🧾 Registering paper status listener...');
     (window as any).electronAPI.onPaperStatusChanged(handlePaperStatusChanged);
 
     // Cleanup listener on unmount
     return () => {
-      console.log('🧾 Cleaning up paper status listener...');
       if ((window as any).electronAPI?.removePaperStatusListener) {
         (window as any).electronAPI.removePaperStatusListener(handlePaperStatusChanged);
       }

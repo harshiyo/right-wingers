@@ -334,8 +334,6 @@ const OrderTypePage = () => {
       setPreviousOrders([]);
       
       try {
-        console.log('🔍 Fetching previous orders for:', customer.name, phone);
-        
         // Use optimized Firebase query
         const { collection, query, where, getDocs, orderBy, limit } = await import('firebase/firestore');
         const { db } = await import('../services/firebase');
@@ -353,8 +351,6 @@ const OrderTypePage = () => {
         if (!snapshot.empty) {
           const doc = snapshot.docs[0];
           const orderData = doc.data();
-          
-          console.log('🎯 Most recent order to display:', JSON.stringify(orderData, null, 2));
           
           const order: Order = {
             id: doc.id,
@@ -414,8 +410,6 @@ const OrderTypePage = () => {
 
   const handleReorder = useCallback((order: any) => {
     try {
-      console.log('🔄 Processing reorder for:', order);
-      
       // Use the exact same logic as modify order
       const normalized = normalizeOrderItemsForCart(order.items);
       
@@ -446,8 +440,6 @@ const OrderTypePage = () => {
           originalOrderType: order.orderType // Store original type for reference
         }
       });
-      
-      console.log('✅ Reorder completed - navigating to order type selection');
       
     } catch (error) {
       console.error('❌ Error processing reorder:', error);

@@ -88,10 +88,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   };
 
   const debugCart = () => {
-    console.log('=== CART DEBUG ===');
-    console.log('Current cartItems:', cartItems);
-    console.log('localStorage pos-cart:', localStorage.getItem('pos-cart'));
-    console.log('=================');
+    // Debug function - no longer logging to console
   };
 
   const setCartItemsDirect = (items: CartItem[]) => {

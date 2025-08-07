@@ -27,12 +27,12 @@ if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true
     connectAuthEmulator(auth, "http://localhost:9099");
     connectFirestoreEmulator(db, "localhost", 8080);
     connectStorageEmulator(storage, "localhost", 9199);
-    console.log("Connected to Firebase emulators for POS Client");
+    // Connected to Firebase emulators for POS Client
   } catch (error) {
     console.error("Error connecting POS Client to Firebase emulators:", error);
   }
 } else {
-  console.log("Connected to real Firebase database for POS Client");
+  // Connected to real Firebase database for POS Client
 }
 
 // Utility to remove undefined fields from an object (shallow)

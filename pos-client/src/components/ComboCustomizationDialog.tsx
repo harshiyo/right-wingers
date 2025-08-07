@@ -58,7 +58,6 @@ export const ComboCustomizationDialog = ({ open, onClose, combo, onAddToCart }: 
           }))
       )
     : [];
-  console.log('Combo steps:', steps);
   const [currentStep, setCurrentStep] = useState(0);
   const [customizations, setCustomizations] = useState<any[]>([]);
   const [showItemDialog, setShowItemDialog] = useState(false);
@@ -94,17 +93,6 @@ export const ComboCustomizationDialog = ({ open, onClose, combo, onAddToCart }: 
 
   // For each step, show the appropriate customization dialog
   const step = steps[currentStep];
-  // Debug: log the item passed to ItemCustomizationDialog
-  if (showItemDialog && step) {
-    console.log('Passing item to dialog:', {
-      id: step.itemId || step.type,
-      name: step.name,
-      price: 0,
-      type: step.type,
-      maxToppings: step.maxToppings,
-      maxSauces: step.maxSauces,
-    });
-  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">

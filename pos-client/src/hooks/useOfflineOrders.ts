@@ -125,7 +125,6 @@ export const useOfflineOrders = () => {
       
       if (isOffline) {
         const orderId = await offlineSync.saveOrderOffline(sanitizedOrderData, currentStore.id);
-        console.log('Order saved offline:', orderId);
         return orderId;
       } else {
         try {
@@ -138,9 +137,7 @@ export const useOfflineOrders = () => {
             createdAt: Date.now(),
           };
 
-          console.log('Creating order with data:', firestoreOrder);
           const docRef = await addDoc(collection(db, 'orders'), firestoreOrder);
-          console.log('✅ Order saved online:', docRef.id);
           return docRef.id;
         } catch (error) {
           console.warn('Failed to save online, saving offline instead:', error);
@@ -189,7 +186,6 @@ export const useOfflineCustomers = () => {
       
       if (isOffline) {
         const customerId = await offlineSync.saveCustomerOffline(sanitizedCustomerData, currentStore.id);
-        console.log('Customer saved offline:', customerId);
         return customerId;
       } else {
         try {
@@ -203,12 +199,10 @@ export const useOfflineCustomers = () => {
           };
 
           const docRef = await addDoc(collection(db, 'customers'), firestoreCustomer);
-          console.log('✅ Customer saved online:', docRef.id);
           return docRef.id;
         } catch (error) {
           console.warn('Failed to save customer online, saving offline instead:', error);
           const customerId = await offlineSync.saveCustomerOffline(sanitizedCustomerData, currentStore.id);
-          console.log('Customer saved offline as fallback:', customerId);
           return customerId;
         }
       }

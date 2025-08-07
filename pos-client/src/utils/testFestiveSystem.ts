@@ -12,19 +12,16 @@ export const testFestiveSystem = () => {
     { date: new Date(2024, 5, 15), expected: 'none', description: 'Regular day' },
   ];
 
-  console.log('Testing Festive System:');
-  console.log('=======================');
-  
+  // Testing Festive System
   testDates.forEach(({ date, expected, description }) => {
     const result = getFestiveTypeForDate(date);
     const status = result === expected ? '✅ PASS' : '❌ FAIL';
-    console.log(`${status} ${description}: ${date.toDateString()} -> ${result} (expected: ${expected})`);
+    // ${status} ${description}: ${date.toDateString()} -> ${result} (expected: ${expected})
   });
   
-  console.log('=======================');
-  console.log('Current date test:');
+  // Current date test
   const currentResult = getFestiveTypeForDate(new Date());
-  console.log(`Today (${new Date().toDateString()}) -> ${currentResult}`);
+  // Today (${new Date().toDateString()}) -> ${currentResult}
 };
 
 // Run the test if this file is executed directly

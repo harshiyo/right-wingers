@@ -153,22 +153,18 @@ class OfflineSyncService {
       // Try to delete the existing database first to avoid version conflicts
       try {
         await deleteDB('rightwingers-pos');
-        console.log('🗑️ Deleted old IndexedDB database');
       } catch (error) {
         // Ignore errors if database doesn't exist
       }
 
       this.db = await openDB<OfflineDB>('rightwingers-pos', 2, {
         upgrade(db, oldVersion, newVersion, transaction) {
-          console.log(`🔧 Upgrading IndexedDB schema from version ${oldVersion} to ${newVersion}...`);
-          
           // Create orders store
           if (!db.objectStoreNames.contains('orders')) {
             const ordersStore = db.createObjectStore('orders', { keyPath: 'id' });
             ordersStore.createIndex('storeId', 'storeId');
             ordersStore.createIndex('status', 'status');
             ordersStore.createIndex('timestamp', 'timestamp');
-            console.log('✅ Created orders store');
           }
 
           // Create customers store
@@ -177,7 +173,6 @@ class OfflineSyncService {
             customersStore.createIndex('storeId', 'storeId');
             customersStore.createIndex('phone', 'phone');
             customersStore.createIndex('status', 'status');
-            console.log('✅ Created customers store');
           }
 
           // Create menu store
@@ -185,7 +180,6 @@ class OfflineSyncService {
             const menuStore = db.createObjectStore('menu', { keyPath: 'id' });
             menuStore.createIndex('storeId', 'storeId');
             menuStore.createIndex('category', 'category');
-            console.log('✅ Created menu store');
           }
 
           // Create toppings store
@@ -193,28 +187,24 @@ class OfflineSyncService {
             const toppingsStore = db.createObjectStore('toppings', { keyPath: 'id' });
             toppingsStore.createIndex('name', 'name');
             toppingsStore.createIndex('category', 'category');
-            console.log('✅ Created toppings store');
           }
 
           // Create sauces store
           if (!db.objectStoreNames.contains('sauces')) {
             const saucesStore = db.createObjectStore('sauces', { keyPath: 'id' });
             saucesStore.createIndex('name', 'name');
-            console.log('✅ Created sauces store');
           }
 
           // Create categories store
           if (!db.objectStoreNames.contains('categories')) {
             const categoriesStore = db.createObjectStore('categories', { keyPath: 'id' });
             categoriesStore.createIndex('name', 'name');
-            console.log('✅ Created categories store');
           }
 
           // Create combos store
           if (!db.objectStoreNames.contains('combos')) {
             const combosStore = db.createObjectStore('combos', { keyPath: 'id' });
             combosStore.createIndex('name', 'name');
-            console.log('✅ Created combos store');
           }
 
           // Create sync queue store
@@ -223,15 +213,11 @@ class OfflineSyncService {
             syncStore.createIndex('type', 'type');
             syncStore.createIndex('timestamp', 'timestamp');
             syncStore.createIndex('storeId', 'storeId');
-            console.log('✅ Created sync_queue store');
           }
-
-          console.log('🎉 IndexedDB schema upgrade complete');
         },
       });
 
       this.initialized = true;
-      console.log('💾 OfflineSync database initialized successfully');
     } catch (error) {
       console.error('Failed to initialize IndexedDB:', error);
       // Set initialized to true anyway to prevent infinite waiting
@@ -242,13 +228,11 @@ class OfflineSyncService {
   private setupNetworkListeners() {
     window.addEventListener('online', () => {
       this._isOnline = true;
-      console.log('🌐 Back online - starting sync...');
       this.syncPendingData();
     });
 
     window.addEventListener('offline', () => {
       this._isOnline = false;
-      console.log('📴 Gone offline - switching to local storage');
     });
   }
 
@@ -283,7 +267,6 @@ class OfflineSyncService {
       }
       
       await tx.done;
-      console.log(`📦 Cached ${menuItems.length} menu items for store ${storeId}`);
     } catch (error) {
       console.error('Failed to cache menu data:', error);
     }
@@ -310,7 +293,6 @@ class OfflineSyncService {
       }
       
       await tx.done;
-      console.log(`🧄 Cached ${toppings.length} toppings`);
     } catch (error) {
       console.error('Failed to cache toppings:', error);
     }
@@ -337,7 +319,6 @@ class OfflineSyncService {
       }
       
       await tx.done;
-      console.log(`🌶️ Cached ${sauces.length} sauces`);
     } catch (error) {
       console.error('Failed to cache sauces:', error);
     }
@@ -364,7 +345,6 @@ class OfflineSyncService {
       }
       
       await tx.done;
-      console.log(`📂 Cached ${categories.length} categories`);
     } catch (error) {
       console.error('Failed to cache categories:', error);
     }
@@ -391,7 +371,6 @@ class OfflineSyncService {
       }
       
       await tx.done;
-      console.log(`🍕 Cached ${combos.length} combos`);
     } catch (error) {
       console.error('Failed to cache combos:', error);
     }
@@ -492,7 +471,6 @@ class OfflineSyncService {
     await this.db.add('customers', offlineCustomer);
     await this.addToSyncQueue('customer', 'create', offlineCustomer, storeId);
 
-    console.log(`💾 Customer saved offline: ${offlineCustomer.id}`);
     return offlineCustomer.id;
   }
 
@@ -546,7 +524,6 @@ class OfflineSyncService {
 
     try {
       const pendingItems = await this.db.getAll('sync_queue');
-      console.log(`🔄 Starting sync: ${pendingItems.length} items pending`);
 
       let successCount = 0;
       let errorCount = 0;
@@ -572,7 +549,6 @@ class OfflineSyncService {
         }
       }
 
-      console.log(`🔄 Sync completed: ${successCount} success, ${errorCount} errors`);
       this.notifyStatusChange('synced');
 
     } catch (error) {
@@ -649,7 +625,6 @@ class OfflineSyncService {
       });
     }
 
-    console.log(`✅ Order synced to Firebase: ${order.id} → ${docRef.id}`);
   }
 
   // Sync customer to Firebase
@@ -673,7 +648,6 @@ class OfflineSyncService {
       });
     }
 
-    console.log(`✅ Customer synced to Firebase: ${customer.id} → ${docRef.id}`);
   }
 
   get isOffline(): boolean {
@@ -752,7 +726,6 @@ class OfflineSyncService {
       tx.objectStore('sync_queue').clear(),
     ]);
 
-    console.log('🗑️ All offline data cleared');
   }
 
   // Wait for database initialization
@@ -766,11 +739,8 @@ class OfflineSyncService {
     }
     
     if (!this.initialized) {
-      console.warn('Database initialization timeout - proceeding anyway');
       // Force initialization to prevent infinite waiting
       this.initialized = true;
-    } else {
-      console.log('✅ Database initialization confirmed');
     }
   }
 }

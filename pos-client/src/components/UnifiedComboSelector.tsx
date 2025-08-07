@@ -630,13 +630,6 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
         sauceData: sauceData,
         extraCharge
       };
-      console.log(`🥄 DIPPING STEP SAVED:`, {
-        stepIndex: currentStep,
-        selectedDippingSauces,
-        sauceData,
-        extraCharge,
-        dippingLimit: step.maxDipping || 0
-      });
     }
 
     setDraft(newDraft);
@@ -644,13 +637,6 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
     // Fix: Replace the current step's extra charge instead of adding to it
     const oldExtraCharge = draft[currentStep]?.extraCharge || 0;
     const newTotalExtraCharges = totalExtraCharges - oldExtraCharge + extraCharge;
-    console.log(`💰 STEP ${currentStep} EXTRA CHARGE UPDATE:`, {
-      stepType: step.type,
-      oldExtraCharge,
-      extraCharge,
-      totalExtraCharges,
-      newTotalExtraCharges
-    });
     setTotalExtraCharges(newTotalExtraCharges);
     
     if (currentStep < steps.length - 1) {
@@ -658,14 +644,6 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
     } else {
       // For final completion, calculate total from all saved step extra charges
       const finalExtraCharges = newDraft.reduce((sum, step) => sum + (step.extraCharge || 0), 0);
-      
-      console.log(`🔥 COMBO COMPLETION DEBUG:`, {
-        totalExtraCharges,
-        oldExtraCharge,
-        extraCharge,
-        finalExtraCharges,
-        comboName: combo.name
-      });
       
       const assembled = {
         comboId: combo.comboId,
@@ -678,7 +656,6 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
         editingItemId: combo.editingItemId,
       };
       
-      console.log(`🔥 ASSEMBLED COMBO:`, assembled);
       onComplete(assembled);
       
       // Reset states
@@ -752,14 +729,6 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
         .slice(dippingLimit)
         .reduce((acc, sauce) => acc + (sauce.price || 0), 0);
         
-      console.log(`🥄 DIPPING EXTRA CHARGE CALC:`, {
-        dippingLimit,
-        selectedDippingSauces,
-        dippingSauceArray: dippingSauceArray.map(s => ({name: s.name, price: s.price})),
-        extraSauces: dippingSauceArray.slice(dippingLimit).map(s => ({name: s.name, price: s.price})),
-        extraCharge
-      });
-      
       return extraCharge;
     }
     return 0;
