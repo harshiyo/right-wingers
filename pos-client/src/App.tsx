@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import MenuPage from './pages/MenuPage';
 import CheckoutPage from './pages/CheckoutPage';
 import CustomerLookupPage from './pages/CustomerLookupPage';
@@ -84,11 +84,11 @@ function App() {
   return (
     <ErrorBoundary>
       <Router>
-      <StoreProvider>
-        <CartProvider>
+        <StoreProvider>
+          <CartProvider>
             <AppContent />
-        </CartProvider>
-      </StoreProvider>
+          </CartProvider>
+        </StoreProvider>
       </Router>
     </ErrorBoundary>
   );

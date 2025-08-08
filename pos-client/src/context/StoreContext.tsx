@@ -225,7 +225,14 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
   const logout = async () => {
     try {
       await signOut(auth);
-      window.location.href = '/login';
+      // Clear localStorage
+      localStorage.removeItem('pos_current_user');
+      localStorage.removeItem('pos_current_store_id');
+      
+      // Force a page reload to clear all state and navigate to login
+      // This works in both development and production modes
+      window.location.reload();
+      
       writeLog({ type: 'logout', message: 'User logged out', user: (currentUser && currentUser.email) ? currentUser.email : undefined });
     } catch (error) {
       console.error('Logout error:', error);

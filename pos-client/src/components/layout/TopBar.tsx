@@ -122,7 +122,7 @@ export const TopBar = ({
           <button onClick={toggleDark} className="p-2 rounded-full hover:bg-red-100">
             {dark ? <Sun className="text-yellow-400" /> : <Moon className="text-gray-600" />}
           </button>
-          <button onClick={() => { logout(); navigate('/login'); }} className="p-2 rounded-full hover:bg-red-100">
+          <button onClick={logout} className="p-2 rounded-full hover:bg-red-100">
             <LogOut className="text-red-600" />
           </button>
         </div>
