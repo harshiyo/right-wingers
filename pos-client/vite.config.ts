@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { readFileSync } from 'fs'
+import path from 'path'
 
 // Read package.json to get version
 const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'))
@@ -104,12 +105,12 @@ export default defineConfig({
         ]
       },
       devOptions: {
-        enabled: true
+        enabled: false // Disable PWA in development to avoid Service Worker conflicts
       }
     })
   ],
   server: {
-    port: 3000,
+    port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
     host: true
   },
   build: {
@@ -117,6 +118,7 @@ export default defineConfig({
     minify: 'esbuild',
     sourcemap: false,
     rollupOptions: {
+      external: ['firebase/app', 'firebase/firestore', 'firebase/auth'],
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
@@ -128,7 +130,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': new URL('./src', import.meta.url).pathname
+      '@': new URL('./src', import.meta.url).pathname,
+      'shared': path.resolve(__dirname, '../shared')
     }
   }
 })

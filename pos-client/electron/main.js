@@ -7,6 +7,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const isDev = process.env.NODE_ENV === 'development';
 
+// Set up separate user data directory for multiple instances
+if (process.env.USER_DATA_DIR) {
+  const userDataPath = path.join(app.getPath('userData'), process.env.USER_DATA_DIR);
+  app.setPath('userData', userDataPath);
+  console.log(`Using user data directory: ${userDataPath}`);
+}
+
 // Initialize printer service
 const printerService = new PrinterService();
 
@@ -244,7 +251,9 @@ function createWindow() {
   Menu.setApplicationMenu(menu);
 
   if (isDev) {
-    mainWindow.loadURL('http://localhost:3000');
+    // Use a unique port for each Electron instance to avoid conflicts
+    const port = process.env.PORT || 3000;
+    mainWindow.loadURL(`http://localhost:${port}`);
     mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));

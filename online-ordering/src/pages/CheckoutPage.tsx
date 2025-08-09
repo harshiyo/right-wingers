@@ -20,28 +20,50 @@ interface InstructionTile {
   isActive: boolean;
 }
 
-const generateOrderNumber = async (): Promise<string> => {
+const generateOrderNumber = async (storeId?: string): Promise<string> => {
   try {
-    const counterRef = doc(db, 'counters', 'onlineOrders');
+    console.log(`🔄 generateOrderNumber called with storeId: ${storeId}`);
     
-    const newNumber = await runTransaction(db, async (transaction) => {
-      const counterDoc = await transaction.get(counterRef);
-      const currentCount = counterDoc.exists() ? counterDoc.data().count : 0;
-      const newCount = currentCount + 1;
+    if (!storeId) {
+      console.log('⚠️ No storeId provided, using fallback system');
+      // Fallback to old system if no store ID
+      const counterRef = doc(db, 'counters', 'onlineOrders');
       
-      transaction.set(counterRef, { count: newCount }, { merge: true });
+      const newNumber = await runTransaction(db, async (transaction) => {
+        const counterDoc = await transaction.get(counterRef);
+        const currentCount = counterDoc.exists() ? counterDoc.data().count : 0;
+        const newCount = currentCount + 1;
+        
+        transaction.set(counterRef, { count: newCount }, { merge: true });
+        
+        // Format: RWO (Roti Way Online) + 6 digits
+        return `RWO${String(newCount).padStart(6, '0')}`;
+      });
       
-      // Format: RWO (Roti Way Online) + 6 digits
-      return `RWO${String(newCount).padStart(6, '0')}`;
+      console.log(`✅ Generated fallback order number: ${newNumber}`);
+      return newNumber;
+    }
+
+    console.log(`📦 Using store-specific order number generation for store: ${storeId}`);
+    // Use store-specific order number generation
+    const { generateStoreOrderNumber } = await import('../services/firebase');
+    const result = await generateStoreOrderNumber(storeId, true);
+    console.log(`✅ Store-specific order number generated: ${result}`);
+    return result;
+  } catch (error) {
+    console.error('❌ Error generating order number:', error);
+    console.error('📊 Error details:', {
+      storeId,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined
     });
     
-    return newNumber;
-  } catch (error) {
-    console.error('Error generating order number:', error);
     // Fallback to timestamp-based number if counter fails
     const timestamp = Date.now();
     const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `RWO${randomSuffix}${timestamp % 1000}`; // Use last 3 digits of timestamp
+    const fallbackNumber = `FALL${randomSuffix}${timestamp % 1000}`;
+    console.log(`🔄 Using fallback order number: ${fallbackNumber}`);
+    return fallbackNumber;
   }
 };
 
@@ -303,7 +325,9 @@ export default function CheckoutPage() {
       }
 
       // Generate order number
-      const orderNumber = await generateOrderNumber();
+      console.log(`🔄 Generating order number for store: ${selectedStore.id} (${selectedStore.name})`);
+      const orderNumber = await generateOrderNumber(selectedStore.id);
+      console.log(`✅ Generated order number: ${orderNumber}`);
 
       // Create order data structure matching POS system
       const orderData = {

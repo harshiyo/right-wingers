@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { doc, getDoc, updateDoc, collection, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { smsService } from '../services/smsService';
+import { stores } from '../services/auth';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useSelectedStore } from '../context/SelectedStoreContext';
@@ -19,6 +20,11 @@ export default function Settings() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   
+  // Order Number Configuration
+  const [orderNumberPrefixes, setOrderNumberPrefixes] = useState<{[key: string]: string}>({});
+  const [isSavingOrderNumbers, setIsSavingOrderNumbers] = useState(false);
+  const [orderNumberSaveStatus, setOrderNumberSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  
   // Twilio SMS Configuration
   const [twilioConfig, setTwilioConfig] = useState<TwilioConfig>({
     accountSid: '',
@@ -30,7 +36,7 @@ export default function Settings() {
   const [isSavingSMS, setIsSavingSMS] = useState(false);
   const [smsSaveStatus, setSmsSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  // Load current tax rate and SMS config from any store
+  // Load current tax rate, SMS config, and order number prefixes from stores
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -43,6 +49,16 @@ export default function Settings() {
           if (firstStore.twilioConfig) {
             setTwilioConfig(firstStore.twilioConfig);
           }
+          
+          // Load order number prefixes from all stores
+          const prefixes: {[key: string]: string} = {};
+          storesSnapshot.docs.forEach((storeDoc) => {
+            const storeData = storeDoc.data();
+            if (storeData.orderNumberPrefix) {
+              prefixes[storeDoc.id] = storeData.orderNumberPrefix;
+            }
+          });
+          setOrderNumberPrefixes(prefixes);
         }
       } catch (error) {
         console.error('Error loading settings:', error);
@@ -86,6 +102,52 @@ export default function Settings() {
       setTimeout(() => setSaveStatus('idle'), 3000);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSaveOrderNumbers = async () => {
+    setIsSavingOrderNumbers(true);
+    setOrderNumberSaveStatus('idle');
+
+    try {
+      // Validate order number prefixes
+      const invalidPrefixes = Object.entries(orderNumberPrefixes).filter(([_, prefix]) => {
+        return prefix && (prefix.length !== 3 || !/^[A-Z]{3}$/.test(prefix));
+      });
+
+      if (invalidPrefixes.length > 0) {
+        throw new Error('Order number prefixes must be exactly 3 uppercase letters');
+      }
+
+      // Get all stores
+      const storesSnapshot = await getDocs(collection(db, 'stores'));
+      
+      // Use batch write to update stores with custom prefixes
+      const batch = writeBatch(db);
+      
+      storesSnapshot.docs.forEach((storeDoc) => {
+        const storeId = storeDoc.id;
+        const prefix = orderNumberPrefixes[storeId];
+        
+        if (prefix) {
+          batch.update(doc(db, 'stores', storeId), {
+            orderNumberPrefix: prefix,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      });
+
+      // Commit the batch
+      await batch.commit();
+
+      setOrderNumberSaveStatus('success');
+      setTimeout(() => setOrderNumberSaveStatus('idle'), 3000);
+    } catch (error) {
+      console.error('Error saving order number prefixes:', error);
+      setOrderNumberSaveStatus('error');
+      setTimeout(() => setOrderNumberSaveStatus('idle'), 3000);
+    } finally {
+      setIsSavingOrderNumbers(false);
     }
   };
 
@@ -216,6 +278,88 @@ export default function Settings() {
                 <li>Tax is applied after any discounts</li>
                 <li>Changes to tax rate will affect all stores immediately</li>
                 <li>The same tax rate is used for both online ordering and POS systems</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Order Number Configuration Section */}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <span className="text-2xl">🔢</span>
+            Order Number Configuration
+          </h2>
+          
+          <div className="space-y-6">
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-4">
+                Configure custom order number prefixes for each store. Leave empty to use default prefixes based on store names.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {stores.map((store) => (
+                  <div key={store.id} className="border rounded-lg p-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {store.name}
+                    </label>
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        type="text"
+                        value={orderNumberPrefixes[store.id] || ''}
+                        onChange={(e) => setOrderNumberPrefixes(prev => ({
+                          ...prev,
+                          [store.id]: e.target.value.toUpperCase()
+                        }))}
+                        placeholder="HAM"
+                        maxLength={3}
+                        className="flex-1"
+                      />
+                      <span className="text-sm text-gray-500">
+                        {orderNumberPrefixes[store.id] ? 
+                          `${orderNumberPrefixes[store.id]}P0001 / ${orderNumberPrefixes[store.id]}O0001` : 
+                          'Default prefix'
+                        }
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={handleSaveOrderNumbers}
+                disabled={isSavingOrderNumbers}
+                className={`${
+                  orderNumberSaveStatus === 'success' ? 'bg-green-600' :
+                  orderNumberSaveStatus === 'error' ? 'bg-red-600' :
+                  ''
+                }`}
+              >
+                {isSavingOrderNumbers ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : orderNumberSaveStatus === 'success' ? (
+                  'Saved!'
+                ) : orderNumberSaveStatus === 'error' ? (
+                  'Error!'
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-1" />
+                    Save Order Numbers
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <h3 className="font-medium text-blue-900 mb-2">Order Number Format:</h3>
+              <ul className="list-disc list-inside space-y-1 text-blue-800 text-sm">
+                <li><strong>Format:</strong> PREFIX + P/O + 4 digits (e.g., HAMP0001, HAMO0001)</li>
+                <li><strong>P:</strong> POS orders (from store terminals)</li>
+                <li><strong>O:</strong> Online orders (from website)</li>
+                <li><strong>Default prefixes:</strong> HAM (Hamilton), BUR (Burlington), STC (St. Catharines), OAK (Oakville)</li>
+                <li><strong>Custom prefixes:</strong> Must be exactly 3 uppercase letters</li>
+                <li><strong>Counters:</strong> Each store has its own counter, so HAMP0001 and BURP0001 can exist simultaneously</li>
               </ul>
             </div>
           </div>

@@ -61,28 +61,35 @@ const sanitizeForFirebase = (obj: any): any => {
   return obj;
 };
 
-const generateOrderNumber = async (isOnline: boolean): Promise<string> => {
+const generateOrderNumber = async (isOnline: boolean, storeId?: string): Promise<string> => {
   try {
-    const counterRef = doc(db, 'counters', 'orders');
-    
-    const newNumber = await runTransaction(db, async (transaction) => {
-      const counterDoc = await transaction.get(counterRef);
-      const currentCount = counterDoc.exists() ? counterDoc.data().count : 0;
-      const newCount = currentCount + 1;
+    if (!storeId) {
+      // Fallback to old system if no store ID
+      const counterRef = doc(db, 'counters', 'orders');
       
-      transaction.set(counterRef, { count: newCount }, { merge: true });
+      const newNumber = await runTransaction(db, async (transaction) => {
+        const counterDoc = await transaction.get(counterRef);
+        const currentCount = counterDoc.exists() ? counterDoc.data().count : 0;
+        const newCount = currentCount + 1;
+        
+        transaction.set(counterRef, { count: newCount }, { merge: true });
+        
+        // Format: RWP (Roti Way POS) or RWO (Roti Way Online) + 6 digits
+        const prefix = isOnline ? 'RWO' : 'RWP';
+        return `${prefix}${String(newCount).padStart(6, '0')}`;
+      });
       
-      // Format: RWP (Roti Way POS) or RWO (Roti Way Online) + 6 digits
-      const prefix = isOnline ? 'RWO' : 'RWP';
-      return `${prefix}${String(newCount).padStart(6, '0')}`;
-    });
-    
-    return newNumber;
+      return newNumber;
+    }
+
+    // Use store-specific order number generation
+    const { generateStoreOrderNumber } = await import('../services/firebase');
+    return await generateStoreOrderNumber(storeId, isOnline);
   } catch (error) {
     console.error('Error generating order number:', error);
     // Fallback to timestamp-based number if offline
     const timestamp = Date.now();
-    return `RWP${timestamp}`;
+    return `FALL${timestamp}`;
   }
 };
 
@@ -100,7 +107,7 @@ export const useOfflineOrders = () => {
       const isOffline = !navigator.onLine;
       
       // Generate order number
-      const orderNumber = await generateOrderNumber(false);
+      const orderNumber = await generateOrderNumber(false, currentStore.id);
       
       // Sanitize the order data first
       const sanitizedOrderData = sanitizeForFirebase({

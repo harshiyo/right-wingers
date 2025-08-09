@@ -185,6 +185,11 @@ const Orders = () => {
 
   const formatOrderNumber = (order: Order): string => {
     // If we already have a properly formatted order number, use it
+    if (order.orderNumber?.match(/^[A-Z]{3}[OP]\d{4}$/)) {
+      return order.orderNumber;
+    }
+    
+    // Legacy format support
     if (order.orderNumber?.match(/^RW[OP]\d{6}$/)) {
       return order.orderNumber;
     }

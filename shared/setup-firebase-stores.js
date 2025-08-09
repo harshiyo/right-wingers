@@ -25,6 +25,7 @@ const stores = [
     taxRate: 13,
     latitude: 43.252203,
     longitude: -79.940158,
+    orderNumberPrefix: 'HAM',
     operatingHours: {
       monday: '3:30pm - 8:30pm',
       tuesday: '3:30pm - 10:30pm',
@@ -49,6 +50,7 @@ const stores = [
     taxRate: 13,
     latitude: 43.367493,
     longitude: -79.826724,
+    orderNumberPrefix: 'BUR',
     operatingHours: {
       monday: '11:00am - 10:00pm',
       tuesday: '11:00am - 11:00pm',
@@ -73,6 +75,7 @@ const stores = [
     taxRate: 13,
     latitude: 43.1998264,
     longitude: -79.2212251,
+    orderNumberPrefix: 'STC',
     operatingHours: {
       monday: '11:00am - 9:00pm',
       tuesday: '11:00am - 10:00pm',
@@ -97,6 +100,7 @@ const stores = [
     taxRate: 13,
     latitude: 43.488808,
     longitude: -79.650518,
+    orderNumberPrefix: 'OAK',
     operatingHours: {
       monday: '11:00am - 10:00pm',
       tuesday: '11:00am - 11:00pm',
