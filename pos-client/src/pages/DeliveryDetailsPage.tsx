@@ -3,10 +3,63 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { TopBar } from '../components/layout/TopBar';
-import { Truck, MapPin, Home, ArrowRight, CheckCircle, User, Clock, Calendar } from 'lucide-react';
+import { Truck, MapPin, Home, ArrowRight, CheckCircle, User, Clock, Calendar, AlertTriangle, X } from 'lucide-react';
 import { Customer, updateCustomerAddress, calculateDrivingDistance, findCustomerByPhone } from '../data/customers';
 import { useStore } from '../context/StoreContext';
 import AddressAutocomplete from '../components/AddressAutocomplete';
+
+// Constants
+const STORE_HOURS = {
+  open: 11, // 11:00 AM
+  close: 22, // 10:00 PM
+  minAdvance: 45 // 45 minutes minimum advance for delivery
+};
+
+const MAX_DELIVERY_DISTANCE = 25; // Maximum delivery distance in km
+
+// Error dialog component for better UX
+const ErrorDialog = ({ 
+  isOpen, 
+  onClose, 
+  title, 
+  message 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  title: string; 
+  message: string; 
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+      <div className="bg-red-50 border-2 border-red-200 rounded-2xl shadow-2xl max-w-md w-full p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-6 w-6 text-red-600" />
+            <h3 className="text-lg font-semibold text-red-900">{title}</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-red-400 hover:text-red-600 transition-colors"
+            aria-label="Close dialog"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <p className="text-red-700 mb-6">{message}</p>
+        <div className="flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Memoized customer info card component
 const CustomerInfoCard = memo(({ 
@@ -14,80 +67,85 @@ const CustomerInfoCard = memo(({
   phone, 
   onNavigateToCustomerLookup 
 }: {
-  customer: Customer;
+  customer: Customer | null;
   phone: string;
   onNavigateToCustomerLookup: () => void;
-}) => (
-  <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 h-full flex flex-col">
-    <div className="flex items-center gap-2 mb-6">
-      <div className="p-2 bg-gradient-to-br from-red-800 to-red-900 rounded-lg">
-        <User className="h-5 w-5 text-white" />
+}) => {
+  if (!customer) return null;
+
+  return (
+    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 h-full flex flex-col">
+      <div className="flex items-center gap-2 mb-6">
+        <div className="p-2 bg-gradient-to-br from-red-800 to-red-900 rounded-lg">
+          <User className="h-5 w-5 text-white" aria-hidden="true" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900">Customer Information</h2>
       </div>
-      <h2 className="text-xl font-bold text-gray-900">Customer Information</h2>
-    </div>
-    
-    <div className="flex-1 flex flex-col justify-center">
-      <div className="space-y-4">
-        {/* Enhanced Customer Status Card */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 p-4">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 opacity-10 rounded-full -mr-8 -mt-8"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-600 rounded-full shadow-sm">
-                  <CheckCircle className="h-4 w-4 text-white" />
+      
+      <div className="flex-1 flex flex-col justify-center">
+        <div className="space-y-4">
+          {/* Enhanced Customer Status Card */}
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 p-4">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 opacity-10 rounded-full -mr-8 -mt-8"></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-600 rounded-full shadow-sm">
+                    <CheckCircle className="h-4 w-4 text-white" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-green-800 text-base leading-tight">
+                      {customer.orderCount > 0 ? 'Welcome back!' : 'New customer!'}
+                    </p>
+                    <p className="text-xs text-green-600 font-medium mt-0.5">
+                      {customer.orderCount > 0 ? 'We\'re glad to see you again' : 'Let\'s get you started'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-bold text-green-800 text-base leading-tight">
-                    {customer.orderCount > 0 ? 'Welcome back!' : 'New customer!'}
-                  </p>
-                  <p className="text-xs text-green-600 font-medium mt-0.5">
-                    {customer.orderCount > 0 ? 'We\'re glad to see you again' : 'Let\'s get you started'}
-                  </p>
-                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={onNavigateToCustomerLookup}
+                  className="text-green-700 hover:bg-green-100 text-xs px-3 py-1.5 font-medium"
+                  aria-label="Change customer"
+                >
+                  Not them?
+                </Button>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={onNavigateToCustomerLookup}
-                className="text-green-700 hover:bg-green-100 text-xs px-3 py-1.5 font-medium"
-              >
-                Not them?
-              </Button>
-            </div>
-            <div className="mb-4">
-              <p className="text-2xl font-bold text-gray-900 mb-2 leading-tight">{customer.name}</p>
-              <p className="text-sm text-gray-600 font-medium">
-                {customer.orderCount > 0 
-                  ? `Customer since ${new Date(customer.lastOrderDate).getFullYear()}`
-                  : 'First time ordering'
-                }
-              </p>
+              <div className="mb-4">
+                <p className="text-2xl font-bold text-gray-900 mb-2 leading-tight">{customer.name}</p>
+                <p className="text-sm text-gray-600 font-medium">
+                  {customer.orderCount > 0 
+                    ? `Customer since ${new Date(customer.lastOrderDate).getFullYear()}`
+                    : 'First time ordering'
+                  }
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-        
-        {/* Enhanced Info Grid */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-red-50 to-orange-50 border border-red-200 p-4">
-            <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-br from-red-400 to-orange-500 opacity-10 rounded-full -mr-4 -mt-4"></div>
-            <div className="relative">
-              <p className="text-red-600 font-semibold text-xs mb-2 uppercase tracking-wide">Phone</p>
-              <p className="text-lg font-bold text-gray-900 leading-tight">{phone}</p>
+          
+          {/* Enhanced Info Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-red-50 to-orange-50 border border-red-200 p-4">
+              <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-br from-red-400 to-orange-500 opacity-10 rounded-full -mr-4 -mt-4"></div>
+              <div className="relative">
+                <p className="text-red-600 font-semibold text-xs mb-2 uppercase tracking-wide">Phone</p>
+                <p className="text-lg font-bold text-gray-900 leading-tight">{phone}</p>
+              </div>
             </div>
-          </div>
-          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 p-4">
-            <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-br from-orange-400 to-amber-500 opacity-10 rounded-full -mr-4 -mt-4"></div>
-            <div className="relative">
-              <p className="text-orange-600 font-semibold text-xs mb-2 uppercase tracking-wide">Order Type</p>
-              <p className="text-lg font-bold text-gray-900 leading-tight">Delivery</p>
+            <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 p-4">
+              <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-br from-orange-400 to-amber-500 opacity-10 rounded-full -mr-4 -mt-4"></div>
+              <div className="relative">
+                <p className="text-orange-600 font-semibold text-xs mb-2 uppercase tracking-wide">Order Type</p>
+                <p className="text-lg font-bold text-gray-900 leading-tight">Delivery</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-));
+  );
+});
 
 CustomerInfoCard.displayName = 'CustomerInfoCard';
 
@@ -103,10 +161,9 @@ const AddressForm = memo(({
   deliveryTimeType,
   setDeliveryTimeType,
   scheduledDeliveryDateTime,
-  setScheduledDeliveryDateTime
+  setScheduledDeliveryDateTime,
+  validationError
 }: {
-  deliveryAddress: { street: string; city: string; postalCode: string; lat?: number; lon?: number };
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onAddressSelect: (address: { street: string; city: string; postalCode: string; fullAddress: string; lat?: number; lon?: number }) => void;
   onAddressChange: (value: string) => void;
   fullAddress: string;
@@ -118,11 +175,12 @@ const AddressForm = memo(({
   setDeliveryTimeType: (type: 'asap' | 'scheduled') => void;
   scheduledDeliveryDateTime: string;
   setScheduledDeliveryDateTime: (datetime: string) => void;
+  validationError: string;
 }) => (
   <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 h-full flex flex-col">
     <div className="flex items-center gap-2 mb-6">
       <div className="p-2 bg-gradient-to-br from-red-800 to-red-900 rounded-lg">
-        <MapPin className="h-5 w-5 text-white" />
+        <MapPin className="h-5 w-5 text-white" aria-hidden="true" />
       </div>
       <h2 className="text-xl font-bold text-gray-900">Where should we deliver this order?</h2>
     </div>
@@ -131,8 +189,8 @@ const AddressForm = memo(({
       <div className="space-y-4 flex-1">
         <div className="grid grid-cols-1 gap-4">
           <div>
-            <label htmlFor="street" className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-              <Home className="h-4 w-4" />
+            <label htmlFor="delivery-address" className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+              <Home className="h-4 w-4" aria-hidden="true" />
               Delivery Address
             </label>
             <AddressAutocomplete
@@ -141,98 +199,135 @@ const AddressForm = memo(({
               onAddressSelect={onAddressSelect}
               placeholder="Enter your delivery address"
               className="w-full"
+              aria-describedby="address-help"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p id="address-help" className="mt-1 text-xs text-gray-500">
               Start typing to see address suggestions (Ontario, Canada only, 7+ characters)
             </p>
           </div>
         </div>
 
-                 {/* Distance Information */}
-         {isLoadingDistance && (
-           <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-             <p className="text-blue-700 text-sm flex items-center gap-1">
-               <MapPin className="h-3 w-3" />
-               Calculating distance...
-             </p>
-           </div>
-         )}
-         {distance !== null && !isNaN(distance) && !isLoadingDistance && (
-           <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-             <p className="text-blue-700 text-sm flex items-center gap-1">
-               <MapPin className="h-3 w-3" />
-               Distance: {distance.toFixed(1)} km
-               {isCachedDistance && (
-                 <span className="text-xs text-green-600 ml-1">(cached)</span>
-               )}
-             </p>
-           </div>
-         )}
+        {/* Distance Information */}
+        {isLoadingDistance && (
+          <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+            <p className="text-blue-700 text-sm flex items-center gap-1">
+              <MapPin className="h-3 w-3" aria-hidden="true" />
+              Calculating distance...
+            </p>
+          </div>
+        )}
+        {distance !== null && !isNaN(distance) && !isLoadingDistance && (
+          <div className={`rounded-lg p-3 border ${
+            distance > MAX_DELIVERY_DISTANCE 
+              ? 'bg-red-50 border-red-200' 
+              : 'bg-blue-50 border-blue-200'
+          }`}>
+            <p className={`text-sm flex items-center gap-1 ${
+              distance > MAX_DELIVERY_DISTANCE ? 'text-red-700' : 'text-blue-700'
+            }`}>
+              <MapPin className="h-3 w-3" aria-hidden="true" />
+              Distance: {distance.toFixed(1)} km
+              {isCachedDistance && (
+                <span className="text-xs text-green-600 ml-1">(cached)</span>
+              )}
+              {distance > MAX_DELIVERY_DISTANCE && (
+                <span className="text-xs text-red-600 ml-1">(outside delivery range)</span>
+              )}
+            </p>
+          </div>
+        )}
 
-         {/* Delivery Time Selection */}
-         <div className="space-y-3">
-           <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2 text-sm">
-             <Clock className="h-4 w-4" />
-             When should we deliver?
-           </h3>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-             <button
-               className={`group relative rounded-lg border-2 p-4 transition-colors duration-200 focus:outline-none text-center h-full ${deliveryTimeType === 'asap' ? 'border-orange-600 bg-orange-50 shadow-lg' : 'border-gray-200 hover:border-orange-300 hover:shadow-md'}`}
-               onClick={() => setDeliveryTimeType('asap')}
-             >
-               <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-2 bg-gradient-to-br from-orange-600 to-orange-700">
-                 <Clock className="h-5 w-5 text-white" />
-               </div>
-               <h4 className="text-base font-bold text-gray-900 mb-1">ASAP</h4>
-               <p className="text-gray-600 text-xs">Delivered in 30-45 minutes</p>
-               {deliveryTimeType === 'asap' && (
-                 <div className="mt-2 flex items-center justify-center gap-1 text-orange-600">
-                   <CheckCircle className="h-3 w-3" />
-                   <span className="font-semibold text-xs">Selected!</span>
-                 </div>
-               )}
-             </button>
-             <button
-               className={`group relative rounded-lg border-2 p-4 transition-colors duration-200 focus:outline-none text-center h-full ${deliveryTimeType === 'scheduled' ? 'border-orange-600 bg-orange-50 shadow-lg' : 'border-gray-200 hover:border-orange-300 hover:shadow-md'}`}
-               onClick={() => setDeliveryTimeType('scheduled')}
-             >
-               <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-2 bg-gradient-to-br from-orange-600 to-orange-700">
-                 <Calendar className="h-5 w-5 text-white" />
-               </div>
-               <h4 className="text-base font-bold text-gray-900 mb-1">Schedule for Later</h4>
-               <p className="text-gray-600 text-xs">Choose specific date and time</p>
-               {deliveryTimeType === 'scheduled' && (
-                 <div className="mt-2 flex items-center justify-center gap-1 text-orange-600">
-                   <CheckCircle className="h-3 w-3" />
-                   <span className="font-semibold text-xs">Selected!</span>
-                 </div>
-               )}
-             </button>
-           </div>
-           {deliveryTimeType === 'scheduled' && (
-             <div className="mt-3 bg-orange-50 rounded-lg p-3 border border-orange-200">
-               <h4 className="font-bold text-orange-800 mb-2 flex items-center gap-2 text-xs">
-                 <Calendar className="h-3 w-3" />
-                 Schedule Delivery Time
-               </h4>
-               <Input
-                 type="datetime-local"
-                 value={scheduledDeliveryDateTime}
-                 onChange={e => setScheduledDeliveryDateTime(e.target.value)}
-                 min={new Date(Date.now() + 45 * 60 * 1000).toISOString().slice(0, 16)}
-                 className="w-full text-sm"
-               />
-               <p className="text-xs text-orange-600 mt-1">
-                 Minimum 45 minutes from now. Store hours: 11:00 AM - 10:00 PM
-               </p>
-             </div>
-           )}
-         </div>
+        {/* Delivery Time Selection */}
+        <div className="space-y-3">
+          <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2 text-sm">
+            <Clock className="h-4 w-4" aria-hidden="true" />
+            When should we deliver?
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <button
+              className={`group relative rounded-lg border-2 p-4 transition-colors duration-200 focus:outline-none text-center h-full ${
+                deliveryTimeType === 'asap' 
+                  ? 'border-orange-600 bg-orange-50 shadow-lg' 
+                  : 'border-gray-200 hover:border-orange-300 hover:shadow-md'
+              }`}
+              onClick={() => setDeliveryTimeType('asap')}
+              aria-label="Select ASAP delivery"
+              aria-pressed={deliveryTimeType === 'asap'}
+            >
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-2 bg-gradient-to-br from-orange-600 to-orange-700">
+                <Clock className="h-5 w-5 text-white" aria-hidden="true" />
+              </div>
+              <h4 className="text-base font-bold text-gray-900 mb-1">ASAP</h4>
+              <p className="text-gray-600 text-xs">Delivered in 30-45 minutes</p>
+              {deliveryTimeType === 'asap' && (
+                <div className="mt-2 flex items-center justify-center gap-1 text-orange-600">
+                  <CheckCircle className="h-3 w-3" aria-hidden="true" />
+                  <span className="font-semibold text-xs">Selected!</span>
+                </div>
+              )}
+            </button>
+            <button
+              className={`group relative rounded-lg border-2 p-4 transition-colors duration-200 focus:outline-none text-center h-full ${
+                deliveryTimeType === 'scheduled' 
+                  ? 'border-orange-600 bg-orange-50 shadow-lg' 
+                  : 'border-gray-200 hover:border-orange-300 hover:shadow-md'
+              }`}
+              onClick={() => setDeliveryTimeType('scheduled')}
+              aria-label="Select scheduled delivery"
+              aria-pressed={deliveryTimeType === 'scheduled'}
+            >
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-2 bg-gradient-to-br from-orange-600 to-orange-700">
+                <Calendar className="h-5 w-5 text-white" aria-hidden="true" />
+              </div>
+              <h4 className="text-base font-bold text-gray-900 mb-1">Schedule for Later</h4>
+              <p className="text-gray-600 text-xs">Choose specific date and time</p>
+              {deliveryTimeType === 'scheduled' && (
+                <div className="mt-2 flex items-center justify-center gap-1 text-orange-600">
+                  <CheckCircle className="h-3 w-3" aria-hidden="true" />
+                  <span className="font-semibold text-xs">Selected!</span>
+                </div>
+              )}
+            </button>
+          </div>
+          {deliveryTimeType === 'scheduled' && (
+            <div className="mt-3 bg-orange-50 rounded-lg p-3 border border-orange-200">
+              <h4 className="font-bold text-orange-800 mb-2 flex items-center gap-2 text-xs">
+                <Calendar className="h-3 w-3" aria-hidden="true" />
+                Schedule Delivery Time
+              </h4>
+              <Input
+                type="datetime-local"
+                value={scheduledDeliveryDateTime}
+                onChange={e => setScheduledDeliveryDateTime(e.target.value)}
+                min={new Date(Date.now() + STORE_HOURS.minAdvance * 60 * 1000).toISOString().slice(0, 16)}
+                className={`w-full text-sm ${validationError ? 'border-red-300 focus:border-red-500 focus:ring-red-200' : ''}`}
+                aria-describedby={validationError ? 'datetime-error' : undefined}
+              />
+              {validationError && (
+                <p id="datetime-error" className="text-red-600 text-sm mt-2 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                  {validationError}
+                </p>
+              )}
+              <p className="text-xs text-orange-600 mt-1">
+                Minimum {STORE_HOURS.minAdvance} minutes from now. Store hours: {STORE_HOURS.open}:00 AM - {STORE_HOURS.close}:00 PM
+              </p>
+            </div>
+          )}
+        </div>
 
         {!isComplete && (
           <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm text-yellow-800 text-center">
               Please fill in all address fields to continue.
+            </p>
+          </div>
+        )}
+
+        {distance !== null && distance > MAX_DELIVERY_DISTANCE && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800 text-center">
+              ⚠️ This address is outside our delivery range ({MAX_DELIVERY_DISTANCE} km). Please choose a closer address or select pickup instead.
             </p>
           </div>
         )}
@@ -266,6 +361,39 @@ const DeliveryDetailsPage = () => {
   const [isCachedDistance, setIsCachedDistance] = useState(false);
   const [deliveryTimeType, setDeliveryTimeType] = useState<'asap' | 'scheduled'>('asap');
   const [scheduledDeliveryDateTime, setScheduledDeliveryDateTime] = useState('');
+  const [errorDialog, setErrorDialog] = useState<{ isOpen: boolean; title: string; message: string }>({
+    isOpen: false,
+    title: '',
+    message: ''
+  });
+  const [validationError, setValidationError] = useState<string>('');
+
+  // Validate scheduled delivery datetime
+  const validateScheduledDateTime = useCallback((dateTime: string): string => {
+    if (!dateTime) return 'Please select a delivery date and time.';
+    
+    const selectedDate = new Date(dateTime);
+    const now = new Date();
+    const minTime = new Date(now.getTime() + STORE_HOURS.minAdvance * 60 * 1000);
+    
+    if (selectedDate < minTime) {
+      return `Delivery time must be at least ${STORE_HOURS.minAdvance} minutes from now.`;
+    }
+    
+    const selectedHour = selectedDate.getHours();
+    if (selectedHour < STORE_HOURS.open || selectedHour >= STORE_HOURS.close) {
+      return `Store hours are ${STORE_HOURS.open}:00 AM - ${STORE_HOURS.close}:00 PM.`;
+    }
+    
+    return '';
+  }, []);
+
+  // Handle scheduled datetime changes
+  const handleScheduledDateTimeChange = useCallback((dateTime: string) => {
+    setScheduledDeliveryDateTime(dateTime);
+    const error = validateScheduledDateTime(dateTime);
+    setValidationError(error);
+  }, [validateScheduledDateTime]);
 
   // Refresh customer data from database when component mounts or phone changes
   useEffect(() => {
@@ -301,6 +429,11 @@ const DeliveryDetailsPage = () => {
         }
       } catch (error) {
         console.error('Error refreshing customer data:', error);
+        setErrorDialog({
+          isOpen: true,
+          title: 'Error Loading Customer',
+          message: 'Failed to load customer information. Please try again.'
+        });
         // If refresh fails, use the initial customer data
         if (initialCustomer) {
           setCustomer(initialCustomer);
@@ -348,14 +481,20 @@ const DeliveryDetailsPage = () => {
       
       if (storeLat && storeLon) {
         setIsLoadingDistance(true);
-        const distanceKm = await calculateDrivingDistance(
-          storeLat,
-          storeLon,
-          address.lat,
-          address.lon
-        );
-        setDistance(distanceKm);
-        setIsLoadingDistance(false);
+        try {
+          const distanceKm = await calculateDrivingDistance(
+            storeLat,
+            storeLon,
+            address.lat,
+            address.lon
+          );
+          setDistance(distanceKm);
+        } catch (error) {
+          console.error('Error calculating distance:', error);
+          setDistance(null);
+        } finally {
+          setIsLoadingDistance(false);
+        }
       } else {
         setDistance(null);
         setIsLoadingDistance(false);
@@ -370,11 +509,6 @@ const DeliveryDetailsPage = () => {
     setFullAddress(value);
   }, []);
 
-  const handleDeliveryAddressChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    setDeliveryAddress(prev => ({ ...prev, [id]: value }));
-  }, []);
-
   const handleNavigateToCustomerLookup = useCallback(() => {
     navigate('/customer-lookup');
   }, [navigate]);
@@ -384,6 +518,30 @@ const DeliveryDetailsPage = () => {
   }, [navigate, customer, phone]);
 
   const handleConfirmDelivery = useCallback(async () => {
+    // Validate scheduled delivery time if selected
+    if (deliveryTimeType === 'scheduled') {
+      const error = validateScheduledDateTime(scheduledDeliveryDateTime);
+      if (error) {
+        setValidationError(error);
+        setErrorDialog({
+          isOpen: true,
+          title: 'Invalid Delivery Time',
+          message: error
+        });
+        return;
+      }
+    }
+
+    // Check delivery distance
+    if (distance !== null && distance > MAX_DELIVERY_DISTANCE) {
+      setErrorDialog({
+        isOpen: true,
+        title: 'Address Outside Delivery Range',
+        message: `This address is ${distance.toFixed(1)} km away, which is outside our delivery range of ${MAX_DELIVERY_DISTANCE} km. Please choose a closer address or select pickup instead.`
+      });
+      return;
+    }
+
     try {
       // Update customer address in database if it has changed
       if (phone && (
@@ -416,29 +574,20 @@ const DeliveryDetailsPage = () => {
       });
     } catch (error) {
       console.error('Error updating customer address:', error);
-      // Continue with navigation even if address update fails
-      navigate('/menu', { 
-        state: { 
-          customer: {
-            ...customer,
-            address: deliveryAddress,
-            distanceFromStore: distance
-          }, 
-          phone, 
-          orderType: 'delivery', 
-          deliveryAddress,
-          deliveryTimeType,
-          scheduledDeliveryDateTime,
-          distance
-        } 
+      setErrorDialog({
+        isOpen: true,
+        title: 'Error Updating Address',
+        message: 'Failed to update customer address. Please try again.'
       });
     }
-  }, [navigate, customer, phone, deliveryAddress, deliveryTimeType, scheduledDeliveryDateTime, distance]);
+  }, [navigate, customer, phone, deliveryAddress, deliveryTimeType, scheduledDeliveryDateTime, distance, validateScheduledDateTime]);
 
   // Memoized derived state
   const isDetailsComplete = useMemo(() => 
-    Boolean(deliveryAddress.street && deliveryAddress.city && deliveryAddress.postalCode),
-    [deliveryAddress.street, deliveryAddress.city, deliveryAddress.postalCode]
+    Boolean(deliveryAddress.street && deliveryAddress.city && deliveryAddress.postalCode) &&
+    (deliveryTimeType === 'asap' || (deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime !== '' && !validationError)) &&
+    (distance === null || distance <= MAX_DELIVERY_DISTANCE),
+    [deliveryAddress.street, deliveryAddress.city, deliveryAddress.postalCode, deliveryTimeType, scheduledDeliveryDateTime, validationError, distance]
   );
 
   if (!customer) {
@@ -461,7 +610,7 @@ const DeliveryDetailsPage = () => {
           <div className="text-center mb-6">
             <div className="inline-flex items-center gap-3 mb-4">
               <div className="p-3 bg-gradient-to-br from-red-800 to-red-900 rounded-2xl shadow-lg">
-                <Truck className="h-8 w-8 text-white" />
+                <Truck className="h-8 w-8 text-white" aria-hidden="true" />
               </div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-red-800 to-red-600 bg-clip-text text-transparent">
                 Delivery Details
@@ -484,25 +633,22 @@ const DeliveryDetailsPage = () => {
 
             {/* Delivery Address Form */}
             <div className="lg:col-span-2">
-                             <AddressForm
-                 deliveryAddress={deliveryAddress}
-                 onChange={handleDeliveryAddressChange}
-                 onAddressSelect={handleAddressSelect}
-                 onAddressChange={handleAddressChange}
-                 fullAddress={fullAddress}
-                 distance={distance}
-                 isLoadingDistance={isLoadingDistance}
-                 isCachedDistance={isCachedDistance}
-                 isComplete={isDetailsComplete}
-                 deliveryTimeType={deliveryTimeType}
-                 setDeliveryTimeType={setDeliveryTimeType}
-                 scheduledDeliveryDateTime={scheduledDeliveryDateTime}
-                 setScheduledDeliveryDateTime={setScheduledDeliveryDateTime}
-               />
+              <AddressForm
+                onAddressSelect={handleAddressSelect}
+                onAddressChange={handleAddressChange}
+                fullAddress={fullAddress}
+                distance={distance}
+                isLoadingDistance={isLoadingDistance}
+                isCachedDistance={isCachedDistance}
+                isComplete={isDetailsComplete}
+                deliveryTimeType={deliveryTimeType}
+                setDeliveryTimeType={setDeliveryTimeType}
+                scheduledDeliveryDateTime={scheduledDeliveryDateTime}
+                setScheduledDeliveryDateTime={handleScheduledDateTimeChange}
+                validationError={validationError}
+              />
             </div>
           </div>
-
-          
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4">
@@ -510,6 +656,7 @@ const DeliveryDetailsPage = () => {
               variant="outline"
               className="sm:w-auto px-6 py-3 border-gray-300 hover:bg-gray-50"
               onClick={handleGoBack}
+              aria-label="Go back to order type selection"
             >
               ← Go Back
             </Button>
@@ -519,13 +666,22 @@ const DeliveryDetailsPage = () => {
               size="lg" 
               disabled={!isDetailsComplete}
               onClick={handleConfirmDelivery}
+              aria-label="Confirm delivery order and proceed to menu"
             >
               <span className="font-bold">Confirm Delivery Order</span>
-              <ArrowRight className="h-5 w-5 ml-2" />
+              <ArrowRight className="h-5 w-5 ml-2" aria-hidden="true" />
             </Button>
           </div>
         </div>
       </div>
+
+      {/* Error Dialog */}
+      <ErrorDialog
+        isOpen={errorDialog.isOpen}
+        onClose={() => setErrorDialog({ ...errorDialog, isOpen: false })}
+        title={errorDialog.title}
+        message={errorDialog.message}
+      />
     </div>
   );
 };

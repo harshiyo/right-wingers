@@ -1,15 +1,116 @@
-import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { searchCustomers, Customer, saveCustomerToFirebase } from '../data/customers';
 import { PhoneInput } from '../components/ui/PhoneInput';
 import { Numpad } from '../components/ui/Numpad';
 import { SearchResults } from '../components/ui/SearchResults';
 import { TopBar } from '../components/layout/TopBar';
-import { Search, Sparkles, Clock } from 'lucide-react';
+import { Search, Sparkles, Clock, AlertTriangle, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 
 // Lazy load the CustomerFormDialog to improve initial load time
 const CustomerFormDialog = React.lazy(() => import('../components/CustomerFormDialog').then(module => ({ default: module.CustomerFormDialog })));
+
+// Error dialog component for better UX
+const ErrorDialog = ({ 
+  isOpen, 
+  onClose, 
+  title, 
+  message, 
+  type = 'error' 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  title: string; 
+  message: string; 
+  type?: 'error' | 'warning' | 'info'; 
+}) => {
+  if (!isOpen) return null;
+
+  const bgColor = type === 'error' ? 'bg-red-50' : type === 'warning' ? 'bg-yellow-50' : 'bg-blue-50';
+  const borderColor = type === 'error' ? 'border-red-200' : type === 'warning' ? 'border-yellow-200' : 'border-blue-200';
+  const iconColor = type === 'error' ? 'text-red-600' : type === 'warning' ? 'text-yellow-600' : 'text-blue-600';
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+      <div className={`${bgColor} ${borderColor} border-2 rounded-2xl shadow-2xl max-w-md w-full p-6`}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className={`h-6 w-6 ${iconColor}`} />
+            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Close dialog"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <p className="text-gray-700 mb-6 whitespace-pre-line">{message}</p>
+        <div className="flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Blocked customer dialog component
+const BlockedCustomerDialog = ({ 
+  isOpen, 
+  onClose, 
+  customer 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  customer: Customer; 
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+      <div className="bg-red-50 border-2 border-red-200 rounded-2xl shadow-2xl max-w-md w-full p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-6 w-6 text-red-600" />
+            <h3 className="text-lg font-semibold text-red-900">Customer Blocked</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-red-400 hover:text-red-600 transition-colors"
+            aria-label="Close dialog"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="space-y-3 text-red-800">
+          <p><strong>Name:</strong> {customer.name}</p>
+          <p><strong>Phone:</strong> {customer.phone}</p>
+          <p><strong>Reason:</strong> {customer.blockedReason || 'No reason provided'}</p>
+          <p><strong>Blocked on:</strong> {customer.blockedDate ? new Date(customer.blockedDate).toLocaleDateString() : 'Unknown date'}</p>
+          <p><strong>Blocked by:</strong> {customer.blockedBy || 'Unknown'}</p>
+        </div>
+        <p className="text-red-700 mt-4 font-medium">
+          This customer is blocked and cannot place orders.
+        </p>
+        <div className="flex justify-end mt-6">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const CustomerLookupPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -18,15 +119,35 @@ const CustomerLookupPage = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1); // For keyboard navigation
+  const [errorDialog, setErrorDialog] = useState<{ isOpen: boolean; title: string; message: string; type: 'error' | 'warning' | 'info' }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'error'
+  });
+  const [blockedCustomerDialog, setBlockedCustomerDialog] = useState<{ isOpen: boolean; customer: Customer | null }>({
+    isOpen: false,
+    customer: null
+  });
+  
   const phoneInputRef = useRef<HTMLInputElement>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
   const { currentStore } = useStore();
 
+  // Validate store ID and provide fallback
+  const storeId = useMemo(() => {
+    if (!currentStore?.id) {
+      console.warn('⚠️ No current store selected, using fallback store ID');
+      return 'store_001'; // This should be replaced with actual fallback logic
+    }
+    return currentStore.id;
+  }, [currentStore?.id]);
+
   // Auto-focus the phone input when page loads and keep it focused
   useEffect(() => {
     const focusInput = () => {
-      if (phoneInputRef.current) {
+      if (phoneInputRef.current && !showCreateDialog) {
         phoneInputRef.current.focus();
       }
     };
@@ -35,10 +156,14 @@ const CustomerLookupPage = () => {
     
     // Keep input focused when clicking anywhere on the page
     const handlePageClick = (e: MouseEvent) => {
-      // Don't refocus if clicking on buttons or interactive elements, or if dialog is open
+      // Don't refocus if clicking on buttons, interactive elements, or if dialog is open
       const target = e.target as HTMLElement;
-      if (!showCreateDialog && !target.closest('button') && !target.closest('a') && !target.closest('input[type="datetime-local"]')) {
-        setTimeout(focusInput, 0);
+      if (!showCreateDialog && 
+          !target.closest('button') && 
+          !target.closest('a') && 
+          !target.closest('input[type="datetime-local"]') &&
+          !target.closest('[role="dialog"]')) {
+        setTimeout(focusInput, 100); // Small delay to ensure proper focus
       }
     };
 
@@ -63,15 +188,21 @@ const CustomerLookupPage = () => {
     
     try {
       // Use Firebase-integrated search function
-      const results = await searchCustomers(query, currentStore?.id);
+      const results = await searchCustomers(query, storeId);
       setSearchResults(results);
     } catch (error) {
       console.error('❌ Search failed:', error);
       setSearchResults([]);
+      setErrorDialog({
+        isOpen: true,
+        title: 'Search Error',
+        message: 'Failed to search for customers. Please try again.',
+        type: 'error'
+      });
     } finally {
       setIsSearching(false);
     }
-  }, [currentStore?.id]);
+  }, [storeId]);
 
   // Optimized debounced search with cleanup
   useEffect(() => {
@@ -81,7 +212,7 @@ const CustomerLookupPage = () => {
 
     searchTimeoutRef.current = setTimeout(() => {
       performSearch(searchQuery);
-    }, 250); // Reduced from 300ms for better responsiveness
+    }, 300); // Increased to 300ms for better user experience
 
     return () => {
       if (searchTimeoutRef.current) {
@@ -90,33 +221,33 @@ const CustomerLookupPage = () => {
     };
   }, [searchQuery, performSearch]);
 
-  // Auto-select first customer when search results change and there's an exact phone match
-  useEffect(() => {
-    if (searchResults.length > 0) {
-      // Check if the search query is a phone number (contains only digits, spaces, dashes, parentheses)
-      const cleanQuery = searchQuery.replace(/[\s\-\(\)]/g, '');
-      const isPhoneQuery = /^\d+$/.test(cleanQuery) && cleanQuery.length >= 10;
+  // Optimized auto-selection logic with useMemo
+  const autoSelectionIndex = useMemo(() => {
+    if (searchResults.length === 0) return -1;
+    
+    // Check if the search query is a phone number (contains only digits, spaces, dashes, parentheses)
+    const cleanQuery = searchQuery.replace(/[\s\-\(\)]/g, '');
+    const isPhoneQuery = /^\d+$/.test(cleanQuery) && cleanQuery.length >= 10;
+    
+    if (isPhoneQuery) {
+      // Check for exact phone match
+      const exactMatch = searchResults.find(customer => {
+        const cleanCustomerPhone = customer.phone.replace(/\D/g, '');
+        return cleanCustomerPhone === cleanQuery || cleanCustomerPhone.endsWith(cleanQuery);
+      });
       
-      if (isPhoneQuery) {
-        // Check for exact phone match
-        const exactMatch = searchResults.find(customer => {
-          const cleanCustomerPhone = customer.phone.replace(/\D/g, '');
-          return cleanCustomerPhone === cleanQuery || cleanCustomerPhone.endsWith(cleanQuery);
-        });
-        
-        if (exactMatch) {
-          const exactIndex = searchResults.findIndex(customer => customer.id === exactMatch.id);
-          setSelectedIndex(exactIndex);
-        } else {
-          setSelectedIndex(0); // Select first result if no exact match
-        }
-      } else {
-        setSelectedIndex(0); // Select first result for name searches
+      if (exactMatch) {
+        return searchResults.findIndex(customer => customer.id === exactMatch.id);
       }
-    } else {
-      setSelectedIndex(-1);
     }
+    
+    return 0; // Select first result by default
   }, [searchResults, searchQuery]);
+
+  // Update selected index when auto-selection changes
+  useEffect(() => {
+    setSelectedIndex(autoSelectionIndex);
+  }, [autoSelectionIndex]);
 
   // Memoized formatters to prevent recreation
   const formatPhoneDisplay = useCallback((phone: string) => {
@@ -128,20 +259,27 @@ const CustomerLookupPage = () => {
   }, []);
 
   const formatLastOrderDate = useCallback((dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid date';
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    } catch {
+      return 'Invalid date';
+    }
   }, []);
 
   // Memoized handlers
   const handleSelectCustomer = useCallback((customer: Customer) => {
     // Check if customer is blocked
     if (customer.isBlocked) {
-      const blockedMessage = `This customer is blocked and cannot place orders.\n\nReason: ${customer.blockedReason || 'No reason provided'}\nBlocked on: ${customer.blockedDate ? new Date(customer.blockedDate).toLocaleDateString() : 'Unknown date'}\nBlocked by: ${customer.blockedBy || 'Unknown'}`;
-      alert(blockedMessage);
+      setBlockedCustomerDialog({
+        isOpen: true,
+        customer
+      });
       return;
     }
     
@@ -159,7 +297,7 @@ const CustomerLookupPage = () => {
         ...customerData,
         orderCount: 0,
         lastOrderDate: new Date().toISOString().split('T')[0],
-        storeId: currentStore?.id || 'store_001', // Default to first store if no current store
+        storeId,
       };
       
       // Save to Firebase first
@@ -175,26 +313,15 @@ const CustomerLookupPage = () => {
     } catch (error) {
       console.error('❌ Failed to save customer:', error);
       
-      // Fallback: create customer in memory if Firebase fails
-      const fallbackCustomer: Customer = {
-        id: Date.now().toString(),
-        ...customerData,
-        orderCount: 0,
-        lastOrderDate: new Date().toISOString().split('T')[0],
-        storeId: currentStore?.id || 'store_001',
-      };
-      
-      // Show error to user but still proceed
-      alert('Warning: Could not save customer to database. Customer will be created temporarily for this order.');
-      
-      navigate('/order', { 
-        state: { 
-          customer: fallbackCustomer, 
-          phone: fallbackCustomer.phone 
-        } 
+      // Show error dialog
+      setErrorDialog({
+        isOpen: true,
+        title: 'Customer Creation Failed',
+        message: 'Could not save customer to database. Please try again or contact support if the problem persists.',
+        type: 'error'
       });
     }
-  }, [navigate, currentStore?.id]);
+  }, [navigate, storeId]);
 
   // Numpad handlers
   const handleNumpadNumber = useCallback((number: string) => {
@@ -207,11 +334,19 @@ const CustomerLookupPage = () => {
 
   const handleNumpadClear = useCallback(() => {
     setSearchQuery('');
+    setSelectedIndex(-1);
+    setSearchResults([]);
+    setHasSearched(false);
   }, []);
 
-  // Handle keyboard navigation
+  // Enhanced keyboard navigation with better edge case handling
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle keys if dialogs are open
+      if (showCreateDialog || blockedCustomerDialog.isOpen || errorDialog.isOpen) {
+        return;
+      }
+
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
@@ -238,12 +373,27 @@ const CustomerLookupPage = () => {
             setShowCreateDialog(true);
           }
           break;
+        case 'Escape':
+          e.preventDefault();
+          if (searchQuery.length > 0) {
+            handleNumpadClear();
+          }
+          break;
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [searchResults, selectedIndex, hasSearched, isSearching, searchQuery.length, handleSelectCustomer]);
+  }, [searchResults, selectedIndex, hasSearched, isSearching, searchQuery.length, handleSelectCustomer, showCreateDialog, blockedCustomerDialog.isOpen, errorDialog.isOpen, handleNumpadClear]);
+
+  // Close dialogs when navigating away
+  useEffect(() => {
+    return () => {
+      setShowCreateDialog(false);
+      setBlockedCustomerDialog({ isOpen: false, customer: null });
+      setErrorDialog({ isOpen: false, title: '', message: '', type: 'error' });
+    };
+  }, []);
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-red-50 via-white to-orange-50">
@@ -257,8 +407,6 @@ const CustomerLookupPage = () => {
       />
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-7xl mx-auto py-4 lg:py-8 px-3 lg:px-4">
-          {/* Header */}
-
           {/* Enhanced Search Section */}
           <div className="bg-white rounded-2xl lg:rounded-3xl shadow-2xl border border-gray-100 p-4 lg:p-8 mb-4 lg:mb-8">
             <div className="relative">
@@ -268,10 +416,11 @@ const CustomerLookupPage = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by phone number or name..."
                 className="pl-4 lg:pl-6 pr-12 lg:pr-16 py-3 lg:py-4 w-full text-base lg:text-lg border-2 border-gray-200 rounded-xl lg:rounded-2xl focus:ring-4 focus:ring-red-200 focus:border-red-800 bg-gray-50 transition-all duration-200"
+                aria-label="Search customers by phone number or name"
               />
               <div className="absolute inset-y-0 right-0 pr-3 lg:pr-4 flex items-center">
                 {isSearching ? (
-                  <div className="relative">
+                  <div className="relative" role="status" aria-label="Searching">
                     <div className="animate-spin rounded-full h-5 w-5 lg:h-6 lg:w-6 border-b-2 border-red-800"></div>
                     <div className="absolute inset-0 animate-ping rounded-full h-5 w-5 lg:h-6 lg:w-6 border border-red-300 opacity-20"></div>
                   </div>
@@ -289,8 +438,8 @@ const CustomerLookupPage = () => {
               </p>
               <div className="text-xs text-gray-400 flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                <span className="hidden lg:inline">Use ↑↓ arrows & Enter | No match? Press Enter to add new customer</span>
-                <span className="lg:hidden">↑↓ arrows & Enter</span>
+                <span className="hidden lg:inline">Use ↑↓ arrows & Enter | No match? Press Enter to add new customer | Press Esc to clear</span>
+                <span className="lg:hidden">↑↓ arrows & Enter | Esc to clear</span>
               </div>
             </div>
           </div>
@@ -338,6 +487,22 @@ const CustomerLookupPage = () => {
           />
         </React.Suspense>
       )}
+
+      {/* Error Dialog */}
+      <ErrorDialog
+        isOpen={errorDialog.isOpen}
+        onClose={() => setErrorDialog({ ...errorDialog, isOpen: false })}
+        title={errorDialog.title}
+        message={errorDialog.message}
+        type={errorDialog.type}
+      />
+
+      {/* Blocked Customer Dialog */}
+      <BlockedCustomerDialog
+        isOpen={blockedCustomerDialog.isOpen}
+        onClose={() => setBlockedCustomerDialog({ isOpen: false, customer: null })}
+        customer={blockedCustomerDialog.customer!}
+      />
     </div>
   );
 };

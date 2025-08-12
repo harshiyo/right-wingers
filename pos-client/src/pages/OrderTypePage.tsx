@@ -4,7 +4,7 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { TopBar } from '../components/layout/TopBar';
 import { PreviousOrdersDialog } from '../components/PreviousOrdersDialog';
-import { Package, Truck, Store, Clock, CheckCircle, User, History } from 'lucide-react';
+import { Package, Truck, Store, Clock, CheckCircle, User, History, AlertTriangle, X } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { Customer } from '../data/customers';
 
@@ -39,6 +39,50 @@ interface Order {
   paymentStatus?: 'paid' | 'unpaid' | 'pending';
 }
 
+// Error dialog component for better UX
+const ErrorDialog = ({ 
+  isOpen, 
+  onClose, 
+  title, 
+  message 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  title: string; 
+  message: string; 
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+      <div className="bg-red-50 border-2 border-red-200 rounded-2xl shadow-2xl max-w-md w-full p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-6 w-6 text-red-600" />
+            <h3 className="text-lg font-semibold text-red-900">{title}</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-red-400 hover:text-red-600 transition-colors"
+            aria-label="Close dialog"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <p className="text-red-700 mb-6">{message}</p>
+        <div className="flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Memoized components to prevent unnecessary re-renders
 const OrderTypeCard = memo(({ 
   type, 
@@ -69,6 +113,8 @@ const OrderTypeCard = memo(({
         "border-gray-200 hover:border-red-300 hover:shadow-md": !isSelected && !isKeyboardSelected,
       }
     )}
+    aria-label={`Select ${title} order type`}
+    aria-pressed={isSelected}
   >
     <div className={cn(
       "w-12 h-12 lg:w-14 lg:h-14 rounded-lg lg:rounded-xl flex items-center justify-center mx-auto mb-2 lg:mb-3 transition-transform duration-150 shadow-lg",
@@ -77,7 +123,7 @@ const OrderTypeCard = memo(({
         "bg-gradient-to-br from-orange-600 to-orange-700 group-hover:scale-105": type === 'delivery'
       }
     )}>
-      <Icon className="h-6 w-6 lg:h-7 lg:w-7 text-white" />
+      <Icon className="h-6 w-6 lg:h-7 lg:w-7 text-white" aria-hidden="true" />
     </div>
     
     <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-1 lg:mb-2">{title}</h3>
@@ -86,7 +132,7 @@ const OrderTypeCard = memo(({
     <div className="space-y-1 text-sm text-gray-500">
       {features.map((feature, index) => (
         <div key={index} className="flex items-center justify-center gap-2">
-          <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+          <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" aria-hidden="true" />
           <span>{feature}</span>
         </div>
       ))}
@@ -94,14 +140,14 @@ const OrderTypeCard = memo(({
     
     {isSelected && (
       <div className="mt-3 flex items-center justify-center gap-2 text-red-600">
-        <CheckCircle className="h-4 w-4" />
+        <CheckCircle className="h-4 w-4" aria-hidden="true" />
         <span className="font-semibold text-sm">Selected!</span>
       </div>
     )}
     
     {isKeyboardSelected && !isSelected && (
       <div className="mt-3 flex items-center justify-center gap-2 text-red-600">
-        <div className="h-4 w-4 border-2 border-red-600 rounded-full animate-pulse" />
+        <div className="h-4 w-4 border-2 border-red-600 rounded-full animate-pulse" aria-hidden="true" />
         <span className="font-semibold text-sm">Press Enter to Select</span>
       </div>
     )}
@@ -113,18 +159,22 @@ OrderTypeCard.displayName = 'OrderTypeCard';
 const CustomerInfoCard = memo(({ 
   customer, 
   phone, 
+  customerName,
+  onCustomerNameChange,
   onNavigateToCustomerLookup,
   onShowPreviousOrders 
 }: {
   customer: Customer | null;
   phone: string;
+  customerName: string;
+  onCustomerNameChange: (name: string) => void;
   onNavigateToCustomerLookup: () => void;
   onShowPreviousOrders: () => void;
 }) => (
   <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 h-full flex flex-col">
     <div className="flex items-center gap-2 mb-6">
       <div className="p-2 bg-gradient-to-br from-red-800 to-red-900 rounded-lg">
-        <User className="h-5 w-5 text-white" />
+        <User className="h-5 w-5 text-white" aria-hidden="true" />
       </div>
       <h2 className="text-xl font-bold text-gray-900">Customer Information</h2>
     </div>
@@ -134,17 +184,26 @@ const CustomerInfoCard = memo(({
         <div className="space-y-3">
           <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <p className="text-sm text-yellow-800 font-medium mb-1 flex items-center gap-2">
-              <Clock className="h-4 w-4" />
+              <Clock className="h-4 w-4" aria-hidden="true" />
               New customer detected
             </p>
             <p className="text-xs text-yellow-700">Please enter their name to continue.</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Customer Name</label>
+            <label htmlFor="customer-name" className="block text-sm font-medium text-gray-700 mb-2">
+              Customer Name
+            </label>
             <Input 
+              id="customer-name"
+              value={customerName}
+              onChange={(e) => onCustomerNameChange(e.target.value)}
               placeholder="Enter customer name..."
               className="w-full"
+              aria-describedby="customer-name-help"
             />
+            <p id="customer-name-help" className="text-xs text-gray-500 mt-1">
+              Enter the customer's full name to continue
+            </p>
           </div>
         </div>
       ) : (
@@ -156,7 +215,7 @@ const CustomerInfoCard = memo(({
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-green-600 rounded-full shadow-sm">
-                    <CheckCircle className="h-4 w-4 text-white" />
+                    <CheckCircle className="h-4 w-4 text-white" aria-hidden="true" />
                   </div>
                   <div>
                     <p className="font-bold text-green-800 text-base leading-tight">
@@ -172,6 +231,7 @@ const CustomerInfoCard = memo(({
                   size="sm" 
                   onClick={onNavigateToCustomerLookup} 
                   className="text-green-700 hover:bg-green-100 text-xs px-3 py-1.5 font-medium"
+                  aria-label="Change customer"
                 >
                   Not them?
                 </Button>
@@ -211,8 +271,9 @@ const CustomerInfoCard = memo(({
               <Button
                 onClick={onShowPreviousOrders}
                 className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white border-0 font-bold py-3 rounded-lg flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all duration-200"
+                aria-label="View previous orders"
               >
-                <History className="h-4 w-4" />
+                <History className="h-4 w-4" aria-hidden="true" />
                 <span className="text-sm">View Previous Orders</span>
               </Button>
             </div>
@@ -241,6 +302,18 @@ const OrderTypePage = () => {
   const [previousOrders, setPreviousOrders] = useState<Order[]>([]);
   const [isLoadingPreviousOrders, setIsLoadingPreviousOrders] = useState(false);
   const [previousOrdersCache, setPreviousOrdersCache] = useState<Map<string, Order[]>>(new Map());
+  const [errorDialog, setErrorDialog] = useState<{ isOpen: boolean; title: string; message: string }>({
+    isOpen: false,
+    title: '',
+    message: ''
+  });
+
+  // Memoized Firebase imports to avoid repeated dynamic imports
+  const firebaseImports = useMemo(async () => {
+    const { collection, query, where, getDocs, orderBy, limit } = await import('firebase/firestore');
+    const { db } = await import('../services/firebase');
+    return { collection, query, where, getDocs, orderBy, limit, db };
+  }, []);
 
   // Pre-fetch previous orders when customer is loaded
   const preFetchPreviousOrders = useCallback(async (customerPhone: string) => {
@@ -252,9 +325,7 @@ const OrderTypePage = () => {
     }
     
     try {
-      // Pre-fetch in background without blocking UI
-      const { collection, query, where, getDocs, orderBy, limit } = await import('firebase/firestore');
-      const { db } = await import('../services/firebase');
+      const { collection, query, where, getDocs, orderBy, limit, db } = await firebaseImports;
 
       // Optimized query - only get the most recent order
       const ordersQuery = query(
@@ -293,7 +364,7 @@ const OrderTypePage = () => {
       // Cache empty result on error
       setPreviousOrdersCache(prev => new Map(prev).set(cleanPhone, []));
     }
-  }, [customer?.name, previousOrdersCache]);
+  }, [customer?.name, previousOrdersCache, firebaseImports]);
 
   // Effect to handle customer initialization
   useEffect(() => {
@@ -312,8 +383,28 @@ const OrderTypePage = () => {
     }
   }, [initialCustomer, phone, navigate, preFetchPreviousOrders]);
 
+  // Handle customer name changes
+  const handleCustomerNameChange = useCallback((name: string) => {
+    setCustomerName(name);
+  }, []);
+
+  // Memoized derived state
+  const isCustomerInfoConfirmed = useMemo(() => 
+    customer !== null || (customer === null && customerName.trim() !== ''),
+    [customer, customerName]
+  );
+
   // Memoized handlers
   const handleOrderTypeSelect = useCallback((type: 'pickup' | 'delivery') => {
+    if (!isCustomerInfoConfirmed) {
+      setErrorDialog({
+        isOpen: true,
+        title: 'Customer Information Required',
+        message: 'Please enter the customer name before selecting an order type.'
+      });
+      return;
+    }
+
     setSelectedType(type);
     
     const finalCustomerData = customer || { name: customerName, phone };
@@ -323,7 +414,7 @@ const OrderTypePage = () => {
         phone 
       } 
     });
-  }, [customer, customerName, phone, navigate]);
+  }, [customer, customerName, phone, navigate, isCustomerInfoConfirmed]);
 
   const handleNavigateToCustomerLookup = useCallback(() => {
     navigate('/customer-lookup');
@@ -347,9 +438,7 @@ const OrderTypePage = () => {
       setPreviousOrders([]);
       
       try {
-        // Use optimized Firebase query
-        const { collection, query, where, getDocs, orderBy, limit } = await import('firebase/firestore');
-        const { db } = await import('../services/firebase');
+        const { collection, query, where, getDocs, orderBy, limit, db } = await firebaseImports;
 
         // Single optimized query - only get the most recent order
         const ordersQuery = query(
@@ -391,11 +480,17 @@ const OrderTypePage = () => {
         setPreviousOrders([]);
         // Cache empty result on error
         setPreviousOrdersCache(prev => new Map(prev).set(cleanPhone, []));
+        
+        setErrorDialog({
+          isOpen: true,
+          title: 'Error Loading Orders',
+          message: 'Failed to load previous orders. Please try again.'
+        });
       } finally {
         setIsLoadingPreviousOrders(false);
       }
     }
-  }, [customer, phone, previousOrdersCache]);
+  }, [customer, phone, previousOrdersCache, firebaseImports]);
 
   // Helper to normalize order items for cart reordering (same as modify order)
   const normalizeOrderItemsForCart = (orderItems: any[]): any[] => {
@@ -456,15 +551,13 @@ const OrderTypePage = () => {
       
     } catch (error) {
       console.error('❌ Error processing reorder:', error);
-      alert('Error loading previous order. Please try again.');
+      setErrorDialog({
+        isOpen: true,
+        title: 'Reorder Error',
+        message: 'Error loading previous order. Please try again.'
+      });
     }
   }, [addToCart, clearCart, navigate]);
-
-  // Memoized derived state
-  const isCustomerInfoConfirmed = useMemo(() => 
-    customer !== null || (customer === null && customerName.trim() !== ''),
-    [customer, customerName]
-  );
 
   // Memoized order type data
   const orderTypeData = useMemo(() => [
@@ -538,7 +631,7 @@ const OrderTypePage = () => {
           <div className="text-center">
             <div className="inline-flex items-center gap-2 lg:gap-3 mb-2 lg:mb-4">
               <div className="p-2 lg:p-3 bg-gradient-to-br from-red-800 to-red-900 rounded-xl lg:rounded-2xl shadow-lg">
-                <Store className="h-6 w-6 lg:h-8 lg:w-8 text-white" />
+                <Store className="h-6 w-6 lg:h-8 lg:w-8 text-white" aria-hidden="true" />
               </div>
               <h1 className="text-2xl lg:text-4xl font-bold bg-gradient-to-r from-red-800 to-red-600 bg-clip-text text-transparent">
                 {customer?.name 
@@ -566,6 +659,8 @@ const OrderTypePage = () => {
               <CustomerInfoCard
                 customer={customer}
                 phone={phone}
+                customerName={customerName}
+                onCustomerNameChange={handleCustomerNameChange}
                 onNavigateToCustomerLookup={handleNavigateToCustomerLookup}
                 onShowPreviousOrders={handleShowPreviousOrders}
               />
@@ -576,7 +671,7 @@ const OrderTypePage = () => {
               <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border border-gray-100 h-full flex flex-col">
                 <div className="flex items-center gap-2 mb-4 lg:mb-6">
                   <div className="p-2 bg-gradient-to-br from-red-800 to-red-900 rounded-lg">
-                    <Truck className="h-5 w-5 text-white" />
+                    <Truck className="h-5 w-5 text-white" aria-hidden="true" />
                   </div>
                   <h2 className="text-lg lg:text-xl font-bold text-gray-900">How would you like to receive your order?</h2>
                 </div>
@@ -621,6 +716,14 @@ const OrderTypePage = () => {
         orders={previousOrders}
         onReorder={handleReorder}
         isLoading={isLoadingPreviousOrders}
+      />
+
+      {/* Error Dialog */}
+      <ErrorDialog
+        isOpen={errorDialog.isOpen}
+        onClose={() => setErrorDialog({ ...errorDialog, isOpen: false })}
+        title={errorDialog.title}
+        message={errorDialog.message}
       />
     </div>
   );
