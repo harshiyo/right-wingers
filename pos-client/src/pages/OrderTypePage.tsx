@@ -11,6 +11,18 @@ import { Customer } from '../data/customers';
 import { useCart } from '../context/CartContext';
 
 // Define Order interface to match PreviousOrdersDialog
+interface OrderItem {
+  id?: string;
+  name: string;
+  quantity: number;
+  price: number;
+  size?: string;
+  extraCharges?: number;
+  customizations?: any;
+  comboItems?: OrderItem[];
+  imageUrl?: string;
+}
+
 interface Order {
   id: string;
   orderNumber: string;
@@ -22,8 +34,9 @@ interface Order {
     name: string;
     phone: string;
   };
-  items: any[];
+  items: OrderItem[];
   orderType?: string;
+  paymentStatus?: 'paid' | 'unpaid' | 'pending';
 }
 
 // Memoized components to prevent unnecessary re-renders

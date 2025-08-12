@@ -1,7 +1,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from './ui/Dialog';
 import { Button } from './ui/Button';
-import { Clock, ShoppingBag, ArrowRight, User, Calendar } from 'lucide-react';
+import { Clock, ShoppingBag, ArrowRight, User, Calendar, MapPin, CreditCard, CheckCircle, AlertCircle, Clock as ClockIcon } from 'lucide-react';
 
 // Use the same order interface as modify order functionality
 interface Order {
@@ -75,7 +75,16 @@ const formatTime = (timestamp: number) => {
 };
 
 const formatPrice = (price: number) => {
-  return `$${price.toFixed(2)}`;
+  // Handle edge cases and ensure we always get exactly 2 decimal places
+  if (typeof price !== 'number' || isNaN(price)) {
+    return '$0.00';
+  }
+  
+  // Convert to string first to handle floating point precision issues
+  const priceStr = price.toString();
+  const roundedPrice = Math.round(parseFloat(priceStr) * 100) / 100;
+  
+  return `$${roundedPrice.toFixed(2)}`;
 };
 
 // Helper function to render customization details - using same logic as OrderNotificationDialog
@@ -128,9 +137,9 @@ const renderCustomizationDetails = (customizations: any, comboItems?: any[]) => 
         details.push(`Instructions: ${step.instructions.join(', ')}`);
       }
       
-      if (!isNaN(Number(step.extraCharge)) && Number(step.extraCharge) > 0) {
-        details.push(`Extra Charge: $${Number(step.extraCharge).toFixed(2)}`);
-      }
+             if (!isNaN(Number(step.extraCharge)) && Number(step.extraCharge) > 0) {
+         details.push(`Extra Charge: ${formatPrice(Number(step.extraCharge))}`);
+       }
     });
   } else if (customizations && typeof customizations === 'object') {
     // Handle regular item customizations - same logic as OrderNotificationDialog
@@ -153,18 +162,66 @@ const renderCustomizationDetails = (customizations: any, comboItems?: any[]) => 
     
     if (customizations.sauces && customizations.sauces.length > 0) {
       details.push(`Sauces: ${customizations.sauces.map((sauce: any) => sauce.name).join(', ')}`);
-    }
+      }
     
     if (customizations.instructions && customizations.instructions.length > 0) {
       details.push(`Instructions: ${customizations.instructions.join(', ')}`);
     }
     
-    if (customizations.extraCharge && Number(customizations.extraCharge) > 0) {
-      details.push(`Extra Charge: $${Number(customizations.extraCharge).toFixed(2)}`);
-    }
+         if (customizations.extraCharge && Number(customizations.extraCharge) > 0) {
+       details.push(`Extra Charge: ${formatPrice(Number(customizations.extraCharge))}`);
+     }
   }
 
   return details;
+};
+
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case 'completed':
+      return <CheckCircle className="w-4 h-4 text-green-600" />;
+    case 'pending':
+      return <ClockIcon className="w-4 h-4 text-yellow-600" />;
+    default:
+      return <AlertCircle className="w-4 h-4 text-gray-600" />;
+  }
+};
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'completed':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
+const getPaymentStatusIcon = (status: string) => {
+  switch (status) {
+    case 'paid':
+      return <CheckCircle className="w-4 h-4 text-green-600" />;
+    case 'unpaid':
+      return <AlertCircle className="w-4 h-4 text-red-600" />;
+    case 'pending':
+      return <ClockIcon className="w-4 h-4 text-yellow-600" />;
+    default:
+      return <CreditCard className="w-4 h-4 text-gray-600" />;
+  }
+};
+
+const getPaymentStatusColor = (status: string) => {
+  switch (status) {
+    case 'paid':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'unpaid':
+      return 'bg-red-100 text-red-800 border-red-200';
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
 };
 
 export const PreviousOrdersDialog: React.FC<PreviousOrdersDialogProps> = ({
@@ -181,26 +238,35 @@ export const PreviousOrdersDialog: React.FC<PreviousOrdersDialogProps> = ({
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg w-full bg-white rounded-xl shadow-xl border-0 p-0 overflow-hidden">
+        <DialogContent className="max-w-2xl w-full bg-white rounded-2xl shadow-2xl border-0 p-0 overflow-hidden">
           <DialogTitle className="sr-only">Loading Previous Order</DialogTitle>
           <DialogDescription className="sr-only">Loading previous order for {customerName}</DialogDescription>
           
           {/* Header */}
-          <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-4">
+          <div className="bg-gradient-to-br from-red-600 via-red-700 to-red-800 text-white p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold">{customerName}'s Recent Order</h2>
-                <p className="text-red-100 text-xs mt-1">Loading...</p>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-full">
+                  <ShoppingBag className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">{customerName}'s Recent Order</h2>
+                  <p className="text-red-100 text-sm mt-1">Loading order details...</p>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Loading Content */}
-          <div className="p-6">
-            <div className="flex items-center justify-center py-8">
-              <div className="flex flex-col items-center space-y-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-                <p className="text-gray-600 text-sm">Loading previous order...</p>
+          <div className="p-8">
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="relative">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-red-200 border-t-red-600"></div>
+                  <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-red-600 animate-ping opacity-20"></div>
+                </div>
+                <p className="text-gray-600 text-base font-medium">Loading previous order...</p>
+                <p className="text-gray-400 text-sm">Please wait while we fetch the details</p>
               </div>
             </div>
           </div>
@@ -212,26 +278,37 @@ export const PreviousOrdersDialog: React.FC<PreviousOrdersDialogProps> = ({
   if (orders.length === 0) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg w-full bg-white rounded-xl shadow-xl border-0 p-0 overflow-hidden">
+        <DialogContent className="max-w-2xl w-full bg-white rounded-2xl shadow-2xl border-0 p-0 overflow-hidden">
           <DialogTitle className="sr-only">No Previous Orders</DialogTitle>
           <DialogDescription className="sr-only">No previous orders found for {customerName}</DialogDescription>
           
           {/* Header */}
-          <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-4">
+          <div className="bg-gradient-to-br from-red-600 via-red-700 to-red-800 text-white p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold">{customerName}'s Orders</h2>
-                <p className="text-red-100 text-xs mt-1">No previous orders found</p>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-full">
+                  <ShoppingBag className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">{customerName}'s Orders</h2>
+                  <p className="text-red-100 text-sm mt-1">No previous orders found</p>
+                </div>
               </div>
             </div>
           </div>
 
           {/* No Orders Content */}
-          <div className="p-6">
-            <div className="flex items-center justify-center py-8">
-              <div className="flex flex-col items-center space-y-3">
-                <ShoppingBag className="h-8 w-8 text-gray-400" />
-                <p className="text-gray-600 text-sm">No previous orders found for this customer.</p>
+          <div className="p-8">
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center space-y-4 text-center">
+                <div className="p-4 bg-gray-100 rounded-full">
+                  <ShoppingBag className="h-12 w-12 text-gray-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No Previous Orders</h3>
+                  <p className="text-gray-600 text-base">This customer hasn't placed any orders yet.</p>
+                  <p className="text-gray-400 text-sm mt-1">Their first order will appear here for quick reordering.</p>
+                </div>
               </div>
             </div>
           </div>
@@ -246,179 +323,202 @@ export const PreviousOrdersDialog: React.FC<PreviousOrdersDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg w-full bg-white rounded-xl shadow-xl border-0 p-0 overflow-hidden max-h-[80vh]">
+      <DialogContent className="max-w-2xl w-full bg-white rounded-2xl shadow-2xl border-0 p-0 overflow-hidden max-h-[85vh]">
         <DialogTitle className="sr-only">{customerName}'s Most Recent Order</DialogTitle>
         <DialogDescription className="sr-only">Quickly reorder their last order</DialogDescription>
         
         {/* Header */}
-        <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-4">
+        <div className="bg-gradient-to-br from-red-600 via-red-700 to-red-800 text-white p-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold">{customerName}'s Recent Order</h2>
-              <p className="text-red-100 text-xs mt-1">Quickly reorder their last order</p>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-full">
+                <ShoppingBag className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">{customerName}'s Recent Order</h2>
+                <p className="text-red-100 text-sm mt-1">Quickly reorder their last order</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold">{formatPrice(order.total)}</div>
+              <div className="text-red-100 text-sm">{order.items.length} items</div>
             </div>
           </div>
         </div>
 
         {/* Scrollable Content */}
-        <div className="overflow-y-auto max-h-[calc(80vh-140px)]">
-          <div className="p-4 space-y-3">
-            {/* Order Info - Compact */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4 text-gray-600" />
-                  <span className="font-semibold text-gray-900 text-sm">
-                    #{order.orderNumber}
-                  </span>
+        <div className="overflow-y-auto max-h-[calc(85vh-200px)]">
+          <div className="p-6 space-y-6">
+            {/* Order Info Card */}
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Order Number & Status */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-red-100 rounded-lg">
+                      <ShoppingBag className="w-4 h-4 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Order Number</p>
+                      <p className="font-bold text-gray-900">#{order.orderNumber}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {getStatusIcon(order.status)}
+                    <div>
+                      <p className="text-sm text-gray-600">Status</p>
+                      <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(order.status)}`}>
+                        {order.status === 'completed' ? 'Completed' : order.status}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {/* Payment Status */}
-                  {order.paymentStatus && (
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      order.paymentStatus === 'paid' 
-                        ? 'bg-green-100 text-green-800' 
-                        : order.paymentStatus === 'unpaid'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {order.paymentStatus === 'paid' ? 'Paid' : 
-                       order.paymentStatus === 'unpaid' ? 'Unpaid' : 
-                       'Pending'}
-                    </span>
+
+                {/* Date & Time */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Calendar className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Date</p>
+                      <p className="font-medium text-gray-900">{orderDate}</p>
+                    </div>
+                  </div>
+                  
+                  {orderTime && (
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <Clock className="w-4 h-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Time</p>
+                        <p className="font-medium text-gray-900">{orderTime}</p>
+                      </div>
+                    </div>
                   )}
-                  {/* Order Status */}
-                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                    {order.status === 'completed' ? 'Completed' : order.status}
-                  </span>
                 </div>
               </div>
-              
-              {/* Date, Time, Customer - Compact */}
-              <div className="flex items-center gap-3 text-xs text-gray-600">
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  <span>{orderDate}</span>
+
+              {/* Customer Info & Payment Status */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="grid grid-cols-2 gap-4">
+                  {order.customerInfo && (
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <User className="w-4 h-4 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Customer</p>
+                        <p className="font-medium text-gray-900">{order.customerInfo.name}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {order.paymentStatus && (
+                    <div className="flex items-center gap-2">
+                      {getPaymentStatusIcon(order.paymentStatus)}
+                      <div>
+                        <p className="text-sm text-gray-600">Payment</p>
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getPaymentStatusColor(order.paymentStatus)}`}>
+                          {order.paymentStatus === 'paid' ? 'Paid' : 
+                           order.paymentStatus === 'unpaid' ? 'Unpaid' : 
+                           'Pending'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {orderTime && (
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    <span>{orderTime}</span>
-                  </div>
-                )}
-                {order.customerInfo && (
-                  <div className="flex items-center gap-1">
-                    <User className="w-3 h-3" />
-                    <span>{order.customerInfo.name}</span>
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* Order Summary - Compact */}
-            <div className="bg-white border border-gray-200 rounded-lg p-3">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-gray-900 text-sm">Order Summary</h3>
+            {/* Order Items Card */}
+            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  Order Items
+                </h3>
                 <div className="text-right">
-                  <div className="text-base font-bold text-gray-900">{formatPrice(order.total)}</div>
-                  <div className="text-xs text-gray-500">{order.items.length} items</div>
+                  <div className="text-lg font-bold text-gray-900">{formatPrice(order.total)}</div>
+                  <div className="text-sm text-gray-500">{order.items.length} items</div>
                 </div>
               </div>
 
-              {/* Order Items - Compact */}
-              <div className="space-y-2">
-                {order.items.slice(0, 2).map((item, index) => {
+              {/* Order Items - Simple Text Format */}
+              <div className="space-y-3">
+                {order.items.map((item, index) => {
                   const customizationDetails = renderCustomizationDetails(item.customizations, item.comboItems);
                   
                   return (
-                    <div key={index} className="flex items-start gap-2 p-2 bg-gray-50 rounded">
-                      {/* Item image */}
-                      {item.imageUrl && (
-                        <img 
-                          src={item.imageUrl} 
-                          alt={item.name}
-                          className="w-8 h-8 rounded object-cover flex-shrink-0"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      )}
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-gray-900 text-sm truncate">
-                            {item.quantity}x {item.name}
-                          </span>
-                          <span className="font-medium text-gray-900 text-sm ml-2">
-                            {formatPrice(item.price)}
-                          </span>
-                        </div>
-                        
-                        {item.size && (
-                          <div className="text-xs text-gray-600 mt-1">
-                            Size: {item.size}
-                          </div>
-                        )}
-                        
-                        {/* Display detailed customizations - Compact */}
-                        {customizationDetails && customizationDetails.length > 0 && (
-                          <div className="mt-1">
-                            <div className="space-y-1">
-                              {customizationDetails.slice(0, 3).map((detail, idx) => (
-                                <div key={idx} className="text-xs text-gray-700 bg-blue-50 px-2 py-1 rounded">
-                                  {detail}
-                                </div>
-                              ))}
-                              {customizationDetails.length > 3 && (
-                                <div className="text-xs text-gray-500 italic">
-                                  +{customizationDetails.length - 3} more...
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
+                    <div key={index} className="border-b border-gray-100 pb-3 last:border-b-0">
+                      {/* Main Item Line */}
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium text-gray-900">
+                          {item.quantity}x {item.name}
+                          {item.size && <span className="text-gray-500 ml-2">({item.size})</span>}
+                        </span>
+                        <span className="font-semibold text-gray-900">
+                          {formatPrice(item.price)}
+                          {item.extraCharges && item.extraCharges > 0 && (
+                            <span className="text-green-600 ml-1">+{formatPrice(item.extraCharges)}</span>
+                          )}
+                        </span>
                       </div>
+                      
+                      {/* Customizations in Simple Text */}
+                      {customizationDetails && customizationDetails.length > 0 && (
+                        <div className="ml-4 space-y-1">
+                          {customizationDetails.map((detail, idx) => (
+                            <div key={idx} className="text-xs text-gray-600">
+                              • {detail}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
-                
-                {order.items.length > 2 && (
-                  <div className="text-center py-1">
-                    <span className="text-xs text-gray-500 italic">
-                      +{order.items.length - 2} more items...
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* Order Type Notice - Compact */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-xs text-blue-800">
-                  <strong>Order Type:</strong> {order.orderType === 'delivery' ? 'Delivery' : 'Pickup'}
-                </span>
+            {/* Order Type & Instructions Card */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <MapPin className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-blue-900 mb-1">
+                    Order Type: {order.orderType === 'delivery' ? 'Delivery' : 'Pickup'}
+                  </h4>
+                  <p className="text-blue-700 text-sm">
+                    You can modify the order type and delivery details when you proceed to checkout.
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-blue-600 mt-1">
-                You can change this when you proceed to checkout
-              </p>
             </div>
           </div>
         </div>
 
-        {/* Footer - Compact */}
-        <div className="bg-gray-50 px-4 py-3 border-t">
-          <Button
-            onClick={() => onReorder(order)}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg flex items-center justify-center gap-2 text-sm"
-          >
-            <ArrowRight className="w-4 h-4" />
-            Reorder This Order
-          </Button>
-          <p className="text-center text-xs text-gray-500 mt-1">
-            Showing most recent order
-          </p>
+        {/* Footer */}
+        <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-t border-gray-200">
+          <div className="space-y-3">
+            <Button
+              onClick={() => onReorder(order)}
+              className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-3 text-base shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
+            >
+              <ArrowRight className="w-5 h-5" />
+              Reorder This Order
+            </Button>
+            
+            <div className="text-center">
+              <p className="text-xs text-gray-500">
+                Showing most recent order • Total: {formatPrice(order.total)} • {order.items.length} items
+              </p>
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
