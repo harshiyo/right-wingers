@@ -52,7 +52,7 @@ function createWindow() {
 
   // IPC handlers for printer service
   ipcMain.handle('print-receipt', async (event, order, type, showPreview = true) => {
-    const lines = printerService.renderReceipt(order, type);
+    const lines = printerService.receiptRenderer.renderReceipt(order, type);
     const storeId = order.storeId || 'hamilton'; // Default to hamilton for testing
     
     console.log(`🖨️ Print request: store=${storeId}, type=${type}, showPreview=${showPreview}`);
@@ -90,7 +90,7 @@ function createWindow() {
         };
       }
 
-      const status = await printerService.checkPaperStatus(printerService.persistentPort);
+      const status = await printerService.paperMonitor.checkPaperStatus(printerService.persistentPort);
       
       return {
         available: true,
@@ -114,7 +114,7 @@ function createWindow() {
       const pendingJobs = printerService.getPendingQueue();
       return {
         pendingJobs,
-        paperStatus: printerService.isPaperOut ? 'out' : printerService.lastPaperStatus === 'low' ? 'low' : 'ok',
+        paperStatus: printerService.paperMonitor.isPaperOut ? 'out' : printerService.paperMonitor.lastPaperStatus === 'low' ? 'low' : 'ok',
         activeJobs: printerService.printQueue.length
       };
     } catch (error) {
