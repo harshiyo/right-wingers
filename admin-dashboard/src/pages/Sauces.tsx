@@ -12,7 +12,7 @@ interface Sauce {
   description?: string;
   price?: number;
   isSpicy?: boolean;
-  isVegan?: boolean;
+  isNotSpicy?: boolean;
 }
 
 const Sauces = () => {
@@ -25,7 +25,7 @@ const Sauces = () => {
     description: '',
     price: '',
     isSpicy: false,
-    isVegan: false,
+    isNotSpicy: false,
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isCreatingDefaults, setIsCreatingDefaults] = useState(false);
@@ -34,25 +34,25 @@ const Sauces = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState(''); // 'spicy', 'vegan', or ''
+  const [typeFilter, setTypeFilter] = useState(''); // 'spicy', 'notSpicy', or ''
 
   // Default sauces to create
   const defaultSauces = [
-    { name: 'Buffalo', description: 'Classic spicy buffalo sauce', price: 0, isSpicy: true, isVegan: true },
-    { name: 'BBQ', description: 'Sweet and tangy barbecue sauce', price: 0, isSpicy: false, isVegan: true },
-    { name: 'Honey BBQ', description: 'Sweet honey barbecue blend', price: 0, isSpicy: false, isVegan: false },
-    { name: 'Teriyaki', description: 'Japanese-style sweet teriyaki', price: 0, isSpicy: false, isVegan: true },
-    { name: 'Hot', description: 'Extra spicy cayenne pepper sauce', price: 0, isSpicy: true, isVegan: true },
-    { name: 'Mild', description: 'Gentle buffalo-style sauce', price: 0, isSpicy: false, isVegan: true },
-    { name: 'Garlic Parmesan', description: 'Creamy garlic and parmesan', price: 0.50, isSpicy: false, isVegan: false },
-    { name: 'Lemon Pepper', description: 'Zesty lemon pepper seasoning', price: 0, isSpicy: false, isVegan: true },
-    { name: 'Ranch', description: 'Cool and creamy ranch dip', price: 0.50, isSpicy: false, isVegan: false },
-    { name: 'Blue Cheese', description: 'Traditional blue cheese dip', price: 0.50, isSpicy: false, isVegan: false },
-    { name: 'Sriracha', description: 'Asian-style chili garlic sauce', price: 0, isSpicy: true, isVegan: true },
-    { name: 'Sweet Chili', description: 'Thai-inspired sweet and spicy', price: 0, isSpicy: false, isVegan: true },
-    { name: 'Carolina Gold', description: 'Mustard-based BBQ sauce', price: 0, isSpicy: false, isVegan: true },
-    { name: 'Cajun Dry Rub', description: 'Spicy Louisiana-style seasoning', price: 0, isSpicy: true, isVegan: true },
-    { name: 'Nashville Hot', description: 'Tennessee-style fiery hot sauce', price: 0, isSpicy: true, isVegan: true },
+    { name: 'Buffalo', description: 'Classic spicy buffalo sauce', price: 0, isSpicy: true, isNotSpicy: false },
+    { name: 'BBQ', description: 'Sweet and tangy barbecue sauce', price: 0, isSpicy: false, isNotSpicy: true },
+    { name: 'Honey BBQ', description: 'Sweet honey barbecue blend', price: 0, isSpicy: false, isNotSpicy: true },
+    { name: 'Teriyaki', description: 'Japanese-style sweet teriyaki', price: 0, isSpicy: false, isNotSpicy: true },
+    { name: 'Hot', description: 'Extra spicy cayenne pepper sauce', price: 0, isSpicy: true, isNotSpicy: false },
+    { name: 'Mild', description: 'Gentle buffalo-style sauce', price: 0, isSpicy: false, isNotSpicy: true },
+    { name: 'Garlic Parmesan', description: 'Creamy garlic and parmesan', price: 0.50, isSpicy: false, isNotSpicy: true },
+    { name: 'Lemon Pepper', description: 'Zesty lemon pepper seasoning', price: 0, isSpicy: false, isNotSpicy: true },
+    { name: 'Ranch', description: 'Cool and creamy ranch dip', price: 0.50, isSpicy: false, isNotSpicy: true },
+    { name: 'Blue Cheese', description: 'Traditional blue cheese dip', price: 0.50, isSpicy: false, isNotSpicy: true },
+    { name: 'Sriracha', description: 'Asian-style chili garlic sauce', price: 0, isSpicy: true, isNotSpicy: false },
+    { name: 'Sweet Chili', description: 'Thai-inspired sweet and spicy', price: 0, isSpicy: false, isNotSpicy: true },
+    { name: 'Carolina Gold', description: 'Mustard-based BBQ sauce', price: 0, isSpicy: false, isNotSpicy: true },
+    { name: 'Cajun Dry Rub', description: 'Spicy Louisiana-style seasoning', price: 0, isSpicy: true, isNotSpicy: false },
+    { name: 'Nashville Hot', description: 'Tennessee-style fiery hot sauce', price: 0, isSpicy: true, isNotSpicy: false },
   ];
 
   const sauces = saucesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Sauce)) || [];
@@ -66,8 +66,8 @@ const Sauces = () => {
       let matchesType = true;
       if (typeFilter === 'spicy') {
         matchesType = sauce.isSpicy === true;
-      } else if (typeFilter === 'vegan') {
-        matchesType = sauce.isVegan === true;
+      } else if (typeFilter === 'notSpicy') {
+        matchesType = sauce.isNotSpicy === true;
       }
       
       return matchesSearch && matchesType;
@@ -87,7 +87,7 @@ const Sauces = () => {
 
   const resetForm = () => {
     setEditingSauce(null);
-    setFormData({ name: '', description: '', price: '', isSpicy: false, isVegan: false });
+    setFormData({ name: '', description: '', price: '', isSpicy: false, isNotSpicy: false });
   };
 
   const handleEdit = (sauce: Sauce) => {
@@ -97,7 +97,7 @@ const Sauces = () => {
       description: sauce.description || '',
       price: sauce.price ? sauce.price.toString() : '',
       isSpicy: sauce.isSpicy || false,
-      isVegan: sauce.isVegan || false,
+      isNotSpicy: sauce.isNotSpicy || false,
     });
   };
 
@@ -116,7 +116,7 @@ const Sauces = () => {
         description: formData.description.trim() || null,
         price: formData.price ? parseFloat(formData.price) : 0,
         isSpicy: formData.isSpicy,
-        isVegan: formData.isVegan,
+        isNotSpicy: formData.isNotSpicy,
       };
 
       if (editingSauce) {
@@ -291,11 +291,11 @@ const Sauces = () => {
                       <label className="flex items-center">
                         <input
                           type="checkbox"
-                          checked={formData.isVegan}
-                          onChange={(e) => setFormData({ ...formData, isVegan: e.target.checked })}
+                          checked={formData.isNotSpicy}
+                          onChange={(e) => setFormData({ ...formData, isNotSpicy: e.target.checked })}
                           className="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
                         />
-                        <span className="ml-3 text-sm font-medium text-gray-700">🌿 Vegan</span>
+                        <span className="ml-3 text-sm font-medium text-gray-700">🌶️ Not Spicy</span>
                       </label>
                     </div>
                   </div>
@@ -381,7 +381,7 @@ const Sauces = () => {
                         >
                           <option value="">All Types</option>
                           <option value="spicy">Spicy Only</option>
-                          <option value="vegan">Vegan Only</option>
+                          <option value="notSpicy">Not Spicy Only</option>
                         </select>
                         <select
                           value={itemsPerPage}
@@ -468,10 +468,10 @@ const Sauces = () => {
                               </div>
                             </div>
                             {/* Options badges */}
-                            {(sauce.isSpicy || sauce.isVegan) && (
+                            {(sauce.isSpicy || sauce.isNotSpicy) && (
                               <div className="flex flex-wrap gap-1 mt-3">
                                 {sauce.isSpicy && <span className="px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded-full">🌶️ Spicy</span>}
-                                {sauce.isVegan && <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">🌿 Vegan</span>}
+                                {sauce.isNotSpicy && <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">🌶️ Not Spicy</span>}
                               </div>
                             )}
                           </div>
