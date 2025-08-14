@@ -552,6 +552,66 @@ const CheckoutPage = () => {
   // Add this line:
   const modifiedItemsRef = useRef<any[]>([]);
 
+  // Fetch instruction tiles for converting IDs to names
+  const [pizzaInstructionTiles] = useCollection(
+    query(collection(db, 'pizzaInstructions'), orderBy('sortOrder'))
+  );
+  const [wingInstructionTiles] = useCollection(
+    query(collection(db, 'wingInstructions'), orderBy('sortOrder'))
+  );
+
+  // Log when instruction tiles are loaded
+  useEffect(() => {
+    if (pizzaInstructionTiles) {
+      console.log('Pizza instruction tiles loaded:', pizzaInstructionTiles.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }
+    if (wingInstructionTiles) {
+      console.log('Wing instruction tiles loaded:', wingInstructionTiles.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }
+  }, [pizzaInstructionTiles, wingInstructionTiles]);
+
+  // Helper function to convert instruction IDs to names in customizations
+  const convertInstructionsToNames = useCallback((customizations: any) => {
+    if (!customizations) return customizations;
+    
+    // Ensure we have the instruction tiles data
+    if (!pizzaInstructionTiles || !wingInstructionTiles) {
+      console.warn('Instruction tiles not loaded yet, using original customizations');
+      return customizations;
+    }
+    
+    console.log('Converting customizations:', customizations);
+    console.log('Pizza instruction tiles:', pizzaInstructionTiles);
+    console.log('Wing instruction tiles:', wingInstructionTiles);
+    
+    const converted = { ...customizations };
+    
+    // Handle regular instructions
+    if (converted.instructions && Array.isArray(converted.instructions)) {
+      if (converted.type === 'wings') {
+        converted.instructions = getWingInstructionLabels(wingInstructionTiles, converted.instructions);
+      } else {
+        converted.instructions = getPizzaInstructionLabels(pizzaInstructionTiles, converted.instructions);
+      }
+    }
+    
+    // Handle combo customizations (array of steps)
+    if (Array.isArray(converted)) {
+      converted.forEach((step: any) => {
+        if (step.instructions && Array.isArray(step.instructions)) {
+          if (step.type === 'wings') {
+            step.instructions = getWingInstructionLabels(wingInstructionTiles, step.instructions);
+          } else {
+            step.instructions = getPizzaInstructionLabels(pizzaInstructionTiles, step.instructions);
+          }
+        }
+      });
+    }
+    
+    console.log('Converted customizations result:', converted);
+    return converted;
+  }, [pizzaInstructionTiles, wingInstructionTiles]);
+
   // Save original order to localStorage for modification diff/receipt
   useEffect(() => {
     if (editingOrderId && location.state?.originalOrder) {
@@ -734,121 +794,79 @@ const CheckoutPage = () => {
       }
 
       // Check if we're editing an existing order
+      console.log('Cart items before processing:', cartItems);
+      console.log('Cart items customizations:', cartItems.map(item => ({ id: item.id, customizations: item.customizations })));
+      // Generate order data
+      let orderData: any = {
+        customerInfo: {
+          name: customer.name,
+          phone: phone,
+          ...(customer.email && { email: customer.email }),
+          address: customer.address ? `${customer.address.street}, ${customer.address.city}, ${customer.address.postalCode}` : undefined,
+        },
+        items: cartItems.map(item => {
+          const base: any = {
+            id: item.id,
+            baseId: item.baseId,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            extraCharges: item.extraCharges || 0,
+            imageUrl: item.imageUrl,
+          };
+          if (item.customizations) {
+            // Convert instruction IDs to names before saving
+            const convertedCustomizations = convertInstructionsToNames(item.customizations);
+            
+            base.customizations = Object.fromEntries(
+              Object.entries(convertedCustomizations).filter(([_, v]) => v !== undefined)
+            );
+          }
+          return base;
+        }),
+        subtotal: subtotal,
+        tax: tax,
+        discount: discountAmount,
+        total: total,
+        orderType: (typeof orderType === 'string' && ['pickup','delivery','dine-in'].includes(orderType.toLowerCase()) ? orderType.toLowerCase() : 'pickup'),
+        paymentMethod: paymentMethod,
+        paymentStatus: paymentStatus, // Use the payment status state
+        createdAt: new Date().toISOString(),
+        store: {
+          id: currentStore.id,
+          name: currentStore.name,
+          address: currentStore.address,
+        },
+        discounts: [],
+        discountTotal: 0,
+        ...(orderType === 'delivery' && customer.address ? { deliveryDetails: { ...customer.address, ...(deliveryAddress || {}), ...(deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime ? { scheduledDeliveryDateTime } : {}) } } : {}),
+        ...(orderType === 'pickup' ? { pickupDetails: { estimatedTime: '15-25 minutes', ...(pickupTime === 'scheduled' && scheduledDateTime ? { scheduledDateTime } : {}) } } : {}),
+        source: location.state?.originalOrder?.source || 'pos',
+      };
+
       if (editingOrderId) {
         // For modifications, update the existing order directly
-        try {
-          // Generate order data for update
-          let orderData = {
-            customerInfo: {
-              name: customer.name,
-              phone: phone,
-              ...(customer.email && { email: customer.email }),
-              address: customer.address ? `${customer.address.street}, ${customer.address.city}, ${customer.address.postalCode}` : undefined,
-            },
-            items: cartItems.map(item => {
-              const base: any = {
-                id: item.id,
-                baseId: item.baseId,
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity,
-                extraCharges: item.extraCharges || 0,
-                imageUrl: item.imageUrl,
-              };
-              if (item.customizations) {
-                base.customizations = Object.fromEntries(
-                  Object.entries(item.customizations).filter(([_, v]) => v !== undefined)
-                );
-              }
-              return base;
-            }),
-            subtotal: subtotal,
-            tax: tax,
-            discount: discountAmount,
-            total: total,
-            orderType: (typeof orderType === 'string' && ['pickup','delivery','dine-in'].includes(orderType.toLowerCase()) ? orderType.toLowerCase() : 'pickup'),
-            paymentMethod: paymentMethod,
-            paymentStatus: paymentStatus, // Use the payment status state
-            createdAt: new Date().toISOString(),
-            store: {
-              id: currentStore.id,
-              name: currentStore.name,
-              address: currentStore.address,
-            },
-            discounts: [],
-            discountTotal: 0,
-            ...(orderType === 'delivery' && customer.address ? { deliveryDetails: { ...customer.address, ...(deliveryAddress || {}), ...(deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime ? { scheduledDeliveryDateTime } : {}) } } : {}),
-            ...(orderType === 'pickup' ? { pickupDetails: { estimatedTime: '15-25 minutes', ...(pickupTime === 'scheduled' && scheduledDateTime ? { scheduledDateTime } : {}) } } : {}),
-            source: location.state?.originalOrder?.source || 'pos',
-          };
+        // Update existing order in Firestore
+        const updateData = deepRemoveUndefined(orderData);
+        console.log('Updating order with data:', updateData);
+        const orderRef = doc(db, 'orders', editingOrderId);
+        await updateDoc(orderRef, updateData);
 
-          // Update existing order in Firestore
-          const updateData = deepRemoveUndefined(orderData);
-          const orderRef = doc(db, 'orders', editingOrderId);
-          await updateDoc(orderRef, updateData);
+        // Get the order number from the original order
+        const orderNumber = location.state?.orderNumber || editingOrderId;
 
-          // Get the order number from the original order
-          const orderNumber = location.state?.orderNumber || editingOrderId;
+        // Set the saved order info for receipt printing
+        setSavedOrderId(editingOrderId);
+        setSavedOrderNumber(orderNumber);
+        setOrderSaved(true);
 
-          // Set the saved order info for receipt printing
-          setSavedOrderId(editingOrderId);
-          setSavedOrderNumber(orderNumber);
-          setOrderSaved(true);
-
-          // Show receipt options instead of automatically printing
-          setShowReceiptOptions(true);
-        } catch (error) {
-          console.error('Failed to update order:', error);
-          alert('Failed to update order. Please try again.');
-        }
+        // Show receipt options instead of automatically printing
+        setShowReceiptOptions(true);
       } else {
         // For new orders, save to database
         if (!orderSaved) {
-          // Generate order data
-          let orderData = {
-            customerInfo: {
-              name: customer.name,
-              phone: phone,
-              ...(customer.email && { email: customer.email }),
-              address: customer.address ? `${customer.address.street}, ${customer.address.city}, ${customer.address.postalCode}` : undefined,
-            },
-            items: cartItems.map(item => {
-              const base: any = {
-                id: item.id,
-                baseId: item.baseId,
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity,
-                extraCharges: item.extraCharges || 0,
-                imageUrl: item.imageUrl,
-              };
-              if (item.customizations) {
-                base.customizations = Object.fromEntries(
-                  Object.entries(item.customizations).filter(([_, v]) => v !== undefined)
-                );
-              }
-              return base;
-            }),
-            subtotal: subtotal,
-            tax: tax,
-            discount: discountAmount,
-            total: total,
-            orderType: (typeof orderType === 'string' && ['pickup','delivery','dine-in'].includes(orderType.toLowerCase()) ? orderType.toLowerCase() : 'pickup'),
-            paymentMethod: paymentMethod,
-            paymentStatus: paymentStatus, // Use the payment status state
-            createdAt: new Date().toISOString(),
-            store: {
-              id: currentStore.id,
-              name: currentStore.name,
-              address: currentStore.address,
-            },
-            discounts: [],
-            discountTotal: 0,
-            ...(orderType === 'delivery' && customer.address ? { deliveryDetails: { ...customer.address, ...(deliveryAddress || {}), ...(deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime ? { scheduledDeliveryDateTime } : {}) } } : {}),
-            ...(orderType === 'pickup' ? { pickupDetails: { estimatedTime: '15-25 minutes', ...(pickupTime === 'scheduled' && scheduledDateTime ? { scheduledDateTime } : {}) } } : {}),
-            source: 'pos',
-          };
           const cleanedOrderData = deepRemoveUndefined(orderData);
+          console.log('Creating new order with data:', cleanedOrderData);
           const orderId = await createOrder(cleanedOrderData);
           setSavedOrderId(orderId);
           
@@ -877,6 +895,7 @@ const CheckoutPage = () => {
       setIsProcessing(false);
     } catch (error) {
       setIsProcessing(false);
+      console.error('Failed to place order:', error);
       alert('Failed to place order. Please try again.');
     }
   }, [isProcessing, orderSaved, currentStore, customer, phone, cartItems, subtotal, tax, discountAmount, orderType, paymentMethod, createOrder, deepRemoveUndefined, deliveryAddress, deliveryTimeType, scheduledDeliveryDateTime, pickupTime, scheduledDateTime, editingOrderId, clearCart, navigate, paymentStatus]);
@@ -914,6 +933,8 @@ const CheckoutPage = () => {
     }
     return obj;
   }
+
+
 
   // Helper to normalize customizations for comparison
   function normalizeCustomizationsForCompare(customizations: any): any {
@@ -1067,8 +1088,11 @@ const CheckoutPage = () => {
           };
           // Only add customizations if they exist and are not empty
           if (item.customizations) {
+            // Convert instruction IDs to names before saving
+            const convertedCustomizations = convertInstructionsToNames(item.customizations);
+            
             base.customizations = Object.fromEntries(
-              Object.entries(item.customizations).filter(([_, v]) => v !== undefined)
+              Object.entries(convertedCustomizations).filter(([_, v]) => v !== undefined)
             );
           }
           return base;
@@ -1123,6 +1147,7 @@ const CheckoutPage = () => {
       if (editingOrderId) {
         // For updateDoc, use Record<string, any> and remove undefined fields
         const updateData = deepRemoveUndefined(orderData);
+        console.log('handleCompleteOrder: Updating order with data:', updateData);
         // Debug: log all undefined fields before update
         logUndefinedFields(orderData);
         // Update existing order in Firestore
@@ -1137,6 +1162,7 @@ const CheckoutPage = () => {
       } else {
         // Save order (handles both online and offline)
         const cleanedOrderData = deepRemoveUndefined(orderData);
+        console.log('handleCompleteOrder: Creating new order with data:', cleanedOrderData);
         const orderId = await createOrder(cleanedOrderData);
         setShowOrderSuccess(true); // Show success modal
       }
@@ -1233,7 +1259,7 @@ const CheckoutPage = () => {
           }
           // Instructions
           if (item.customizations.instructions && Array.isArray(item.customizations.instructions) && item.customizations.instructions.length > 0) {
-            const instructions = item.customizations.instructions.map((inst: any) => inst.name || inst).join(', ');
+            const instructions = item.customizations.instructions.join(', ');
             if (instructions) {
               details.push(`<strong>Instructions:</strong> ${instructions}`);
             }
@@ -1280,7 +1306,7 @@ const CheckoutPage = () => {
               }
               // Instructions
               if (step.instructions && Array.isArray(step.instructions) && step.instructions.length > 0) {
-                const instructions = step.instructions.map((inst: any) => inst.name || inst).join(', ');
+                const instructions = step.instructions.join(', ');
                 if (instructions) {
                   stepDetails.push(`&nbsp;&nbsp;&nbsp;&nbsp;<strong>Instructions:</strong> ${instructions}`);
                 }
@@ -1442,7 +1468,7 @@ const CheckoutPage = () => {
         price: item.price,
         modifiers: [],
         extraCharges: item.extraCharges || 0,
-        customizations: item.customizations,
+        customizations: convertInstructionsToNames(item.customizations),
       })),
       total: total,
       createdAt: Date.now(),
@@ -1833,7 +1859,7 @@ const CheckoutPage = () => {
                                   price: item.price,
                                   modifiers: [],
                                   extraCharges: item.extraCharges || 0,
-                                  customizations: item.customizations,
+                                  customizations: convertInstructionsToNames(item.customizations),
                                 })),
                                 total: total,
                                 createdAt: Date.now(),

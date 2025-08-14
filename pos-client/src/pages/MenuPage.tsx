@@ -642,6 +642,14 @@ const MenuPage = () => {
   const [settingsSnapshot, loadingSettings] = useDocument(doc(db, 'settings', 'menuScreen'));
   const [categoryOrderSnapshot, loadingCategoryOrder] = useDocument(doc(db, 'settings', 'posCategoryOrder'));
 
+  // Fetch instruction tiles for converting IDs to labels
+  const [pizzaInstructionTiles] = useCollection(
+    query(collection(db, 'pizzaInstructions'), orderBy('sortOrder'))
+  );
+  const [wingInstructionTiles] = useCollection(
+    query(collection(db, 'wingInstructions'), orderBy('sortOrder'))
+  );
+
   // Data mapping
   const categories = categoriesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)) || [];
   const menuItems = menuItemsSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuItem)) || [];
@@ -693,6 +701,29 @@ const MenuPage = () => {
   const [showSizeDialog, setShowSizeDialog] = useState(false);
   const [sizingPizza, setSizingPizza] = useState<MenuItem | null>(null);
   const [sizingItem, setSizingItem] = useState<MenuItem | null>(null);
+
+  // Convert instruction labels back to IDs for editing
+  const getPizzaInstructionIds = (instructionLabels: string[]): string[] => {
+    if (!pizzaInstructionTiles) return instructionLabels;
+    const tiles = pizzaInstructionTiles.docs
+      .map(doc => ({ id: doc.id, ...doc.data() } as InstructionTile))
+      .filter(tile => tile.isActive);
+    return instructionLabels.map(label => {
+      const tile = tiles.find(t => t.label === label);
+      return tile ? tile.id : label;
+    });
+  };
+
+  const getWingInstructionIds = (instructionLabels: string[]): string[] => {
+    if (!wingInstructionTiles) return instructionLabels;
+    const tiles = wingInstructionTiles.docs
+      .map(doc => ({ id: doc.id, ...doc.data() } as InstructionTile))
+      .filter(tile => tile.isActive);
+    return instructionLabels.map(label => {
+      const tile = tiles.find(t => t.label === label);
+      return tile ? tile.id : label;
+    });
+  };
 
   // Helper function to determine item type from name and category
   const getItemType = (item: MenuItem): 'pizza' | 'wings' | 'other' => {
@@ -898,7 +929,13 @@ const MenuPage = () => {
           setCustomizingPizza({
             ...originalItem,
             isEditing: true,
-            editingItemId: cartItem.id
+            editingItemId: cartItem.id,
+            existingCustomizations: {
+              ...cartItem.customizations,
+              instructions: cartItem.customizations.instructions ? 
+                getPizzaInstructionIds(cartItem.customizations.instructions) : 
+                cartItem.customizations.instructions
+            }
           } as any);
           setShowPizzaDialog(true);
         } else {
@@ -928,7 +965,13 @@ const MenuPage = () => {
           setCustomizingWing({
             ...originalItem,
             isEditing: true,
-            editingItemId: cartItem.id
+            editingItemId: cartItem.id,
+            existingCustomizations: {
+              ...cartItem.customizations,
+              instructions: cartItem.customizations.instructions ? 
+                getWingInstructionIds(cartItem.customizations.instructions) : 
+                cartItem.customizations.instructions
+            }
           } as any);
           setShowWingDialog(true);
         } else {
@@ -1266,7 +1309,7 @@ const MenuPage = () => {
         toppingLimit={customizingPizza?.maxToppings || 3} // Use item-specific limit or default to 3
         pizzaName={(customizingPizza as any)?.isEditing ? `Edit ${customizingPizza?.name || 'Pizza'}` : customizingPizza?.name || 'Pizza'}
         pizzaItem={customizingPizza} // Pass the full pizza item for pricing data
-        existingSelections={(customizingPizza as any)?.isEditing ? editingCartItem?.customizations : undefined}
+        existingSelections={(customizingPizza as any)?.isEditing ? (customizingPizza as any)?.existingCustomizations : undefined}
       />
       <WingSauceDialog
         open={showWingDialog}
@@ -1278,7 +1321,7 @@ const MenuPage = () => {
         onSubmit={handleWingCustomizationComplete}
         sauceLimit={customizingWing?.maxSauces || 1} // Use item-specific limit or default to 1
         wingName={(customizingWing as any)?.isEditing ? `Edit ${customizingWing?.name || 'Wings'}` : customizingWing?.name || 'Wings'}
-        existingSelections={(customizingWing as any)?.isEditing ? editingCartItem?.customizations : undefined}
+        existingSelections={(customizingWing as any)?.isEditing ? (customizingWing as any)?.existingCustomizations : undefined}
       />
       <SizeSelectDialog
         open={showSizeDialog}
