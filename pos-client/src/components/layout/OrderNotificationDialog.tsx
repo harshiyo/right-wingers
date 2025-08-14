@@ -1,7 +1,7 @@
 // ✅ Redesigned Order Notification Dialog Component
 import { useState, useEffect } from 'react';
-import { Clock, Package, CheckCircle, ChevronDown, X } from 'lucide-react';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { Clock, Package, CheckCircle, ChevronDown, X, Printer } from 'lucide-react';
+import { collection, query, where, onSnapshot, orderBy, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useStore } from '../../context/StoreContext';
 import { cn } from '../../utils/cn';
@@ -95,10 +95,10 @@ function normalizeOrderItemsForCart(orderItems: any[]): any[] {
 }
 
 export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDialogProps) => {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
-  const { currentStore } = useStore();
+     const [orders, setOrders] = useState<Order[]>([]);
+   const [searchTerm, setSearchTerm] = useState('');
+   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+   const { currentStore } = useStore();
   const [orderFilter, setOrderFilter] = useState<'all' | 'pending' | 'completed'>('all');
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'paid' | 'unpaid' | 'pending'>('all');
   const { setCartItems } = useCart();
@@ -135,6 +135,25 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
 
     return () => unsubscribe();
   }, [currentStore?.id]);
+
+        // ESC key to close dialog
+   useEffect(() => {
+     const handleKeyDown = (event: KeyboardEvent) => {
+       if (!open) return;
+       
+       if (event.key === 'Escape') {
+         onClose();
+       }
+     };
+
+     if (open) {
+       document.addEventListener('keydown', handleKeyDown);
+     }
+
+     return () => {
+       document.removeEventListener('keydown', handleKeyDown);
+     };
+   }, [open, onClose]);
 
   const formatTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString('en-US', {
@@ -192,6 +211,35 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
     });
   };
 
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const markAsPaid = async (orderId: string) => {
+    try {
+      if (!currentStore?.id) {
+        setNotification({ message: 'Store not found. Please try again.', type: 'error' });
+        return;
+      }
+      
+      const orderRef = doc(db, 'orders', orderId);
+      await updateDoc(orderRef, { 
+        paymentStatus: 'paid',
+        updatedAt: new Date().toISOString()
+      });
+      
+      // Show success message
+      setNotification({ message: 'Order marked as paid successfully!', type: 'success' });
+      
+      // Clear notification after 3 seconds
+      setTimeout(() => setNotification(null), 3000);
+    } catch (error) {
+      console.error('Error marking order as paid:', error);
+      setNotification({ message: 'Failed to mark order as paid. Please try again.', type: 'error' });
+      
+      // Clear error notification after 5 seconds
+      setTimeout(() => setNotification(null), 5000);
+    }
+  };
+
   // Filter by status
   const statusFiltered = orderFilter === 'all'
     ? orders
@@ -212,126 +260,147 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
     );
   });
 
+  
+
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+           return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center order-notification-dialog p-4" tabIndex={-1}>
+         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative bg-white max-w-5xl w-full max-h-[85vh] rounded-2xl shadow-xl z-50 overflow-hidden">
-        <div className="flex h-full">
+      {/* Notification Toast */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-[60] px-4 py-3 rounded-lg shadow-lg transition-all duration-300 ${
+          notification.type === 'success' 
+            ? 'bg-green-500 text-white' 
+            : 'bg-red-500 text-white'
+        }`}>
+          <div className="flex items-center gap-2">
+            <CheckCircle className={`w-5 h-5 ${notification.type === 'success' ? 'text-green-100' : 'text-red-100'}`} />
+            <span className="font-medium">{notification.message}</span>
+            <button 
+              onClick={() => setNotification(null)}
+              className="ml-2 text-white hover:text-gray-200"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
-          {/* Sidebar */}
-          <div className="w-[220px] bg-gray-50 border-r p-4 space-y-2 flex-shrink-0">
-            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-              <Package className="w-4 h-4" /> Order Actions
-            </h3>
-            <button
-              className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${orderFilter === 'all' ? 'bg-red-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
-              onClick={() => setOrderFilter('all')}
-            >
-              <Clock className="w-4 h-4" /> Today's Orders
-            </button>
-            <button
-              className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${orderFilter === 'completed' ? 'bg-green-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
-              onClick={() => setOrderFilter('completed')}
-            >
-              <CheckCircle className="w-4 h-4" /> Completed
-            </button>
-            <button
-              className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${orderFilter === 'pending' ? 'bg-orange-500 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
-              onClick={() => setOrderFilter('pending')}
-            >
-              <Package className="w-4 h-4" /> Pending
-            </button>
-            
-            {/* Payment Status Filters */}
-            <div className="border-t pt-3 mt-3">
-              <h4 className="text-xs font-semibold text-gray-600 mb-2">Payment Status</h4>
-              <button
-                className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${paymentFilter === 'all' ? 'bg-gray-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
-                onClick={() => setPaymentFilter('all')}
-              >
-                <Package className="w-4 h-4" /> All Payments
-              </button>
-              <button
-                className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${paymentFilter === 'paid' ? 'bg-green-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
-                onClick={() => setPaymentFilter('paid')}
-              >
-                <CheckCircle className="w-4 h-4" /> Paid
-              </button>
-              <button
-                className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${paymentFilter === 'unpaid' ? 'bg-red-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
-                onClick={() => setPaymentFilter('unpaid')}
-              >
-                <Package className="w-4 h-4" /> Unpaid
-              </button>
-              <button
-                className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${paymentFilter === 'pending' ? 'bg-yellow-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
-                onClick={() => setPaymentFilter('pending')}
-              >
-                <Clock className="w-4 h-4" /> Pending
-              </button>
-            </div>
+             <div className="relative bg-white max-w-8xl w-full max-h-[98vh] rounded-2xl shadow-xl z-50 overflow-hidden">
+         <div className="flex h-full">
+
+           {/* Sidebar */}
+           <div className="w-[220px] bg-gray-50 border-r p-4 space-y-2 flex-shrink-0">
+             <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+               <Package className="w-4 h-4" /> Order Actions
+             </h3>
+             <button
+               className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${orderFilter === 'all' ? 'bg-red-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
+               onClick={() => setOrderFilter('all')}
+             >
+               <Clock className="w-4 h-4" /> Today's Orders
+             </button>
+             <button
+               className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${orderFilter === 'completed' ? 'bg-green-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
+               onClick={() => setOrderFilter('completed')}
+             >
+               <CheckCircle className="w-4 h-4" /> Completed
+             </button>
+             
+             {/* Payment Status Filters */}
+             <div className="border-t pt-3 mt-3">
+               <h4 className="text-xs font-semibold text-gray-600 mb-2">Payment Status</h4>
+               <button
+                 className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${paymentFilter === 'all' ? 'bg-gray-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
+                 onClick={() => setPaymentFilter('all')}
+               >
+                 <Package className="w-4 h-4" /> All Payments
+               </button>
+               <button
+                 className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${paymentFilter === 'paid' ? 'bg-green-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
+                 onClick={() => setPaymentFilter('paid')}
+               >
+                 <CheckCircle className="w-4 h-4" /> Paid
+               </button>
+               <button
+                 className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${paymentFilter === 'unpaid' ? 'bg-red-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
+                 onClick={() => setPaymentFilter('unpaid')}
+               >
+                 <Package className="w-4 h-4" /> Unpaid
+               </button>
+               <button
+                 className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${paymentFilter === 'pending' ? 'bg-yellow-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
+                 onClick={() => setPaymentFilter('pending')}
+               >
+                 <Clock className="w-4 h-4" /> Pending
+               </button>
+             </div>
             
             <button onClick={onClose} className="mt-auto w-full py-2 px-3 text-sm text-gray-800 hover:bg-gray-100 rounded-lg flex gap-2 items-center">
               <X className="w-4 h-4" /> Close
             </button>
           </div>
 
-          {/* Main Content */}
-          <div className="flex-1 flex flex-col p-6 max-h-[85vh] w-[800px] h-[600px]">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-gray-800">Today's Orders</h2>
-                <p className="text-sm text-gray-500">All orders placed today</p>
-              </div>
-            </div>
+                                {/* Main Content */}
+                       <div className="flex-1 flex flex-col p-6 max-h-[98vh] w-[1000px] h-[800px]">
+             <div className="flex justify-between items-center mb-4">
+               <div>
+                 <h2 className="text-lg font-bold text-gray-800">Today's Orders</h2>
+                 <p className="text-sm text-gray-500">
+                   All orders placed today
+                 </p>
+               </div>
+             </div>
 
-            <div className="mb-4 relative">
-              <input
-                type="text"
-                placeholder="Search orders..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
-              />
-            </div>
+             <div className="mb-4 relative">
+               <input
+                 type="text"
+                 placeholder="Search orders..."
+                 value={searchTerm}
+                 onChange={(e) => setSearchTerm(e.target.value)}
+                 className="w-full border border-gray-200 rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
+               />
+             </div>
 
-            <div className="overflow-y-auto flex-1 space-y-3 pr-2 min-h-0">
-              {filtered.map(order => (
-                <div key={order.id} className="bg-white rounded-xl shadow-md p-4 mb-4 border border-gray-200">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <div className="font-bold text-gray-900">Order #{order.orderNumber}</div>
-                      <div className="text-xs text-gray-600">{formatTime(order.timestamp)} • {order.customerInfo?.name} • ${order.total.toFixed(2)}</div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {order.customerInfo?.phone && (
-                          <span>Phone: {order.customerInfo.phone} • </span>
-                        )}
-                        <span className={order.source === 'online' ? 'text-green-700 font-semibold' : 'text-blue-700 font-semibold'}>
-                          {order.source === 'online' ? 'Online Order' : 'POS Order'}
-                        </span>
-                        {order.paymentStatus && (
-                          <span className={`ml-2 px-2 py-0.5 text-xs font-medium rounded-full ${
-                            order.paymentStatus === 'paid' 
-                              ? 'bg-green-100 text-green-800' 
-                              : order.paymentStatus === 'unpaid'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {order.paymentStatus === 'paid' ? 'Paid' : 
-                             order.paymentStatus === 'unpaid' ? 'Unpaid' : 
-                             'Pending'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      {/* Reprint Receipt Button */}
-                      <button
-                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-semibold"
-                        onClick={async () => {
+                           <div className="overflow-y-auto flex-1 space-y-3 pr-4 pl-2 min-h-0">
+               {filtered.map((order, index) => (
+                 <div 
+                   key={order.id} 
+                   className="bg-white rounded-xl shadow-md p-4 mb-4 border border-gray-200 transition-all duration-200 cursor-pointer"
+                 >
+                   <div className="flex justify-between items-center">
+                     <div>
+                       <div className="font-bold text-gray-900">Order #{order.orderNumber}</div>
+                       <div className="text-xs text-gray-600">{formatTime(order.timestamp)} • {order.customerInfo?.name} • ${order.total.toFixed(2)}</div>
+                       <div className="text-xs text-gray-500 mt-1">
+                         {order.customerInfo?.phone && (
+                           <span>Phone: {order.customerInfo.phone} • </span>
+                         )}
+                         <span className={order.source === 'online' ? 'text-green-700 font-semibold' : 'text-blue-700 font-semibold'}>
+                           {order.source === 'online' ? 'Online Order' : 'POS Order'}
+                         </span>
+                         {order.paymentStatus && (
+                           <span className={`ml-2 px-2 py-0.5 text-xs font-medium rounded-full ${
+                             order.paymentStatus === 'paid' 
+                               ? 'bg-green-100 text-green-800' 
+                               : order.paymentStatus === 'unpaid'
+                               ? 'bg-red-100 text-red-800'
+                               : 'bg-yellow-100 text-yellow-800'
+                           }`}>
+                             {order.paymentStatus === 'paid' ? 'Paid' : 
+                              order.paymentStatus === 'unpaid' ? 'Unpaid' : 
+                              'Pending'}
+                           </span>
+                         )}
+                       </div>
+                     </div>
+                     <div className="flex gap-2">
+                       {/* Reprint Receipt Button */}
+                       <button
+                         className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-semibold flex items-center gap-1"
+                         onClick={async () => {
                           // Prepare order data for reprint (match printReceiptIfLocal structure)
                           const orderForPrint = {
                             id: order.id,
@@ -361,14 +430,23 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
                           }
                         }}
                       >
-                        Reprint Receipt
+                        <Printer className="w-3 h-3" /> Reprint
                       </button>
+                      {/* Mark as Paid Button - only show for unpaid orders */}
+                      {order.paymentStatus !== 'paid' && (
+                        <button
+                          className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs font-semibold flex items-center gap-1"
+                          onClick={() => markAsPaid(order.id)}
+                        >
+                          <CheckCircle className="w-3 h-3" /> Mark Paid
+                        </button>
+                      )}
                       {/* Existing actions (expand, modify, etc.) */}
                       <button onClick={() => toggleOrderExpansion(order.id)}>
                         <ChevronDown className={cn('w-5 h-5 text-gray-400', expandedOrders.has(order.id) && 'rotate-180')} />
                       </button>
                       <button
-                        className="ml-4 px-3 py-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded shadow"
+                        className="px-2 py-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded"
                         onClick={() => handleModifyOrder(order)}
                       >
                         Modify

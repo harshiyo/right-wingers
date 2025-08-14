@@ -34,6 +34,25 @@ export const TopBar = ({
     if (saved) setDark(true);
   }, []);
 
+  // Keyboard shortcut for opening orders dialog (Ctrl + O)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check if Ctrl + O is pressed
+      if (event.ctrlKey && event.key === 'o') {
+        event.preventDefault(); // Prevent default browser behavior
+        setOrdersOpen(true);
+      }
+    };
+
+    // Add event listener
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   const toggleDark = () => {
     const val = !dark;
     setDark(val);
@@ -84,6 +103,7 @@ export const TopBar = ({
           <button
             onClick={() => setOrdersOpen(true)}
             className="ml-2 px-3 py-1 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded shadow"
+            title="View Orders (Ctrl + O)"
           >
             View Orders
           </button>

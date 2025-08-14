@@ -165,7 +165,12 @@ const CustomerLookupPage = () => {
     const handlePageClick = (e: MouseEvent) => {
       // Don't refocus if clicking on buttons, interactive elements, or if dialog is open
       const target = e.target as HTMLElement;
+      
+      // Check if OrderNotificationDialog is open by looking for its specific class
+      const isOrderDialogOpen = document.querySelector('.order-notification-dialog') !== null;
+      
       if (!showCreateDialog && 
+          !isOrderDialogOpen &&
           !target.closest('button') && 
           !target.closest('a') && 
           !target.closest('input[type="datetime-local"]') &&
