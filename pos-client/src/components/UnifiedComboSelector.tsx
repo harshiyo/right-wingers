@@ -56,6 +56,14 @@ interface UnifiedComboSelectorProps {
   onComplete: (customizedCombo: any) => void;
 }
 
+interface InstructionTile {
+  id: string;
+  label: string;
+  color: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
 export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: UnifiedComboSelectorProps) => {
   if (!open || !combo) return null;
 
@@ -127,6 +135,12 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
   // Size selection state
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [currentStepExtraCharge, setCurrentStepExtraCharge] = useState(0);
+
+  // Instruction tiles state
+  const [pizzaInstructionTiles, setPizzaInstructionTiles] = useState<InstructionTile[]>([]);
+  const [wingInstructionTiles, setWingInstructionTiles] = useState<InstructionTile[]>([]);
+  const [selectedPizzaInstructions, setSelectedPizzaInstructions] = useState<Set<string>>(new Set());
+  const [selectedWingInstructions, setSelectedWingInstructions] = useState<Set<string>>(new Set());
 
   // Function to fetch pizza menu item for pricing
   const fetchPizzaMenuItem = async (itemId: string) => {
@@ -256,6 +270,33 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
     }
   }, [open]);
 
+  // Fetch instruction tiles
+  useEffect(() => {
+    const fetchInstructionTiles = async () => {
+      try {
+        // Fetch pizza instruction tiles
+        const pizzaQuerySnapshot = await getDocs(query(collection(db, 'pizzaInstructions'), orderBy('sortOrder')));
+        const pizzaTiles: InstructionTile[] = pizzaQuerySnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as InstructionTile))
+          .filter(tile => tile.isActive);
+        setPizzaInstructionTiles(pizzaTiles);
+
+        // Fetch wing instruction tiles
+        const wingQuerySnapshot = await getDocs(query(collection(db, 'wingInstructions'), orderBy('sortOrder')));
+        const wingTiles: InstructionTile[] = wingQuerySnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as InstructionTile))
+          .filter(tile => tile.isActive);
+        setWingInstructionTiles(wingTiles);
+      } catch (error) {
+        console.error('Error fetching instruction tiles:', error);
+      }
+    };
+
+    if (open) {
+      fetchInstructionTiles();
+    }
+  }, [open]);
+
   // Initialize current step data
   useEffect(() => {
     if (open && draft[currentStep]) {
@@ -274,10 +315,24 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
         const allToppings = [...wholePizza, ...leftSide, ...rightSide];
         const maxAddedOrder = Math.max(...allToppings.map((t: Topping & { addedOrder?: number }) => t.addedOrder || 0), -1);
         setToppingOrderCounter(maxAddedOrder + 1);
+
+        // Handle pizza instructions
+        if (currentItem.instructions) {
+          setSelectedPizzaInstructions(new Set(currentItem.instructions));
+        } else {
+          setSelectedPizzaInstructions(new Set());
+        }
       }
       
       if (currentItem.type === 'wings' && currentItem.sauces) {
         setSelectedSauces(currentItem.sauces);
+        
+        // Handle wing instructions
+        if (currentItem.instructions) {
+          setSelectedWingInstructions(new Set(currentItem.instructions));
+        } else {
+          setSelectedWingInstructions(new Set());
+        }
       }
       
       if (currentItem.type === 'dipping' && currentItem.selectedDippingSauces) {
@@ -312,6 +367,8 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
       setActiveCategory('All');
       setSpicyFilter('all');
       setToppingOrderCounter(0);
+      setSelectedPizzaInstructions(new Set());
+      setSelectedWingInstructions(new Set());
     }
   }, [open, currentStep, draft]);
 
@@ -562,6 +619,31 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
     });
   };
 
+  // Instruction toggle handlers
+  const handlePizzaInstructionToggle = (instructionId: string) => {
+    setSelectedPizzaInstructions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(instructionId)) {
+        newSet.delete(instructionId);
+      } else {
+        newSet.add(instructionId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleWingInstructionToggle = (instructionId: string) => {
+    setSelectedWingInstructions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(instructionId)) {
+        newSet.delete(instructionId);
+      } else {
+        newSet.add(instructionId);
+      }
+      return newSet;
+    });
+  };
+
   // Size selection handlers
   const handleSizeSelect = (size: string) => {
     setSelectedSize(size || '');
@@ -584,6 +666,7 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
       newDraft[currentStep] = {
         ...step,
         toppings: toppingsData,
+        instructions: Array.from(selectedPizzaInstructions),
         extraCharge
       };
     } else if (step.type === 'wings') {
@@ -592,6 +675,7 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
       newDraft[currentStep] = {
         ...step,
         sauces: selectedSauces,
+        instructions: Array.from(selectedWingInstructions),
         extraCharge
       };
     } else if (step.type === 'drink' || step.type === 'side') {
@@ -936,6 +1020,39 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
               );
             })}
           </div>
+
+          {/* Pizza Instruction Tiles */}
+          {pizzaInstructionTiles.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Special Instructions
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {pizzaInstructionTiles.map((instruction) => {
+                  const isSelected = selectedPizzaInstructions.has(instruction.id);
+                  return (
+                    <button
+                      key={instruction.id}
+                      onClick={() => handlePizzaInstructionToggle(instruction.id)}
+                      className={cn(
+                        "p-3 rounded-xl border-2 transition-all duration-200 text-center hover:shadow-md",
+                        isSelected 
+                          ? "border-gray-800 bg-gray-800 text-white shadow-lg" 
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      )}
+                    >
+                      <p className="text-sm font-medium">
+                        {instruction.label}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       );
     } else if (step.type === 'wings') {
@@ -993,6 +1110,39 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
               );
             })}
           </div>
+
+          {/* Wing Instruction Tiles */}
+          {wingInstructionTiles.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Special Instructions
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {wingInstructionTiles.map((instruction) => {
+                  const isSelected = selectedWingInstructions.has(instruction.id);
+                  return (
+                    <button
+                      key={instruction.id}
+                      onClick={() => handleWingInstructionToggle(instruction.id)}
+                      className={cn(
+                        "p-3 rounded-xl border-2 transition-all duration-200 text-center hover:shadow-md",
+                        isSelected 
+                          ? "border-gray-800 bg-gray-800 text-white shadow-lg" 
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      )}
+                    >
+                      <p className="text-sm font-medium">
+                        {instruction.label}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       );
     } else if (step.type === 'drink' || step.type === 'side') {
@@ -1353,6 +1503,38 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
                       </div>
                     );
                   }
+                  
+                  // Add instructions to details if they exist
+                  if (stepData.instructions && stepData.instructions.length > 0) {
+                    const instructionLabels = stepData.instructions.map((id: string) => {
+                      const tile = pizzaInstructionTiles.find(t => t.id === id);
+                      return tile ? tile.label : id;
+                    });
+                    
+                    if (instructionLabels.length > 0) {
+                      const instructionDetails = (
+                        <div className="text-xs text-gray-500 mt-2">
+                          <div className="flex flex-wrap gap-1">
+                            {instructionLabels.map((label: string, idx: number) => (
+                              <span
+                                key={idx}
+                                className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200"
+                              >
+                                {label}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                      
+                      details = (
+                        <>
+                          {details}
+                          {instructionDetails}
+                        </>
+                      );
+                    }
+                  }
                 } else if (stepData.type === 'wings' && stepData.sauces && stepData.sauces.length > 0) {
                   const sauces = stepData.sauces.map((s: Topping) => ({
                     ...s,
@@ -1378,6 +1560,38 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
                       </div>
                     </div>
                   );
+                  
+                  // Add wing instructions to details if they exist
+                  if (stepData.instructions && stepData.instructions.length > 0) {
+                    const instructionLabels = stepData.instructions.map((id: string) => {
+                      const tile = wingInstructionTiles.find(t => t.id === id);
+                      return tile ? tile.label : id;
+                    });
+                    
+                    if (instructionLabels.length > 0) {
+                      const instructionDetails = (
+                        <div className="text-xs text-gray-500 mt-2">
+                          <div className="flex flex-wrap gap-1">
+                            {instructionLabels.map((label: string, idx: number) => (
+                              <span
+                                key={idx}
+                                className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200"
+                              >
+                                {label}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                      
+                      details = (
+                        <>
+                          {details}
+                          {instructionDetails}
+                        </>
+                      );
+                    }
+                  }
                 }
               }
 

@@ -884,11 +884,32 @@ const MenuPage = () => {
     
     if (cartItem.isCombo) {
       // For combos, we need to reconstruct the combo data and open ComboSelector
+      // Convert instruction names back to IDs for each combo step
+      const convertedComboItems = (cartItem.customizations || []).map((step: any) => {
+        if (step.instructions && Array.isArray(step.instructions)) {
+          // Convert instruction names back to IDs based on step type
+          const convertedInstructions = step.type === 'wings' 
+            ? getWingInstructionIds(step.instructions)
+            : getPizzaInstructionIds(step.instructions);
+          
+          console.log(`Converting combo step ${step.type} instructions:`, {
+            original: step.instructions,
+            converted: convertedInstructions
+          });
+          
+          return {
+            ...step,
+            instructions: convertedInstructions
+          };
+        }
+        return step;
+      });
+
       setSelectedCombo({
         comboId: cartItem.baseId,
         name: cartItem.name, // Use original name, do not prepend 'Edit'
         imageUrl: cartItem.imageUrl,
-        items: cartItem.customizations || [],
+        items: convertedComboItems,
         price: cartItem.price,
         extraCharges: cartItem.extraCharges || 0,
         isEditing: true,

@@ -1,5 +1,34 @@
 import { Order } from './types';
 
+interface InstructionTile {
+  id: string;
+  label: string;
+  color: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+interface RenderReceiptOptions {
+  logoLines?: string[];
+  showAddress?: boolean;
+  modifiedDeltas?: Array<{ name: string; change: '+' | '-' | '~'; details?: string }>;
+  pizzaInstructionTiles?: InstructionTile[];
+  wingInstructionTiles?: InstructionTile[];
+}
+
+// Helper function to convert instruction IDs to names
+function convertInstructionIdsToNames(
+  instructionIds: string[],
+  instructionTiles: InstructionTile[] | undefined
+): string[] {
+  if (!instructionTiles) return instructionIds;
+  
+  return instructionIds.map(id => {
+    const tile = instructionTiles.find(t => t.id === id && t.isActive);
+    return tile ? tile.label : id;
+  });
+}
+
 function formatDateTime(ts: number) {
   const d = new Date(ts);
   return d.toLocaleString();
@@ -20,7 +49,7 @@ function renderToppingsBySide(toppings: any, indent = '    ') {
   return lines;
 }
 
-function renderComboStep(step: any, idx: number) {
+function renderComboStep(step: any, idx: number, opts?: RenderReceiptOptions) {
   const lines: string[] = [];
   let label = step.itemName || (step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : `Item ${idx + 1}`);
   if (step.size) label += ` (${step.size})`;
@@ -40,7 +69,15 @@ function renderComboStep(step: any, idx: number) {
   }
   // Instructions
   if (step.instructions && step.instructions.length > 0) {
-    lines.push(`    Instructions: ${step.instructions.join(', ')}`);
+    // Convert instruction IDs to names if instruction tiles are provided
+    let instructionLabels = step.instructions;
+    if (opts?.pizzaInstructionTiles || opts?.wingInstructionTiles) {
+      // Determine which instruction tiles to use based on step type
+      const isWings = step.type === 'wings';
+      const instructionTiles = isWings ? opts.wingInstructionTiles : opts.pizzaInstructionTiles;
+      instructionLabels = convertInstructionIdsToNames(step.instructions, instructionTiles);
+    }
+    lines.push(`    Instructions: ${instructionLabels.join(', ')}`);
   }
   // Extra charge
   if (step.extraCharge && Number(step.extraCharge) > 0) {
@@ -50,7 +87,14 @@ function renderComboStep(step: any, idx: number) {
 }
 
 function isComboCustomizations(customizations: any): boolean {
-  if (!customizations || Array.isArray(customizations)) return false;
+  if (!customizations) return false;
+  
+  // Handle array format (from UnifiedComboSelector)
+  if (Array.isArray(customizations)) {
+    return customizations.length > 0 && customizations.every(step => step && typeof step === 'object' && step.type);
+  }
+  
+  // Handle object format (legacy)
   const keys = Object.keys(customizations);
   return keys.length > 0 && keys.every(k => !isNaN(Number(k)));
 }
@@ -58,11 +102,7 @@ function isComboCustomizations(customizations: any): boolean {
 export function renderReceipt(
   order: Order,
   type: 'new' | 'reprint' | 'modified-partial' | 'modified-full',
-  opts?: {
-    logoLines?: string[];
-    showAddress?: boolean;
-    modifiedDeltas?: Array<{ name: string; change: '+' | '-' | '~'; details?: string }>;
-  }
+  opts?: RenderReceiptOptions
 ): string[] {
   const lines: string[] = [];
   if (opts?.logoLines) lines.push(...opts.logoLines);
@@ -110,11 +150,17 @@ export function renderReceipt(
       lines.push(`${item.quantity}x ${item.name} $${item.price.toFixed(2)}`);
       // Combo breakdown
       if (isComboCustomizations(item.customizations)) {
-        const steps = Object.keys(item.customizations)
-          .sort((a, b) => Number(a) - Number(b))
-          .map(k => item.customizations[k]);
+        let steps: any[] = [];
+        // Handle both array format (from UnifiedComboSelector) and object format (legacy)
+        if (Array.isArray(item.customizations)) {
+          steps = item.customizations;
+        } else {
+          steps = Object.keys(item.customizations)
+            .sort((a, b) => Number(a) - Number(b))
+            .map(k => item.customizations[k]);
+        }
         steps.forEach((step: any, idx: number) => {
-          lines.push(...renderComboStep(step, idx));
+          lines.push(...renderComboStep(step, idx, opts));
         });
       } else if (item.customizations) {
         // Size
@@ -136,7 +182,16 @@ export function renderReceipt(
         }
         // Instructions
         if (item.customizations.instructions && item.customizations.instructions.length > 0) {
-          lines.push(`  Instructions: ${item.customizations.instructions.join(', ')}`);
+          // Convert instruction IDs to names if instruction tiles are provided
+          let instructionLabels = item.customizations.instructions;
+          if (opts?.pizzaInstructionTiles || opts?.wingInstructionTiles) {
+            // Determine which instruction tiles to use based on item type
+            const isWings = item.name.toLowerCase().includes('wing') || 
+                           (item.customizations && item.customizations.type === 'wings');
+            const instructionTiles = isWings ? opts.wingInstructionTiles : opts.pizzaInstructionTiles;
+            instructionLabels = convertInstructionIdsToNames(item.customizations.instructions, instructionTiles);
+          }
+          lines.push(`  Instructions: ${instructionLabels.join(', ')}`);
         }
       }
       // Extra charges (always show if present)

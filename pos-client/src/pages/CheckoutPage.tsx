@@ -595,17 +595,43 @@ const CheckoutPage = () => {
       }
     }
     
-    // Handle combo customizations (array of steps)
+    // Handle combo customizations (array of steps from UnifiedComboSelector)
     if (Array.isArray(converted)) {
-      converted.forEach((step: any) => {
-        if (step.instructions && Array.isArray(step.instructions)) {
+      console.log('Processing combo customizations as array:', converted);
+      converted.forEach((step, index) => {
+        console.log(`Processing step ${index}:`, step);
+        if (step && step.instructions && Array.isArray(step.instructions)) {
+          console.log(`Step ${index} has instructions:`, step.instructions);
           if (step.type === 'wings') {
             step.instructions = getWingInstructionLabels(wingInstructionTiles, step.instructions);
           } else {
             step.instructions = getPizzaInstructionLabels(pizzaInstructionTiles, step.instructions);
           }
+          console.log(`Step ${index} converted instructions:`, step.instructions);
         }
       });
+    }
+    // Handle combo customizations (object with numeric keys - legacy format)
+    else if (converted && typeof converted === 'object' && !Array.isArray(converted)) {
+      const keys = Object.keys(converted);
+      // Check if this looks like combo customizations (numeric keys)
+      if (keys.length > 0 && keys.every(k => !isNaN(Number(k)))) {
+        console.log('Processing combo customizations with keys:', keys);
+        // This is a combo customization object
+        keys.forEach(key => {
+          const step = converted[key];
+          console.log(`Processing step ${key}:`, step);
+          if (step && step.instructions && Array.isArray(step.instructions)) {
+            console.log(`Step ${key} has instructions:`, step.instructions);
+            if (step.type === 'wings') {
+              step.instructions = getWingInstructionLabels(wingInstructionTiles, step.instructions);
+            } else {
+              step.instructions = getPizzaInstructionLabels(pizzaInstructionTiles, step.instructions);
+            }
+            console.log(`Step ${key} converted instructions:`, step.instructions);
+          }
+        });
+      }
     }
     
     console.log('Converted customizations result:', converted);
