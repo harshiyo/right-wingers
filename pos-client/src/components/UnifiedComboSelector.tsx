@@ -1686,7 +1686,10 @@ export const UnifiedComboSelector = ({ open, onClose, combo, onComplete }: Unifi
         WebkitBackdropFilter: 'blur(8px)'
       }}
     >
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-7xl h-[90vh] flex">
+      <div 
+        className="bg-white rounded-2xl shadow-xl w-full max-w-7xl h-[90vh] flex overflow-hidden"
+        style={{ borderRadius: '1rem' }}
+      >
         {/* Main Content */}
         <div className="flex-1 flex flex-col bg-gradient-to-br from-gray-50 to-white">
           {/* Header */}
