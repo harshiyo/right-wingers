@@ -12,6 +12,7 @@ interface SearchResultsProps {
   onCreateCustomer: () => void;
   formatPhoneDisplay: (phone: string) => string;
   formatLastOrderDate: (date: string) => string;
+  isPartialSearch?: boolean;
 }
 
 export const SearchResults: React.FC<SearchResultsProps> = ({
@@ -23,7 +24,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   onSelectCustomer,
   onCreateCustomer,
   formatPhoneDisplay,
-  formatLastOrderDate
+  formatLastOrderDate,
+  isPartialSearch = false
 }) => {
   const showNoResults = hasSearched && !isSearching && searchResults.length === 0 && searchQuery.length >= 3;
   const showResults = searchResults.length > 0;
@@ -135,6 +137,27 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   }
 
   if (showNoResults) {
+    // Show partial search message if applicable
+    if (isPartialSearch) {
+      return (
+        <div className="rounded-2xl lg:rounded-3xl p-4 lg:p-8 text-white shadow-2xl" style={{ backgroundColor: '#800000' }}>
+          <div className="flex items-center gap-2 lg:gap-4 mb-4 lg:mb-6">
+            <div className="p-2 lg:p-3 bg-white/20 rounded-lg lg:rounded-xl backdrop-blur-sm">
+              <UserPlus className="h-5 w-5 lg:h-8 lg:w-8" />
+            </div>
+            <h3 className="text-lg lg:text-2xl font-bold">Keep Typing</h3>
+          </div>
+          <p className="text-orange-100 mb-4 lg:mb-6 leading-relaxed text-sm lg:text-base">
+            Type at least <strong>6 digits</strong> of the phone number to search our full database. 
+            Currently showing results from cached data only.
+          </p>
+          <div className="bg-white/20 backdrop-blur-sm border border-white/30 text-white font-bold px-4 lg:px-6 py-2 lg:py-3 rounded-lg lg:rounded-xl text-sm lg:text-base text-center">
+            Continue typing to search all customers
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="rounded-2xl lg:rounded-3xl p-4 lg:p-8 text-white shadow-2xl" style={{ backgroundColor: '#800000' }}>
         <div className="flex items-center gap-2 lg:gap-4 mb-4 lg:mb-6">

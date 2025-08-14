@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { searchCustomers, Customer, saveCustomerToFirebase } from '../data/customers';
+import { Customer, saveCustomerToFirebase } from '../data/customers';
 import { PhoneInput } from '../components/ui/PhoneInput';
 import { Numpad } from '../components/ui/Numpad';
 import { SearchResults } from '../components/ui/SearchResults';
 import { TopBar } from '../components/layout/TopBar';
 import { Search, Sparkles, Clock, AlertTriangle, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
+import { useCustomerCache } from '../hooks/useCustomerCache';
 
 // Lazy load the CustomerFormDialog to improve initial load time
 const CustomerFormDialog = React.lazy(() => import('../components/CustomerFormDialog').then(module => ({ default: module.CustomerFormDialog })));
@@ -144,6 +145,12 @@ const CustomerLookupPage = () => {
     return currentStore.id;
   }, [currentStore?.id]);
 
+  // Use customer caching hook (background caching - no UI needed)
+  const {
+    searchCustomers,
+    addCustomerToCache
+  } = useCustomerCache(storeId);
+
   // Auto-focus the phone input when page loads and keep it focused
   useEffect(() => {
     const focusInput = () => {
@@ -187,8 +194,8 @@ const CustomerLookupPage = () => {
     setHasSearched(true);
     
     try {
-      // Use Firebase-integrated search function
-      const results = await searchCustomers(query, storeId);
+      // Use cached search function
+      const results = await searchCustomers(query);
       setSearchResults(results);
     } catch (error) {
       console.error('❌ Search failed:', error);
@@ -202,7 +209,13 @@ const CustomerLookupPage = () => {
     } finally {
       setIsSearching(false);
     }
-  }, [storeId]);
+  }, [searchCustomers]);
+
+  // Check if search is partial (for UI feedback)
+  const isPartialSearch = useMemo(() => {
+    const cleanedDigits = searchQuery.replace(/\D/g, '');
+    return cleanedDigits.length >= 3 && cleanedDigits.length < 6;
+  }, [searchQuery]);
 
   // Optimized debounced search with cleanup
   useEffect(() => {
@@ -303,6 +316,9 @@ const CustomerLookupPage = () => {
       // Save to Firebase first
       const savedCustomer = await saveCustomerToFirebase(newCustomerData);
       
+      // Add to cache for immediate availability
+      addCustomerToCache(savedCustomer);
+      
       // Navigate to order page with the saved customer
       navigate('/order', { 
         state: { 
@@ -321,7 +337,7 @@ const CustomerLookupPage = () => {
         type: 'error'
       });
     }
-  }, [navigate, storeId]);
+  }, [navigate, storeId, addCustomerToCache]);
 
   // Numpad handlers
   const handleNumpadNumber = useCallback((number: string) => {
@@ -431,41 +447,42 @@ const CustomerLookupPage = () => {
                 )}
               </div>
             </div>
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mt-3 lg:mt-4 gap-2 lg:gap-0">
-              <p className="text-xs lg:text-sm text-gray-500 flex items-center gap-2">
-                <Sparkles className="h-3 w-3 lg:h-4 lg:w-4 text-yellow-500" />
-                Search by phone number, last 4 digits, area code, or customer name
-              </p>
-              <div className="text-xs text-gray-400 flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                <span className="hidden lg:inline">Use ↑↓ arrows & Enter | No match? Press Enter to add new customer | Press Esc to clear</span>
-                <span className="lg:hidden">↑↓ arrows & Enter | Esc to clear</span>
-              </div>
-            </div>
+                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mt-3 lg:mt-4 gap-2 lg:gap-0">
+               <p className="text-xs lg:text-sm text-gray-500 flex items-center gap-2">
+                 <Sparkles className="h-3 w-3 lg:h-4 lg:w-4 text-yellow-500" />
+                 Search by phone number, last 4 digits, area code, or customer name
+               </p>
+               <div className="text-xs text-gray-400 flex items-center gap-1">
+                 <Clock className="h-3 w-3" />
+                 <span className="hidden lg:inline">Use ↑↓ arrows & Enter | No match? Press Enter to add new customer | Press Esc to clear</span>
+                 <span className="lg:hidden">↑↓ arrows & Enter | Esc to clear</span>
+               </div>
+             </div>
           </div>
 
-          {/* Two Column Layout - Numpad and Search Results */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-8">
-            {/* Left Column - Touch Numpad */}
-            <Numpad
-              onNumberClick={handleNumpadNumber}
-              onBackspace={handleNumpadBackspace}
-              onClear={handleNumpadClear}
-            />
+                     {/* Two Column Layout - Numpad and Search Results */}
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-8">
+             {/* Left Column - Touch Numpad */}
+             <Numpad
+               onNumberClick={handleNumpadNumber}
+               onBackspace={handleNumpadBackspace}
+               onClear={handleNumpadClear}
+             />
 
-            {/* Right Column - Search Results */}
-            <SearchResults
-              searchResults={searchResults}
-              searchQuery={searchQuery}
-              isSearching={isSearching}
-              hasSearched={hasSearched}
-              selectedIndex={selectedIndex}
-              onSelectCustomer={handleSelectCustomer}
-              onCreateCustomer={() => setShowCreateDialog(true)}
-              formatPhoneDisplay={formatPhoneDisplay}
-              formatLastOrderDate={formatLastOrderDate}
-            />
-          </div>
+                           {/* Right Column - Search Results */}
+              <SearchResults
+                searchResults={searchResults}
+                searchQuery={searchQuery}
+                isSearching={isSearching}
+                hasSearched={hasSearched}
+                selectedIndex={selectedIndex}
+                onSelectCustomer={handleSelectCustomer}
+                onCreateCustomer={() => setShowCreateDialog(true)}
+                formatPhoneDisplay={formatPhoneDisplay}
+                formatLastOrderDate={formatLastOrderDate}
+                isPartialSearch={isPartialSearch}
+              />
+           </div>
         </div>
       </div>
 
