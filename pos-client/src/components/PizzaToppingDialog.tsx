@@ -81,7 +81,6 @@ export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizz
   });
   const [selectedInstructions, setSelectedInstructions] = useState<Set<string>>(new Set());
   const [activeCategory, setActiveCategory] = useState<string>('All');
-  const [activeDietaryFilter, setActiveDietaryFilter] = useState<string>('All');
 
   useEffect(() => {
     if (open) {
@@ -514,26 +513,13 @@ export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizz
   const currentSelection = getCurrentSelection();
   // const currentLimit = getCurrentLimit();
 
-  // Get unique categories and dietary filters
+  // Get unique categories
   // const categories = ['All', ...Array.from(new Set(toppings.map(t => t.category).filter((cat): cat is string => Boolean(cat))))];
-  // const dietaryFilters = ['All', 'Vegetarian', 'Vegan', 'Gluten-Free', 'Keto'];
 
-  // Filter toppings based on active category and dietary filter
+  // Filter toppings based on active category
   const filteredToppings = toppings.filter(topping => {
     const categoryMatch = activeCategory === 'All' || topping.category === activeCategory;
-    
-    let dietaryMatch = true;
-    if (activeDietaryFilter === 'Vegetarian') {
-      dietaryMatch = topping.isVegetarian === true;
-    } else if (activeDietaryFilter === 'Vegan') {
-      dietaryMatch = topping.isVegan === true;
-    } else if (activeDietaryFilter === 'Gluten-Free') {
-      dietaryMatch = topping.isGlutenFree === true;
-    } else if (activeDietaryFilter === 'Keto') {
-      dietaryMatch = topping.isKeto === true;
-    }
-    
-    return categoryMatch && dietaryMatch;
+    return categoryMatch;
   });
 
   if (!open) return null;
@@ -708,38 +694,11 @@ export const PizzaToppingDialog = ({ open, onClose, onSubmit, toppingLimit, pizz
                       className={cn(
                         "flex-1 px-2 py-1.5 rounded-md text-xs lg:text-sm font-medium transition-all",
                         activeCategory === category
-                          ? "bg-blue-600 text-white shadow-sm" 
+                          ? "bg-red-600 text-white shadow-sm" 
                           : "text-gray-600 hover:text-gray-800 hover:bg-gray-200"
                       )}
                     >
                       {category}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Dietary Filter */}
-              <div className="flex-1">
-                <label className="block text-xs lg:text-sm font-semibold text-gray-700 mb-1 lg:mb-2">Dietary</label>
-                <div className="flex bg-gray-100 rounded-lg p-1">
-                  {[
-                    { key: 'All', label: 'All' },
-                    { key: 'Vegetarian', label: 'Veg 🌱' },
-                    { key: 'Vegan', label: 'Vegan 🌿' },
-                    { key: 'Gluten-Free', label: 'GF 🌾' },
-                    { key: 'Keto', label: 'Keto ❤️' }
-                  ].map(filter => (
-                    <button
-                      key={filter.key}
-                      onClick={() => setActiveDietaryFilter(filter.key)}
-                      className={cn(
-                        "flex-1 px-1 py-1.5 rounded-md text-xs lg:text-sm font-medium transition-all",
-                        activeDietaryFilter === filter.key
-                          ? "bg-green-600 text-white shadow-sm" 
-                          : "text-gray-600 hover:text-gray-800 hover:bg-gray-200"
-                      )}
-                    >
-                      {filter.label}
                     </button>
                   ))}
                 </div>
