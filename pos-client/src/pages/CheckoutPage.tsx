@@ -20,7 +20,6 @@ import { Input } from '../components/ui/Input';
 import { TopBar } from '../components/layout/TopBar';
 import { PaymentMethodCard } from '../components/checkout/PaymentMethodCard';
 import { OrderSummary } from '../components/checkout/OrderSummary';
-import { CustomerInfoCard } from '../components/checkout/CustomerInfoCard';
 import { useCheckout } from '../hooks/useCheckout';
 import { printReceiptIfLocal } from '../services/printReceiptIfLocal';
 import { Order } from '../services/types';
@@ -246,12 +245,7 @@ const CheckoutPage = () => {
       <div className="flex-1 p-4">
         <div className="max-w-7xl mx-auto h-full">
           {/* Compact Header */}
-          <div className="text-center mb-4">
-            <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-lg border border-gray-200">
-              <Receipt className="h-5 w-5 text-red-600" />
-              <h1 className="text-xl font-bold text-gray-900">Checkout</h1>
-            </div>
-          </div>
+          
 
           {/* Main Content - 2 Column Layout */}
           <div className="grid lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
