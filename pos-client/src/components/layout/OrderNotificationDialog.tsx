@@ -193,10 +193,39 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
       }
     }
     
-    // Pass customer info and phone to /menu so it is preselected
+          // Construct customer object with delivery address for delivery orders
+      let customer = order.customerInfo;
+      if (order.orderType === 'delivery') {
+        // Check for delivery address in deliveryDetails (new format)
+        if (order.deliveryDetails && order.deliveryDetails.street) {
+          customer = {
+            ...order.customerInfo,
+            address: {
+              street: order.deliveryDetails.street || '',
+              city: order.deliveryDetails.city || '',
+              postalCode: order.deliveryDetails.postalCode || ''
+            }
+          };
+        }
+        // Check for delivery address in legacy format (if deliveryDetails doesn't have address fields)
+        else if (order.deliveryAddress && typeof order.deliveryAddress === 'string') {
+          // Parse the delivery address string if it's in a specific format
+          const addressParts = order.deliveryAddress.split(',').map((part: string) => part.trim());
+          customer = {
+            ...order.customerInfo,
+            address: {
+              street: addressParts[0] || '',
+              city: addressParts[1] || '',
+              postalCode: addressParts[2] || ''
+            }
+          };
+        }
+      }
+      
+      // Pass customer info and phone to /menu so it is preselected
     navigate('/menu', {
       state: {
-        customer: order.customerInfo,
+        customer: customer,
         phone: order.customerInfo?.phone,
         orderType: order.orderType || 'pickup',
         editingOrderId: order.id, // Pass the order ID for modification mode
