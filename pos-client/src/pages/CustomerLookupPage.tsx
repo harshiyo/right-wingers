@@ -346,7 +346,22 @@ const CustomerLookupPage = () => {
 
   // Numpad handlers
   const handleNumpadNumber = useCallback((number: string) => {
-    setSearchQuery(prev => prev + number);
+    setSearchQuery(prev => {
+      // Only allow digits 0-9, not * or #
+      if (!/^[0-9]$/.test(number)) {
+        return prev;
+      }
+      
+      // Remove all non-digits to check the actual digit count
+      const currentDigits = prev.replace(/\D/g, '');
+      
+      // Only add the number if we haven't reached 10 digits
+      if (currentDigits.length < 10) {
+        return prev + number;
+      }
+      
+      return prev;
+    });
   }, []);
 
   const handleNumpadBackspace = useCallback(() => {
