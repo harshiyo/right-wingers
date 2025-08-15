@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
-import { User, Lock, Eye, EyeOff, LogIn, AlertCircle } from "lucide-react"
+import { User, Lock, Eye, EyeOff, LogIn, AlertCircle, CheckCircle2 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import Logo from '../assets/logo.png'
@@ -11,7 +11,10 @@ import { useStore } from '../context/StoreContext'
 import { ChristmasEffect } from '../components/ChristmasEffect'
 import { HalloweenEffect } from '../components/HalloweenEffect'
 import { getFestiveType } from '../utils/festiveUtils'
+import { motion, AnimatePresence } from "framer-motion"
+import confetti from "canvas-confetti"
 
+// Live clock component
 const LiveClock = () => {
   const [currentTime, setCurrentTime] = useState(new Date())
 
@@ -28,6 +31,62 @@ const LiveClock = () => {
   )
 }
 
+// Success animation overlay
+function LoginSuccessAnimation({ onComplete }: { onComplete: () => void }) {
+  useEffect(() => {
+    const duration = 1 * 1000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+    const interval: any = setInterval(() => {
+      const timeLeft = animationEnd - Date.now();
+      if (timeLeft <= 0) return clearInterval(interval);
+
+      const particleCount = 50 * (timeLeft / duration);
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: Math.random(), y: Math.random() - 0.2 }
+      });
+    }, 200);
+
+    const timeout = setTimeout(() => {
+      onComplete();
+    }, 1500);
+
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
+  }, [onComplete]);
+
+  return (
+    <motion.div
+      className="fixed inset-0 bg-white flex items-center justify-center z-[9998]"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 200, damping: 15 }}
+        className="flex flex-col items-center"
+      >
+        <CheckCircle2 className="text-green-500 w-24 h-24" />
+        <motion.span
+          className="mt-4 text-2xl font-bold text-gray-800"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          Login Successful!
+        </motion.span>
+      </motion.div>
+    </motion.div>
+  )
+}
+
 export function Login() {
   const [passwordVisible, setPasswordVisible] = useState(false)
   const [email, setEmail] = useState('')
@@ -35,21 +94,17 @@ export function Login() {
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
   const navigate = useNavigate()
   const { loginWithCredentials, currentUser } = useStore()
-  
-  // Get version from environment variables
+
   const version = (import.meta.env as any).__APP_VERSION__ || '1.0.0'
   const buildDate = (import.meta.env as any).__BUILD_DATE__ || new Date().toISOString().split('T')[0]
-
-  // Get current festive type based on date
   const [festiveType, setFestiveType] = useState(getFestiveType())
 
-  // Fetch login screen settings from Firestore
   const [snapshot, loading] = useDocument(doc(db, 'settings', 'loginScreen'))
   const locationName = snapshot?.data()?.locationName || 'Right Wingers'
 
-  // Load saved credentials on component mount
   useEffect(() => {
     const savedCredentials = localStorage.getItem('pos_remember_me')
     if (savedCredentials) {
@@ -58,15 +113,12 @@ export function Login() {
         setEmail(savedEmail || '')
         setPassword(savedPassword || '')
         setRememberMe(savedRememberMe || false)
-      } catch (error) {
-        console.error('Error loading saved credentials:', error)
-        // Clear corrupted data
+      } catch {
         localStorage.removeItem('pos_remember_me')
       }
     }
   }, [])
 
-  // Update festive type when date changes (check every minute)
   useEffect(() => {
     const checkFestiveType = () => {
       const newFestiveType = getFestiveType()
@@ -74,12 +126,10 @@ export function Login() {
         setFestiveType(newFestiveType)
       }
     }
-
-    const intervalId = setInterval(checkFestiveType, 60000) // Check every minute
+    const intervalId = setInterval(checkFestiveType, 60000)
     return () => clearInterval(intervalId)
   }, [festiveType])
 
-  // Redirect if already logged in
   useEffect(() => {
     if (currentUser) {
       navigate('/', { replace: true });
@@ -103,35 +153,21 @@ export function Login() {
     try {
       const success = await loginWithCredentials(email, password);
       if (success) {
-        // Save credentials if remember me is checked
         if (rememberMe) {
-          const credentialsToSave = {
-            email,
-            password,
-            rememberMe: true
-          }
-          localStorage.setItem('pos_remember_me', JSON.stringify(credentialsToSave))
+          localStorage.setItem('pos_remember_me', JSON.stringify({ email, password, rememberMe: true }))
         } else {
-          // Clear saved credentials if remember me is unchecked
           localStorage.removeItem('pos_remember_me')
         }
-        
-        navigate('/', { replace: true });
+        setShowSuccess(true) // Show animation instead of instant navigate
       } else {
         setError('Invalid email or password. Please check your credentials.');
       }
     } catch (err: any) {
-      if (err.code === 'auth/user-not-found') {
-        setError('No account found with this email address.');
-      } else if (err.code === 'auth/wrong-password') {
-        setError('Incorrect password. Please try again.');
-      } else if (err.code === 'auth/invalid-email') {
-        setError('Please enter a valid email address.');
-      } else if (err.code === 'auth/too-many-requests') {
-        setError('Too many failed attempts. Please try again later.');
-      } else {
-        setError('Login failed. Please check your credentials and try again.');
-      }
+      if (err.code === 'auth/user-not-found') setError('No account found with this email address.');
+      else if (err.code === 'auth/wrong-password') setError('Incorrect password. Please try again.');
+      else if (err.code === 'auth/invalid-email') setError('Please enter a valid email address.');
+      else if (err.code === 'auth/too-many-requests') setError('Too many failed attempts. Please try again later.');
+      else setError('Login failed. Please check your credentials and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -139,23 +175,24 @@ export function Login() {
 
   const handleRememberMeChange = (checked: boolean) => {
     setRememberMe(checked)
-    // If unchecking remember me, clear saved credentials
-    if (!checked) {
-      localStorage.removeItem('pos_remember_me')
-    }
+    if (!checked) localStorage.removeItem('pos_remember_me')
   }
 
   return (
     <div className="min-h-screen w-full flex bg-gray-100">
-      {/* Dynamic Festive Effect */}
       {festiveType === 'christmas' && <ChristmasEffect />}
       {festiveType === 'halloween' && <HalloweenEffect />}
-      
-      {/* Left decorative panel */}
+
+      <AnimatePresence>
+        {showSuccess && (
+          <LoginSuccessAnimation onComplete={() => navigate('/', { replace: true })} />
+        )}
+      </AnimatePresence>
+
       <div className="w-1/2 bg-[#800000] flex flex-col items-center justify-center p-12 text-white relative overflow-hidden">
         <div className="absolute -top-16 -left-16 w-64 h-64 bg-white/10 rounded-full"></div>
         <div className="absolute -bottom-24 -right-10 w-80 h-80 bg-white/10 rounded-full"></div>
-        
+
         <div className="z-10 text-center flex-grow flex flex-col items-center justify-center">
           <img src={Logo} alt="POS System Logo" className="w-48 h-48 mx-auto" />
           <h2 className="text-3xl font-bold mt-6">
@@ -171,8 +208,7 @@ export function Login() {
           <p className="text-xs text-white/50">Build: {buildDate}</p>
         </div>
       </div>
-      
-      {/* Login Form Panel */}
+
       <div className="w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-md p-8">
           <h2 className="text-3xl font-bold mb-2 text-gray-800">Cashier Login</h2>
@@ -189,17 +225,17 @@ export function Login() {
             <div className="space-y-6">
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="Email" 
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Email"
                   className="pl-12 h-14 text-lg"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required 
+                  required
                 />
               </div>
-              
+
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
@@ -220,7 +256,6 @@ export function Login() {
                 </button>
               </div>
 
-              {/* Remember Me Checkbox */}
               <div className="flex items-center">
                 <input
                   id="remember-me"
@@ -234,15 +269,15 @@ export function Login() {
                 </label>
               </div>
             </div>
-            
+
             <div className="mt-8">
-              <Button 
-                className="w-full h-14 text-lg font-bold bg-[#800000] hover:bg-red-800 disabled:opacity-50" 
+              <Button
+                className="w-full h-14 text-lg font-bold bg-[#800000] hover:bg-red-800 disabled:opacity-50"
                 type="submit"
                 disabled={isLoading || !email || !password}
               >
                 {isLoading ? 'Signing In...' : 'Sign In'}
-                <LogIn className="ml-2 h-5 w-5"/>
+                <LogIn className="ml-2 h-5 w-5" />
               </Button>
             </div>
           </form>
@@ -250,4 +285,4 @@ export function Login() {
       </div>
     </div>
   )
-} 
+}

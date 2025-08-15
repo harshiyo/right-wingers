@@ -12,7 +12,7 @@ export const toppingImageMap: Record<string, string> = {
   'italian-sausage': images['/src/assets/Toppings/italian-sausage.png'],
   'hot-italian-sausage': images['/src/assets/Toppings/hot-italian-sausage.png'],
   'chicken': images['/src/assets/Toppings/chicken.png'],
-
+  'pesto': images['/src/assets/Toppings/pesto.png'],
   'mushrooms': images['/src/assets/Toppings/mushrooms.png'],
   'onion': images['/src/assets/Toppings/onion.png'],
   'green-peppers': images['/src/assets/Toppings/green-peppers.png'],
@@ -24,7 +24,6 @@ export const toppingImageMap: Record<string, string> = {
   'jalapeno': images['/src/assets/Toppings/jalapeno.png'],
   'hot-peppers': images['/src/assets/Toppings/hot-peppers.png'],
   'sundried-tomatoes': images['/src/assets/Toppings/sundried-tomatoes.png'],
-
   'feta-cheese': images['/src/assets/Toppings/feta-cheese.png'],
 };
 

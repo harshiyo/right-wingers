@@ -228,6 +228,7 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
       // Clear localStorage
       localStorage.removeItem('pos_current_user');
       localStorage.removeItem('pos_current_store_id');
+      localStorage.removeItem('pos-cart'); // Clear cart data
       
       // Force a page reload to clear all state and navigate to login
       // This works in both development and production modes

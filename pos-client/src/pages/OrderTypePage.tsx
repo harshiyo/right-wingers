@@ -4,9 +4,11 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { TopBar } from '../components/layout/TopBar';
 import { PreviousOrdersDialog } from '../components/PreviousOrdersDialog';
-import { Package, Truck, Store, Clock, CheckCircle, User, History, AlertTriangle, X } from 'lucide-react';
+import { Store, Clock, CheckCircle, User, History, AlertTriangle, X } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { Customer } from '../data/customers';
+import pickupImage from '../assets/pickup.png';
+import deliveryImage from '../assets/pizza-deliver.png';
 
 import { useCart } from '../context/CartContext';
 
@@ -86,7 +88,7 @@ const ErrorDialog = ({
 // Memoized components to prevent unnecessary re-renders
 const OrderTypeCard = memo(({ 
   type, 
-  icon: Icon, 
+  image, 
   title, 
   description, 
   features, 
@@ -95,7 +97,7 @@ const OrderTypeCard = memo(({
   onClick 
 }: {
   type: 'pickup' | 'delivery';
-  icon: React.ComponentType<any>;
+  image: string;
   title: string;
   description: string;
   features: string[];
@@ -117,13 +119,13 @@ const OrderTypeCard = memo(({
     aria-pressed={isSelected}
   >
     <div className={cn(
-      "w-12 h-12 lg:w-14 lg:h-14 rounded-lg lg:rounded-xl flex items-center justify-center mx-auto mb-2 lg:mb-3 transition-transform duration-150 shadow-lg",
-      {
-        "bg-gradient-to-br from-red-700 to-red-800 group-hover:scale-105": type === 'pickup',
-        "bg-gradient-to-br from-orange-600 to-orange-700 group-hover:scale-105": type === 'delivery'
-      }
+      "w-16 h-16 lg:w-20 lg:h-20 rounded-lg lg:rounded-xl flex items-center justify-center mx-auto mb-2 lg:mb-3 transition-transform duration-150 shadow-lg overflow-hidden bg-white group-hover:scale-105"
     )}>
-      <Icon className="h-6 w-6 lg:h-7 lg:w-7 text-white" aria-hidden="true" />
+      <img 
+        src={image} 
+        alt={`${title} icon`}
+        className="h-10 w-10 lg:h-12 lg:w-12 object-contain"
+      />
     </div>
     
     <h3 className="text-lg lg:text-xl font-bold text-gray-900 mb-1 lg:mb-2">{title}</h3>
@@ -563,7 +565,7 @@ const OrderTypePage = () => {
   const orderTypeData = useMemo(() => [
     {
       type: 'pickup' as const,
-      icon: Package,
+      image: pickupImage,
       title: 'Pickup',
       description: 'Ready in 15-25 minutes',
       features: [
@@ -573,7 +575,7 @@ const OrderTypePage = () => {
     },
     {
       type: 'delivery' as const,
-      icon: Truck,
+      image: deliveryImage,
       title: 'Delivery',
       description: 'Delivered in 30-45 minutes',
       features: [
@@ -671,7 +673,7 @@ const OrderTypePage = () => {
               <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border border-gray-100 h-full flex flex-col">
                 <div className="flex items-center gap-2 mb-4 lg:mb-6">
                   <div className="p-2 bg-gradient-to-br from-red-800 to-red-900 rounded-lg">
-                    <Truck className="h-5 w-5 text-white" aria-hidden="true" />
+                    <Store className="h-5 w-5 text-white" aria-hidden="true" />
                   </div>
                   <h2 className="text-lg lg:text-xl font-bold text-gray-900">How would you like to receive your order?</h2>
                 </div>
@@ -682,7 +684,7 @@ const OrderTypePage = () => {
                       <OrderTypeCard
                         key={orderType.type}
                         type={orderType.type}
-                        icon={orderType.icon}
+                        image={orderType.image}
                         title={orderType.title}
                         description={orderType.description}
                         features={orderType.features}
