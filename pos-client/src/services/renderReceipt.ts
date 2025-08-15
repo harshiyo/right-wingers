@@ -49,9 +49,24 @@ function renderToppingsBySide(toppings: any, indent = '    ') {
   return lines;
 }
 
-function renderComboStep(step: any, idx: number, opts?: RenderReceiptOptions) {
+function renderComboStep(step: any, idx: number, opts?: RenderReceiptOptions, pizzaCount?: number) {
   const lines: string[] = [];
-  let label = step.itemName || (step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : `Item ${idx + 1}`);
+  // Simplified step display - just show the type without redundant information
+  let label;
+  if (step.type === 'pizza') {
+    const currentPizzaCount = (pizzaCount || 0) + 1;
+    label = `Pizza ${currentPizzaCount}`;
+  } else if (step.type === 'wings') {
+    label = 'Wings';
+  } else if (step.type === 'side') {
+    label = 'Side';
+  } else if (step.type === 'drink') {
+    label = 'Drink';
+  } else if (step.type === 'dipping') {
+    label = 'Dipping Sauce';
+  } else {
+    label = step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : `Item ${idx + 1}`;
+  }
   if (step.size) label += ` (${step.size})`;
   lines.push(`  - ${label}`);
   // Toppings (pizza)
@@ -165,8 +180,10 @@ export function renderReceipt(
             .sort((a, b) => Number(a) - Number(b))
             .map(k => item.customizations[k]);
         }
+        let pizzaCount = 0;
         steps.forEach((step: any, idx: number) => {
-          lines.push(...renderComboStep(step, idx, opts));
+          lines.push(...renderComboStep(step, idx, opts, pizzaCount));
+          if (step.type === 'pizza') pizzaCount++;
         });
       } else if (item.customizations) {
         // Size
@@ -207,6 +224,8 @@ export function renderReceipt(
     });
   }
   lines.push('-----------------------------');
+  if (order['subtotal'] !== undefined) lines.push(`Subtotal:   $${order['subtotal'].toFixed(2)}`);
+  if (order['tax'] !== undefined) lines.push(`Tax:        $${order['tax'].toFixed(2)}`);
   if (order['subtotal'] !== undefined) lines.push(`Subtotal:   $${order['subtotal'].toFixed(2)}`);
   if (order['tax'] !== undefined) lines.push(`Tax:        $${order['tax'].toFixed(2)}`);
   lines.push(`Total:      $${order.total.toFixed(2)}`);

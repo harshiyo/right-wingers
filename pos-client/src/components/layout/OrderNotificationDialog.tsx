@@ -48,6 +48,7 @@ interface Order {
   tax?: number;
   paymentMethod?: string;
   deliveryAddress?: string;
+  orderNote?: string;
 }
 
 interface OrderItem {
@@ -397,7 +398,8 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
                {filtered.map((order, index) => (
                  <div 
                    key={order.id} 
-                   className="bg-white rounded-xl shadow-md p-4 mb-4 border border-gray-200 transition-all duration-200 cursor-pointer"
+                   className="bg-white rounded-xl shadow-md p-4 mb-4 border border-gray-200 transition-all duration-200 cursor-pointer hover:shadow-lg"
+                   onClick={() => toggleOrderExpansion(order.id)}
                  >
                    <div className="flex justify-between items-center">
                      <div>
@@ -425,7 +427,7 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
                          )}
                        </div>
                      </div>
-                     <div className="flex gap-2">
+                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                        {/* Reprint Receipt Button */}
                        <button
                          className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-semibold flex items-center gap-1"
@@ -472,10 +474,10 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
                           <CheckCircle className="w-3 h-3" /> Mark Paid
                         </button>
                       )}
-                      {/* Existing actions (expand, modify, etc.) */}
-                      <button onClick={() => toggleOrderExpansion(order.id)}>
-                        <ChevronDown className={cn('w-5 h-5 text-gray-400', expandedOrders.has(order.id) && 'rotate-180')} />
-                      </button>
+                      {/* Chevron indicator - now just visual */}
+                      <div className="flex items-center">
+                        <ChevronDown className={cn('w-5 h-5 text-gray-400 transition-transform duration-200', expandedOrders.has(order.id) && 'rotate-180')} />
+                      </div>
                       <button
                         className="px-2 py-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded"
                         onClick={() => handleModifyOrder(order)}
@@ -496,8 +498,9 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
                             let comboArr = null;
                             if (Array.isArray(item.customizations)) comboArr = item.customizations;
                             else if (item.customizations && typeof item.customizations === 'object' && Object.keys(item.customizations).every(k => !isNaN(Number(k)))) comboArr = Object.values(item.customizations);
-                            if (comboArr && comboArr.length > 0) {
-                              comboArr.forEach(step => {
+                                                         if (comboArr && comboArr.length > 0) {
+                               let pizzaCount = 0;
+                               comboArr.forEach(step => {
                                 // Handle dipping sauces specially
                                 if (step.type === 'dipping' && step.selectedDippingSauces && step.sauceData) {
                                   // Show individual dipping sauce items
@@ -506,14 +509,22 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
                                     html += `&nbsp;&nbsp;- <b>${quantity}x ${sauceName}</b><br/>`;
                                   });
                                 } else {
-                                  // For steps with itemName (like sides/drinks), use the actual item name
-                                  let stepDisplayName;
-                                  if (step.itemName && step.itemName.trim() !== '') {
-                                    stepDisplayName = step.itemName;
-                                  } else {
-                                    stepDisplayName = step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : 'Item';
-                                  }
-                                  html += `&nbsp;&nbsp;- <b>${stepDisplayName}</b>${step.size ? ' (' + step.size + ')' : ''}<br/>`;
+                                                                     // Simplified step display - just show the type without redundant information
+                                   let stepDisplayName;
+                                   if (step.type === 'pizza') {
+                                     stepDisplayName = `Pizza ${++pizzaCount}`;
+                                   } else if (step.type === 'wings') {
+                                     stepDisplayName = 'Wings';
+                                   } else if (step.type === 'side') {
+                                     stepDisplayName = 'Side';
+                                   } else if (step.type === 'drink') {
+                                     stepDisplayName = 'Drink';
+                                   } else if (step.type === 'dipping') {
+                                     stepDisplayName = 'Dipping Sauce';
+                                   } else {
+                                     stepDisplayName = step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : 'Item';
+                                   }
+                                  html += `&nbsp;&nbsp;- <b>${stepDisplayName}</b><br/>`;
                                   if (step.toppings) {
                                     const t = step.toppings;
                                     if (t.wholePizza && t.wholePizza.length > 0) html += `&nbsp;&nbsp;&nbsp;&nbsp;Whole: ${(t.wholePizza as { name: string }[]).map((t: { name: string }) => t.name).join(', ')}<br/>`;

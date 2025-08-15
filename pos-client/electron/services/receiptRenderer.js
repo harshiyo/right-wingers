@@ -34,7 +34,7 @@ export class ReceiptRenderer {
     return lines;
   }
 
-  renderComboStep(step, idx) {
+  renderComboStep(step, idx, pizzaCount = 0) {
     const lines = [];
     
     // Handle dipping sauces specially
@@ -45,7 +45,22 @@ export class ReceiptRenderer {
         lines.push(`  - ${quantity}x ${sauceName}`);
       });
     } else {
-      let label = step.itemName || (step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : `Item ${idx + 1}`);
+      // Simplified step display - just show the type without redundant information
+      let label;
+      if (step.type === 'pizza') {
+        const currentPizzaCount = pizzaCount + 1;
+        label = `Pizza ${currentPizzaCount}`;
+      } else if (step.type === 'wings') {
+        label = 'Wings';
+      } else if (step.type === 'side') {
+        label = 'Side';
+      } else if (step.type === 'drink') {
+        label = 'Drink';
+      } else if (step.type === 'dipping') {
+        label = 'Dipping Sauce';
+      } else {
+        label = step.type ? step.type.charAt(0).toUpperCase() + step.type.slice(1) : `Item ${idx + 1}`;
+      }
       if (step.size) label += ` (${step.size})`;
       lines.push(`  - ${label}`);
       // Toppings (pizza)
@@ -349,6 +364,13 @@ export class ReceiptRenderer {
       const padding = Math.max(0, 32 - 'Discount:'.length - discountStr.length);
       lines.push(`Discount:${' '.repeat(padding)}${discountStr}`);
     }
+    
+         if (order.discount) {
+       const discountStr = `-$${order.discount.toFixed(2)}`;
+       const padding = Math.max(0, 32 - 'Discount:'.length - discountStr.length);
+       lines.push(`Discount:${' '.repeat(padding)}${discountStr}`);
+     }
+    
     if (order.total) {
       const totalStr = `$${order.total.toFixed(2)}`;
       const padding = Math.max(0, 32 - 'TOTAL:'.length - totalStr.length);
@@ -375,11 +397,13 @@ export class ReceiptRenderer {
       
       // Handle combo customizations (array format - like what modified receipt uses)
       if (Array.isArray(customizations)) {
+        let pizzaCount = 0;
         customizations.forEach((step, idx) => {
-          const stepLines = this.renderComboStep(step, idx);
+          const stepLines = this.renderComboStep(step, idx, pizzaCount);
           if (Array.isArray(stepLines)) {
             lines.push(...stepLines);
           }
+          if (step.type === 'pizza') pizzaCount++;
         });
       }
       // Handle combo customizations (object with numeric keys)
@@ -389,11 +413,13 @@ export class ReceiptRenderer {
           .sort((a, b) => Number(a) - Number(b))
           .map(k => customizations[k]);
         
+        let pizzaCount = 0;
         steps.forEach((step, idx) => {
-          const stepLines = this.renderComboStep(step, idx);
+          const stepLines = this.renderComboStep(step, idx, pizzaCount);
           if (Array.isArray(stepLines)) {
             lines.push(...stepLines);
           }
+          if (step.type === 'pizza') pizzaCount++;
         });
       } else {
         // Handle regular customizations (array)
