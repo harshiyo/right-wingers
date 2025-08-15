@@ -239,6 +239,9 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
         scheduledDeliveryDateTime,
       }
     });
+    
+    // Close the dialog after initiating the modification
+    onClose();
   };
 
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
