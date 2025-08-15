@@ -293,7 +293,7 @@ const OrderTypePage = () => {
   const location = useLocation();
   const { addToCart, clearCart, getCartItemCount, getCartTotal } = useCart();
   
-  const { customer: initialCustomer, phone } = location.state || {};
+  const { customer: initialCustomer, phone, cartItems } = location.state || {};
 
   // State
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -413,7 +413,9 @@ const OrderTypePage = () => {
     navigate(`/order/${type}-details`, { 
       state: { 
         customer: finalCustomerData, 
-        phone 
+        phone,
+        // Preserve cart items if they exist
+        ...(cartItems && { cartItems })
       } 
     });
   }, [customer, customerName, phone, navigate, isCustomerInfoConfirmed]);

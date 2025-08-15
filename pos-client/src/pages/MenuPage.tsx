@@ -267,11 +267,17 @@ const CartPanel = ({
   onRemoveItem,
   onEditItem,
   onCheckout,
+  onBack,
+  customerInfo,
+  orderType,
 }: {
   cartItems: CartItem[];
   onRemoveItem: (itemId: string) => void;
   onEditItem: (item: CartItem) => void;
   onCheckout: () => void;
+  onBack: () => void;
+  customerInfo?: any;
+  orderType?: string;
 }) => {
   // Fetch instruction tiles for converting IDs to labels
   const [pizzaInstructionTiles] = useCollection(
@@ -598,15 +604,38 @@ const CartPanel = ({
           <span>Total:</span>
           <span>${total.toFixed(2)}</span>
         </div>
-        <Button 
-          className="w-full h-[48px] text-base font-bold" 
-          size="lg" 
-          disabled={cartItems.length === 0}
-          onClick={onCheckout}
-          type="button"
-        >
-          Checkout
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            className="flex-1 h-[48px] text-base font-bold" 
+            size="lg" 
+            onClick={onBack}
+            type="button"
+            style={{
+              borderColor: '#800000',
+              color: '#800000'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#600000';
+              e.currentTarget.style.color = '#600000';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#800000';
+              e.currentTarget.style.color = '#800000';
+            }}
+          >
+            Back
+          </Button>
+          <Button 
+            className="flex-1 h-[48px] text-base font-bold" 
+            size="lg" 
+            disabled={cartItems.length === 0}
+            onClick={onCheckout}
+            type="button"
+          >
+            Checkout
+          </Button>
+        </div>
       </div>
     </aside>
   )
@@ -624,7 +653,8 @@ const MenuPage = () => {
     scheduledDateTime,
     deliveryTimeType,
     scheduledDeliveryDateTime,
-    deliveryAddress
+    deliveryAddress,
+    cartItems: passedCartItems
   } = location.state || {};
   
 
@@ -684,7 +714,7 @@ const MenuPage = () => {
   const allCategories = getCategoriesInOrder();
 
   // Cart context
-  const { cartItems, addToCart, removeFromCart, updateCartItem, getCartTotal, getCartItemCount } = useCart();
+  const { cartItems, addToCart, removeFromCart, updateCartItem, getCartTotal, getCartItemCount, setCartItems } = useCart();
   
   // State
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
@@ -744,6 +774,14 @@ const MenuPage = () => {
       setSelectedCategory(allCategories[0]);
     }
   }, [allCategories, selectedCategory]);
+
+  // Restore cart items when passed back from details pages
+  useEffect(() => {
+    if (passedCartItems && passedCartItems.length > 0 && cartItems.length === 0) {
+      // Restore passed cart items directly
+      setCartItems(passedCartItems);
+    }
+  }, [passedCartItems, cartItems.length, setCartItems]);
 
   // Add keyboard shortcut handler
   useEffect(() => {
@@ -1276,6 +1314,36 @@ const MenuPage = () => {
     });
   };
 
+  const handleBackNavigation = () => {
+    // Determine the appropriate back destination based on order type
+    if (orderType === 'pickup') {
+      navigate('/order/pickup-details', { 
+        state: { 
+          customer: customer, 
+          phone: customer?.phone,
+          cartItems: cartItems 
+        } 
+      });
+    } else if (orderType === 'delivery') {
+      navigate('/order/delivery-details', { 
+        state: { 
+          customer: customer, 
+          phone: customer?.phone,
+          cartItems: cartItems 
+        } 
+      });
+    } else {
+      // Default to order type selection
+      navigate('/order', { 
+        state: { 
+          customer: customer, 
+          phone: customer?.phone,
+          cartItems: cartItems 
+        } 
+      });
+    }
+  };
+
   const subtotal = cartItems.reduce((sum, item) => {
     const itemTotal = (item.price + (item.extraCharges || 0)) * item.quantity;
     //console.log(`🛒 MAIN SUBTOTAL DEBUG: ${item.name} - Price: $${item.price}, Extra: $${item.extraCharges || 0}, Qty: ${item.quantity}, Total: $${itemTotal}`);
@@ -1307,7 +1375,15 @@ const MenuPage = () => {
           loading={loadingMenuItems || loadingCombos || loadingSettings}
           gridColumns={menuSettings.gridColumns}
         />
-        <CartPanel cartItems={cartItems} onRemoveItem={handleRemoveFromCart} onEditItem={handleEditCartItem} onCheckout={handleCheckout} />
+        <CartPanel 
+          cartItems={cartItems} 
+          onRemoveItem={handleRemoveFromCart} 
+          onEditItem={handleEditCartItem} 
+          onCheckout={handleCheckout}
+          onBack={handleBackNavigation}
+          customerInfo={customer}
+          orderType={orderType}
+        />
       </div>
       <ItemCustomizationDialog
         open={customizingItem !== null}

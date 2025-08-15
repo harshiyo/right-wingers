@@ -218,7 +218,7 @@ const PickupDetailsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const { customer, phone } = location.state || {};
+  const { customer, phone, cartItems } = location.state || {};
 
   const [pickupTime, setPickupTime] = useState<'asap' | 'scheduled'>('asap');
   const [scheduledDateTime, setScheduledDateTime] = useState('');
@@ -292,10 +292,12 @@ const PickupDetailsPage = () => {
         phone, 
         orderType: 'pickup', 
         pickupTime, 
-        scheduledDateTime 
+        scheduledDateTime,
+        // Preserve cart items if they exist
+        ...(cartItems && { cartItems })
       } 
     });
-  }, [navigate, customer, phone, pickupTime, scheduledDateTime, validateScheduledDateTime]);
+  }, [navigate, customer, phone, pickupTime, scheduledDateTime, validateScheduledDateTime, cartItems]);
 
   // Memoized pickup options data
   const pickupOptions = useMemo(() => [

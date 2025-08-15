@@ -343,7 +343,7 @@ const DeliveryDetailsPage = () => {
   const location = useLocation();
   const { currentStore } = useStore();
   
-  const { customer: initialCustomer, phone } = location.state || {};
+  const { customer: initialCustomer, phone, cartItems } = location.state || {};
 
   const [customer, setCustomer] = useState<Customer | null>(initialCustomer || null);
   const [deliveryAddress, setDeliveryAddress] = useState<{
@@ -569,7 +569,9 @@ const DeliveryDetailsPage = () => {
           deliveryAddress,
           deliveryTimeType,
           scheduledDeliveryDateTime,
-          distance
+          distance,
+          // Preserve cart items if they exist
+          ...(cartItems && { cartItems })
         } 
       });
     } catch (error) {
