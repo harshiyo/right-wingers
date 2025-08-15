@@ -635,6 +635,9 @@ const CheckoutPage = () => {
                 <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2 flex-shrink-0">
                   <ShoppingCart className="h-5 w-5" />
                   Order Summary
+                  <span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[20px] text-center">
+                    {cartItems.reduce((total, item) => total + item.quantity, 0)}
+                  </span>
                 </h2>
                 <div className="flex-1 min-h-0 overflow-hidden">
                   <OrderSummary 
