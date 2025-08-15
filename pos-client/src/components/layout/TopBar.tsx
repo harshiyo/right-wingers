@@ -125,9 +125,11 @@ export const TopBar = ({
             <ShoppingCart className="w-5 h-5" />
             <span>{cartItemsCount} • ${cartTotal.toFixed(2)}</span>
           </div>
-          <button onClick={onQuickAddClick} className="p-2 rounded-full hover:bg-red-100 transition">
-            <Search className="w-5 h-5 text-gray-600" />
-          </button>
+          {currentStep === 'menu' && (
+            <button onClick={onQuickAddClick} className="p-2 rounded-full hover:bg-red-100 transition">
+              <Search className="w-5 h-5 text-gray-600" />
+            </button>
+          )}
           {currentUser && (
             <div className="flex items-center gap-2 px-3 py-1 bg-red-50 dark:bg-red-900 rounded-xl border border-red-200 dark:border-red-600 shadow">
               <div className="w-8 h-8 bg-red-700 text-white rounded-full flex items-center justify-center font-bold">
@@ -139,9 +141,7 @@ export const TopBar = ({
               </div>
             </div>
           )}
-          <button onClick={toggleDark} className="p-2 rounded-full hover:bg-red-100">
-            {dark ? <Sun className="text-yellow-400" /> : <Moon className="text-gray-600" />}
-          </button>
+          
           <button onClick={logout} className="p-2 rounded-full hover:bg-red-100">
             <LogOut className="text-red-600" />
           </button>

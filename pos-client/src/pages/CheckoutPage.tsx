@@ -257,88 +257,114 @@ const CheckoutPage = () => {
           <div className="grid lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
             {/* Left Column - Customer Info & Payment Method */}
             <div className="space-y-3 h-full">
-              {/* Customer Info - Compact */}
-              <div className="bg-white rounded-xl shadow-lg p-3 border border-gray-200">
-                <h2 className="text-base font-bold text-gray-900 mb-2 flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Customer Information
-                </h2>
-                <div className="space-y-2">
-                  {/* Customer Name */}
-                  <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
-                    <div className="p-1 rounded-lg bg-green-100">
-                      <CheckCircle className="h-3 w-3 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-green-800 text-xs">{customer.name}</p>
-                      <p className="text-xs text-gray-600">Customer</p>
-                    </div>
+              {/* Customer Info - New Design */}
+              <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
+                {/* Red Header */}
+                <div className="bg-red-600 px-4 py-3 flex items-center gap-3">
+                  <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                    <User className="h-5 w-5 text-red-600" />
                   </div>
+                  <div>
+                    <h2 className="text-white font-bold text-lg">Customer Information</h2>
+                    <p className="text-red-100 text-sm">Order Details & Preferences</p>
+                  </div>
+                </div>
+                
+                <div className="p-4 space-y-3">
+                                     {/* Customer Name - Light Blue Card */}
+                   <div className="bg-blue-50 rounded-lg p-3 flex items-center gap-3">
+                     <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                       <User className="h-5 w-5 text-white" />
+                     </div>
+                     <div className="flex-1">
+                       <p className="text-gray-500 text-xs font-medium">CUSTOMER NAME</p>
+                       <p className="text-gray-900 font-bold text-base">{customer.name}</p>
+                     </div>
+                   </div>
                   
-                  {/* Phone Number */}
-                  <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
-                    <div className="p-1 rounded-lg bg-blue-100">
-                      <Phone className="h-3 w-3 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 text-xs">{phone}</p>
-                      <p className="text-xs text-gray-600">Phone</p>
-                    </div>
-                  </div>
+                                     {/* Phone Number - Light Blue Card */}
+                   <div className="bg-blue-50 rounded-lg p-3 flex items-center gap-3">
+                     <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                       <Phone className="h-5 w-5 text-white" />
+                     </div>
+                     <div className="flex-1">
+                       <p className="text-gray-500 text-xs font-medium">PHONE NUMBER</p>
+                       <p className="text-gray-900 font-bold text-base">{phone}</p>
+                     </div>
+                   </div>
                   
-                  {/* Order Type & Timing */}
-                  <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg">
-                    <Clock className="h-3 w-3 text-yellow-600" />
-                    <div>
-                      <p className="font-semibold text-gray-900 text-xs capitalize">{orderType}</p>
-                      <p className="text-xs text-gray-600">
-                        {orderType === 'pickup' 
-                          ? (pickupTime === 'scheduled' && scheduledDateTime 
-                              ? `Scheduled: ${new Date(scheduledDateTime).toLocaleString()}`
-                              : 'ASAP: 15-25 minutes')
-                          : orderType === 'delivery'
-                            ? (deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime
-                                ? `Scheduled: ${new Date(scheduledDeliveryDateTime).toLocaleString()}`
-                                : 'ASAP: 30-45 minutes')
-                            : 'Ready when prepared'
-                        }
-                      </p>
-                    </div>
-                  </div>
+                                     {/* Order Type - Light Yellow/Orange Card */}
+                   <div className="bg-orange-50 rounded-lg p-3 flex items-center gap-3">
+                     <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+                       <Clock className="h-5 w-5 text-white" />
+                     </div>
+                     <div className="flex-1">
+                       <p className="text-gray-500 text-xs font-medium">ORDER TYPE</p>
+                       <p className="text-gray-900 font-bold text-base capitalize">{orderType}</p>
+                       <div className="flex items-center gap-1 mt-1">
+                         <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                         <span className="text-orange-600 text-xs font-medium">
+                           {orderType === 'pickup' 
+                             ? (pickupTime === 'scheduled' && scheduledDateTime 
+                                 ? `Scheduled: ${new Date(scheduledDateTime).toLocaleString()}`
+                                 : 'ASAP: 15-25 minutes')
+                             : orderType === 'delivery'
+                               ? (deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime
+                                   ? `Scheduled: ${new Date(scheduledDeliveryDateTime).toLocaleString()}`
+                                   : 'ASAP: 30-45 minutes')
+                               : 'Ready when prepared'
+                           }
+                         </span>
+                       </div>
+                     </div>
+                   </div>
 
-                  {/* Delivery Address (if delivery order) */}
-                  {orderType === 'delivery' && customer.address && (
-                    <div className="flex items-start gap-2 p-2 bg-gray-50 rounded-lg">
-                      <MapPin className="h-3 w-3 text-gray-600 mt-0.5" />
+                                     {/* Delivery Address (if delivery order) */}
+                   {orderType === 'delivery' && customer.address && (
+                     <div className="bg-blue-50 rounded-lg p-3 flex items-center gap-3">
+                       <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                         <MapPin className="h-5 w-5 text-white" />
+                       </div>
+                       <div className="flex-1">
+                         <p className="text-gray-500 text-xs font-medium">DELIVERY ADDRESS</p>
+                         <p className="text-gray-900 font-bold text-base">
+                           {customer.address.street}
+                           {customer.address.city && `, ${customer.address.city}`}
+                           {customer.address.postalCode && `, ${customer.address.postalCode}`}
+                         </p>
+                       </div>
+                     </div>
+                   )}
+
+                  {/* Order Notes Section */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 bg-gray-500 rounded flex items-center justify-center">
+                        <MessageSquare className="h-3 w-3 text-white" />
+                      </div>
                       <div>
-                        <p className="font-semibold text-gray-900 text-xs">Address</p>
-                        <p className="text-xs text-gray-600">
-                          {customer.address.street}
-                          {customer.address.city && `, ${customer.address.city}`}
-                          {customer.address.postalCode && `, ${customer.address.postalCode}`}
-                        </p>
+                        <p className="text-gray-500 text-xs font-medium">Order Notes</p>
+                        <p className="text-gray-400 text-xs">Special instructions or preferences</p>
                       </div>
                     </div>
-                  )}
-
-                  {/* Order Note */}
-                  <div className="space-y-2">
-                    <label className="block text-xs font-semibold text-gray-900">
-                      <MessageSquare className="h-3 w-3 inline mr-1" />
-                      Order Note (Optional)
-                    </label>
-                    <textarea
-                      value={state.orderNote}
-                      onChange={(e) => updateState({ orderNote: e.target.value })}
-                      placeholder="Add any special instructions or notes for your order..."
-                      className="w-full p-2 text-base border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                      rows={3}
-                      maxLength={500}
-                    />
+                                         <textarea
+                       value={state.orderNote}
+                       onChange={(e) => updateState({ orderNote: e.target.value })}
+                       placeholder="Add any special instructions or notes for your order..."
+                       className="w-full p-3 text-base border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                       rows={3}
+                       maxLength={500}
+                     />
                     {state.orderNote.length > 0 && (
-                      <p className="text-xs text-gray-500 text-right">
-                        {state.orderNote.length}/500 characters
-                      </p>
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <span className="text-blue-600 text-xs font-medium">Note Added</span>
+                        </div>
+                        <p className="text-gray-500 text-xs">
+                          {state.orderNote.length}/500 characters
+                        </p>
+                      </div>
                     )}
                   </div>
                 </div>
