@@ -135,6 +135,12 @@ export function renderReceipt(
   lines.push(`Customer: ${order.customerInfo.name}`);
   lines.push(`Phone:    ${order.customerInfo.phone}`);
   if (order['deliveryAddress']) lines.push(`Address:  ${order['deliveryAddress']}`);
+  // Add order note if present
+  if (order['orderNote']) {
+    lines.push('-----------------------------');
+    lines.push('Order Note:');
+    lines.push(order['orderNote']);
+  }
   lines.push('-----------------------------');
   if (type === 'reprint') lines.push('*** REPRINT ***');
   if (type.startsWith('modified')) lines.push('*** MODIFIED ORDER ***');

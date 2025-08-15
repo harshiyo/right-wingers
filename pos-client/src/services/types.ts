@@ -51,4 +51,5 @@ export interface Order {
   deliveryTimeType?: 'asap' | 'scheduled';
   scheduledDeliveryDateTime?: string;
   estimatedPickupTime?: string;
+  orderNote?: string; // Add order note field
 } 

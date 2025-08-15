@@ -137,6 +137,13 @@ export class ReceiptRenderer {
       if (order.customerInfo?.phone) lines.push(`Phone: ${order.customerInfo.phone}`);
     }
     
+    // Add order note if present
+    if (order.orderNote) {
+      lines.push('-----------------------------');
+      lines.push('ORDER NOTE:');
+      lines.push(order.orderNote);
+    }
+    
     // Pickup/Delivery details - more compact
     if (order.orderType === 'pickup') {
       if (order.pickupDetails && order.pickupDetails.scheduledDateTime) {

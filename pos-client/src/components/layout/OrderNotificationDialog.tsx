@@ -422,6 +422,8 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
                             tax: order.tax,
                             paymentMethod: order.paymentMethod,
                             deliveryAddress: order.deliveryAddress,
+                            // Include order note if present
+                            orderNote: order.orderNote,
                           };
                           if (window.electronAPI && typeof window.electronAPI.printReceipt === 'function') {
                             await window.electronAPI.printReceipt(orderForPrint, 'reprint');
@@ -513,6 +515,13 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
                           }).join('')
                         }}
                       />
+                      {/* Show order note if present */}
+                      {order.orderNote && (
+                        <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                          <div className="text-sm font-semibold text-yellow-800 mb-1">Order Note:</div>
+                          <div className="text-sm text-yellow-700">{order.orderNote}</div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

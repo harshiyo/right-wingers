@@ -645,6 +645,13 @@ const CheckoutPage = () => {
     }
   }, [editingOrderId, location.state]);
 
+  // Load order note when modifying an existing order
+  useEffect(() => {
+    if (editingOrderId && location.state?.originalOrder?.orderNote) {
+      setOrderNote(location.state.originalOrder.orderNote);
+    }
+  }, [editingOrderId, location.state?.originalOrder?.orderNote]);
+
   // Modal state for modification prompt - DEPRECATED: Now using direct update
   const [showModificationPrompt, setShowModificationPrompt] = useState(false);
   const [pendingOrder, setPendingOrder] = useState(false); // Prevent double submit
@@ -663,6 +670,7 @@ const CheckoutPage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showReceiptOptions, setShowReceiptOptions] = useState(false);
   const [taxRate, setTaxRate] = useState(0.13); // Default to 13%
+  const [orderNote, setOrderNote] = useState(''); // Add state for order note
 
   // Add state for order save tracking
   const [orderSaved, setOrderSaved] = useState(false);
@@ -867,6 +875,7 @@ const CheckoutPage = () => {
         discountTotal: 0,
         ...(orderType === 'delivery' && customer.address ? { deliveryDetails: { ...customer.address, ...(deliveryAddress || {}), ...(deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime ? { scheduledDeliveryDateTime } : {}) } } : {}),
         ...(orderType === 'pickup' ? { pickupDetails: { estimatedTime: '15-25 minutes', ...(pickupTime === 'scheduled' && scheduledDateTime ? { scheduledDateTime } : {}) } } : {}),
+        ...(orderNote.trim() && { orderNote: orderNote.trim() }), // Add order note if provided
         source: location.state?.originalOrder?.source || 'pos',
       };
 
@@ -924,7 +933,7 @@ const CheckoutPage = () => {
       console.error('Failed to place order:', error);
       alert('Failed to place order. Please try again.');
     }
-  }, [isProcessing, orderSaved, currentStore, customer, phone, cartItems, subtotal, tax, discountAmount, orderType, paymentMethod, createOrder, deepRemoveUndefined, deliveryAddress, deliveryTimeType, scheduledDeliveryDateTime, pickupTime, scheduledDateTime, editingOrderId, clearCart, navigate, paymentStatus]);
+  }, [isProcessing, orderSaved, currentStore, customer, phone, cartItems, subtotal, tax, discountAmount, orderType, paymentMethod, createOrder, deepRemoveUndefined, deliveryAddress, deliveryTimeType, scheduledDeliveryDateTime, pickupTime, scheduledDateTime, editingOrderId, clearCart, navigate, paymentStatus, orderNote]);
   
   // Utility to remove undefined fields from an object (shallow)
   function removeUndefinedFields(obj: Record<string, any>) {
@@ -1140,6 +1149,7 @@ const CheckoutPage = () => {
         discountTotal: 0,
         ...(orderType === 'delivery' && customer.address ? { deliveryDetails: { ...customer.address, ...(deliveryAddress || {}), ...(deliveryTimeType === 'scheduled' && scheduledDeliveryDateTime ? { scheduledDeliveryDateTime } : {}) } } : {}),
         ...(orderType === 'pickup' ? { pickupDetails: { estimatedTime: '15-25 minutes', ...(pickupTime === 'scheduled' && scheduledDateTime ? { scheduledDateTime } : {}) } } : {}),
+        ...(orderNote.trim() && { orderNote: orderNote.trim() }), // Add order note if provided
         source: location.state?.originalOrder?.source || 'pos',
       };
 
@@ -1202,7 +1212,7 @@ const CheckoutPage = () => {
     } finally {
       setPendingOrder(false);
     }
-  }, [navigate, clearCart, createOrder, customer, phone, cartItems, total, subtotal, discountAmount, orderType, paymentMethod, editingOrderId, currentStore, showOrderSuccess, location.state]);
+  }, [navigate, clearCart, createOrder, customer, phone, cartItems, total, subtotal, discountAmount, orderType, paymentMethod, editingOrderId, currentStore, showOrderSuccess, location.state, orderNote]);
 
   // Handler for modal choice (just sets state) - DEPRECATED: Now using direct update
   const handleModificationPromptChoice = (choice: 'full' | 'modified') => {
@@ -1429,6 +1439,10 @@ const CheckoutPage = () => {
             `<div><strong>Address:</strong> ${customer.address.street}, ${customer.address.city}, ${customer.address.postalCode}</div>` : 
             ''
           }
+          ${orderNote.trim() ? 
+            `<div><strong>Order Note:</strong> ${orderNote.trim()}</div>` : 
+            ''
+          }
         </div>
         
         <div style="border-top: 1px dashed #000; padding-top: 10px; margin-bottom: 15px;">
@@ -1465,7 +1479,7 @@ const CheckoutPage = () => {
       printWindow.document.close();
       printWindow.print();
     }
-  }, [cartItems, customer, phone, orderType, paymentMethod, editingOrderId, location.state, getPizzaInstructionLabels, getWingInstructionLabels, pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime]);
+  }, [cartItems, customer, phone, orderType, paymentMethod, editingOrderId, location.state, getPizzaInstructionLabels, getWingInstructionLabels, pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime, orderNote]);
   
   // On Complete Order button click
   const handleCompleteOrderClick = () => {
@@ -1526,11 +1540,12 @@ const CheckoutPage = () => {
           postalCode: customer.address.postalCode
         } : {})
       } : undefined,
+      ...(orderNote.trim() && { orderNote: orderNote.trim() }), // Add order note if provided
     };
     // Use 'modified-full' for modified orders, 'new' for new orders
     const receiptType = editingOrderId ? 'modified-full' : 'new';
     await printReceiptIfLocal(orderForPrint, currentStore?.id ?? '', receiptType);
-  }, [savedOrderId, savedOrderNumber, currentStore, customer, phone, cartItems, total, subtotal, tax, discountAmount, appliedDiscountCode, paymentMethod, orderType, editingOrderId, pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime]);
+  }, [savedOrderId, savedOrderNumber, currentStore, customer, phone, cartItems, total, subtotal, tax, discountAmount, appliedDiscountCode, paymentMethod, orderType, editingOrderId, pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime, orderNote]);
 
   // --- Print Modified Receipt (only changed items) ---
   const printModifiedReceipt = useCallback(async () => {
@@ -1587,9 +1602,10 @@ const CheckoutPage = () => {
           postalCode: customer.address.postalCode
         } : {})
       } : undefined,
+      ...(orderNote.trim() && { orderNote: orderNote.trim() }), // Add order note if provided
     };
     await printReceiptIfLocal(orderForPrint, currentStore?.id ?? '', 'modified-partial');
-  }, [savedOrderId, savedOrderNumber, cartItems, currentStore, customer, phone, orderType, subtotal, tax, discountAmount, appliedDiscountCode, paymentMethod, total, pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime]);
+  }, [savedOrderId, savedOrderNumber, cartItems, currentStore, customer, phone, orderType, subtotal, tax, discountAmount, appliedDiscountCode, paymentMethod, total, pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime, orderNote]);
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-red-50 via-white to-orange-50">
@@ -1679,6 +1695,27 @@ const CheckoutPage = () => {
                       </div>
                     </div>
                   )}
+
+                  {/* Order Note */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold text-gray-900">
+                      <MessageSquare className="h-3 w-3 inline mr-1" />
+                      Order Note (Optional)
+                    </label>
+                    <textarea
+                      value={orderNote}
+                      onChange={(e) => setOrderNote(e.target.value)}
+                      placeholder="Add any special instructions or notes for your order..."
+                      className="w-full p-2 text-base border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      rows={3}
+                      maxLength={500}
+                    />
+                    {orderNote.length > 0 && (
+                      <p className="text-xs text-gray-500 text-right">
+                        {orderNote.length}/500 characters
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
               
@@ -1908,6 +1945,7 @@ const CheckoutPage = () => {
                                     postalCode: customer.address.postalCode
                                   } : {})
                                 } : undefined,
+                                ...(orderNote.trim() && { orderNote: orderNote.trim() }), // Add order note if provided
                               };
                               await printReceiptIfLocal(orderForPrint, currentStore?.id ?? '', 'new');
                             }}
