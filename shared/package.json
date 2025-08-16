@@ -3,7 +3,17 @@
   "version": "1.0.0",
   "main": "setup-firebase-stores.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "backup": "node backup-script.js",
+    "backup:upload": "node backup-script.js --upload",
+    "backup:cleanup": "node backup-script.js --cleanup",
+    "backup:full": "node backup-script.js --upload --cleanup",
+    "restore": "node restore-script.js",
+    "restore:dry-run": "node restore-script.js --dry-run",
+    "restore:overwrite": "node restore-script.js --overwrite",
+    "restore:latest": "node restore-script.js",
+    "restore:list": "node -e \"const service = require('./restore-script.js'); service.prototype.listAvailableBackups.call({backupDir: './backups'}).then(console.log)\"",
+    "test-structure": "node test-structure.js"
   },
   "keywords": [],
   "author": "",
@@ -11,6 +21,7 @@
   "description": "",
   "dependencies": {
     "firebase": "^12.0.0",
-    "firebase-admin": "^13.4.0"
+    "firebase-admin": "^13.4.0",
+    "@google-cloud/storage": "^7.0.0"
   }
 }
