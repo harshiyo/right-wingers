@@ -108,6 +108,11 @@ const Orders = () => {
   const [storeSyncStatus, setStoreSyncStatus] = useState<StoreSync[]>([]);
   const [showSyncStatus, setShowSyncStatus] = useState(false);
 
+  // Bulk selection state
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+  const [showBulkActions, setShowBulkActions] = useState(false);
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -170,6 +175,13 @@ const Orders = () => {
     setCurrentPage(1);
   }, [searchQuery, statusFilter, typeFilter, dateFilter, storeFilter]);
 
+  // Reset selection when filters change
+  useEffect(() => {
+    setSelectedOrders(new Set());
+    setSelectAll(false);
+    setShowBulkActions(false);
+  }, [searchQuery, statusFilter, typeFilter, dateFilter, storeFilter]);
+
   const getOrderSource = (order: Order): 'online' | 'pos' => {
     // Check for explicit source fields first
     if (order.orderSource === 'online' || order.source === 'online') return 'online';
@@ -198,21 +210,132 @@ const Orders = () => {
     const source = getOrderSource(order);
     const prefix = source === 'online' ? 'RWO' : 'RWP';
     
-    // For online orders, try to get the last 6 characters of the ID
-    if (source === 'online') {
-      const match = order.id?.match(/[A-Za-z0-9]{6}$/);
-      if (match) {
-        const counter = parseInt(match[0], 36); // Convert base36 to number
-        if (!isNaN(counter)) {
-          return `${prefix}${String(counter).padStart(6, '0')}`;
-        }
-      }
+    // Generate a new order number if needed
+    const timestamp = Date.now();
+    const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `${prefix}${timestamp.toString().slice(-4)}${randomNum}`;
+  };
+
+  // Bulk selection functions
+  const handleSelectOrder = (orderId: string, checked: boolean) => {
+    const newSelected = new Set(selectedOrders);
+    if (checked) {
+      newSelected.add(orderId);
+    } else {
+      newSelected.delete(orderId);
     }
+    setSelectedOrders(newSelected);
+    setShowBulkActions(newSelected.size > 0);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allOrderIds = new Set(filteredOrders.map(order => order.id));
+      setSelectedOrders(allOrderIds);
+      setSelectAll(true);
+      setShowBulkActions(true);
+    } else {
+      setSelectedOrders(new Set());
+      setSelectAll(false);
+      setShowBulkActions(false);
+    }
+  };
+
+  const handleSelectAllOnPage = (checked: boolean) => {
+    if (checked) {
+      const pageOrderIds = new Set(paginatedOrders.map(order => order.id));
+      setSelectedOrders(pageOrderIds);
+      setSelectAll(false);
+      setShowBulkActions(true);
+    } else {
+      setSelectedOrders(new Set());
+      setSelectAll(false);
+      setShowBulkActions(false);
+    }
+  };
+
+  const bulkDeleteOrders = async () => {
+    if (selectedOrders.size === 0) return;
     
-    // For POS orders or fallback
-    const timestamp = order.timestamp || Date.now();
-    const counter = Math.floor(Math.random() * 1000000); // Random 6-digit number
-    return `${prefix}${String(counter).padStart(6, '0')}`;
+    if (!confirm(`Are you sure you want to delete ${selectedOrders.size} order(s)? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      // Delete orders directly without calling individual deleteOrder function
+      const deletePromises = Array.from(selectedOrders).map(orderId => 
+        deleteDoc(doc(db, 'orders', orderId))
+      );
+      await Promise.all(deletePromises);
+      
+      // Clear selection after successful deletion
+      setSelectedOrders(new Set());
+      setSelectAll(false);
+      setShowBulkActions(false);
+      
+      // Refresh orders
+      fetchOrders();
+    } catch (error) {
+      console.error('Error deleting orders:', error);
+      alert('Error deleting some orders. Please try again.');
+    }
+  };
+
+  const bulkUpdateStatus = async (newStatus: Order['status']) => {
+    if (selectedOrders.size === 0) return;
+    
+    try {
+      const updatePromises = Array.from(selectedOrders).map(orderId => 
+        updateOrderStatus(orderId, newStatus)
+      );
+      await Promise.all(updatePromises);
+      
+      // Clear selection after successful update
+      setSelectedOrders(new Set());
+      setSelectAll(false);
+      setShowBulkActions(false);
+      
+      // Refresh orders
+      fetchOrders();
+    } catch (error) {
+      console.error('Error updating order statuses:', error);
+      alert('Error updating some order statuses. Please try again.');
+    }
+  };
+
+  const exportOrdersToCSV = (ordersToExport: Order[]) => {
+    const csvContent = [
+      ['Order Number', 'Customer', 'Phone', 'Type', 'Status', 'Total', 'Created At', 'Items'].join(','),
+      ...ordersToExport.map(order => [
+        order.orderNumber || order.id?.slice(-6) || 'N/A',
+        order.customerInfo?.name || order.customerName || 'Unknown',
+        order.customerInfo?.phone || order.customerPhone || 'N/A',
+        order.orderType,
+        order.status,
+        order.total || 0,
+        order.createdAt ? new Date(order.createdAt).toLocaleString() : new Date(order.timestamp || 0).toLocaleString(),
+        order.items.map(item => `${item.name} (${item.quantity})`).join('; ')
+      ].join(','))
+    ].join('\n');
+    return csvContent;
+  };
+
+  const handleBulkExport = () => {
+    const selectedOrderData = Array.from(selectedOrders).map(id => 
+      orders.find(order => order.id === id)
+    ).filter(Boolean);
+    
+    if (selectedOrderData.length === 0) return;
+    
+    // Export selected orders to CSV
+    const csvContent = exportOrdersToCSV(selectedOrderData as Order[]);
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `selected-orders-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const fetchOrders = async () => {
@@ -826,11 +949,103 @@ const Orders = () => {
         </div>
       </div>
 
+      {/* Bulk Actions */}
+      {showBulkActions && (
+        <div className="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">
+                  {selectedOrders.size} order(s) selected
+                </span>
+                <span className="text-xs text-gray-500">
+                  • Total: ${Array.from(selectedOrders)
+                    .map(id => orders.find(order => order.id === id)?.total || 0)
+                    .reduce((sum, total) => sum + total, 0)
+                    .toFixed(2)}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedOrders(new Set());
+                  setSelectAll(false);
+                  setShowBulkActions(false);
+                }}
+                className="text-sm text-gray-500 hover:text-gray-700 underline"
+              >
+                Clear Selection
+              </button>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Status:</span>
+                <select
+                  onChange={(e) => bulkUpdateStatus(e.target.value as Order['status'])}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  defaultValue=""
+                >
+                  <option value="" disabled>Select Status</option>
+                  <option value="pending">Mark as Pending</option>
+                  <option value="preparing">Mark as Preparing</option>
+                  <option value="ready">Mark as Ready</option>
+                  <option value="completed">Mark as Completed</option>
+                  <option value="cancelled">Mark as Cancelled</option>
+                </select>
+              </div>
+              <Button
+                onClick={handleBulkExport}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export ({selectedOrders.size})
+              </Button>
+              <Button
+                onClick={() => {
+                  // Bulk print functionality - could open print dialog for selected orders
+                  alert(`Print functionality for ${selectedOrders.size} orders would be implemented here.`);
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+              >
+                <Package className="h-4 w-4 mr-2" />
+                Print ({selectedOrders.size})
+              </Button>
+              <Button
+                onClick={bulkDeleteOrders}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete ({selectedOrders.size})
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedOrders.size === paginatedOrders.length && paginatedOrders.length > 0}
+                      onChange={(e) => handleSelectAllOnPage(e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span>Select</span>
+                    {filteredOrders.length > paginatedOrders.length && (
+                      <button
+                        onClick={() => handleSelectAll(true)}
+                        className="text-xs text-blue-600 hover:text-blue-800 underline ml-2"
+                        title={`Select all ${filteredOrders.length} orders (not just this page)`}
+                      >
+                        All ({filteredOrders.length})
+                      </button>
+                    )}
+                  </div>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
@@ -844,7 +1059,7 @@ const Orders = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                     {searchQuery || statusFilter !== 'all' || typeFilter !== 'all' || dateFilter !== 'today' || (currentUser?.role === 'master_admin' && storeFilter !== 'all')
                       ? 'No orders found matching your criteria.' 
                       : 'No orders yet today.'}
@@ -860,6 +1075,14 @@ const Orders = () => {
                   
                   return (
                     <tr key={order.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={selectedOrders.has(order.id)}
+                          onChange={(e) => handleSelectOrder(order.id, e.target.checked)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold">#{formatOrderNumber(order)}</span>

@@ -3,6 +3,7 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy,
 import { db } from '../services/firebase';
 import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, Calendar, Filter, Download, Users, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { jobScheduler } from '../services/jobScheduler';
+import { Button } from '../components/ui/Button';
 
 interface Customer {
   id: string;
@@ -34,6 +35,11 @@ const Customers = () => {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [syncSuccess, setSyncSuccess] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'recent' | 'frequent' | 'inactive' | 'blocked'>('all');
+
+  // Bulk selection state
+  const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+  const [showBulkActions, setShowBulkActions] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -80,6 +86,116 @@ const Customers = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, filterType]);
+
+  // Reset selection when filters change
+  useEffect(() => {
+    setSelectedCustomers(new Set());
+    setSelectAll(false);
+    setShowBulkActions(false);
+  }, [searchQuery, filterType]);
+
+  // Bulk selection functions
+  const handleSelectCustomer = (customerId: string, checked: boolean) => {
+    const newSelected = new Set(selectedCustomers);
+    if (checked) {
+      newSelected.add(customerId);
+    } else {
+      newSelected.delete(customerId);
+    }
+    setSelectedCustomers(newSelected);
+    setShowBulkActions(newSelected.size > 0);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allCustomerIds = new Set(filteredCustomers.map(customer => customer.id));
+      setSelectedCustomers(allCustomerIds);
+      setSelectAll(true);
+      setShowBulkActions(true);
+    } else {
+      setSelectedCustomers(new Set());
+      setSelectAll(false);
+      setShowBulkActions(false);
+    }
+  };
+
+  const handleSelectAllOnPage = (checked: boolean) => {
+    if (checked) {
+      const pageCustomerIds = new Set(paginatedCustomers.map(customer => customer.id));
+      setSelectedCustomers(pageCustomerIds);
+      setSelectAll(false);
+      setShowBulkActions(true);
+    } else {
+      setSelectedCustomers(new Set());
+      setSelectAll(false);
+      setShowBulkActions(false);
+    }
+  };
+
+  const bulkDeleteCustomers = async () => {
+    if (selectedCustomers.size === 0) return;
+    
+    if (!confirm(`Are you sure you want to delete ${selectedCustomers.size} customer(s)? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      // Delete customers directly without calling individual handleDelete function
+      const deletePromises = Array.from(selectedCustomers).map(customerId => 
+        deleteDoc(doc(db, 'customers', customerId))
+      );
+      await Promise.all(deletePromises);
+      
+      // Clear selection after successful deletion
+      setSelectedCustomers(new Set());
+      setSelectAll(false);
+      setShowBulkActions(false);
+      
+      // Refresh customers
+      fetchCustomers();
+    } catch (error) {
+      console.error('Error deleting customers:', error);
+      alert('Error deleting some customers. Please try again.');
+    }
+  };
+
+  const exportCustomersToCSV = (customersToExport: Customer[]) => {
+    const csvContent = [
+      ['Name', 'Email', 'Phone', 'Address', 'City', 'Postal Code', 'Total Orders', 'Total Spent', 'Last Order', 'Status', 'Notes'].join(','),
+      ...customersToExport.map(customer => [
+        customer.name,
+        customer.email || 'N/A',
+        customer.phone,
+        typeof customer.address === 'string' ? customer.address : (customer.address as any)?.street || 'N/A',
+        typeof customer.address === 'string' ? customer.city || 'N/A' : (customer.address as any)?.city || 'N/A',
+        typeof customer.address === 'string' ? customer.postalCode || 'N/A' : (customer.address as any)?.postalCode || 'N/A',
+        customer.totalOrders || customer.orderCount || 0,
+        customer.totalSpent || 0,
+        customer.lastOrderDate ? new Date(customer.lastOrderDate).toLocaleDateString() : 'Never',
+        customer.isBlocked ? 'Blocked' : 'Active',
+        customer.notes || 'N/A'
+      ].join(','))
+    ].join('\n');
+    return csvContent;
+  };
+
+  const handleBulkExport = () => {
+    const selectedCustomerData = Array.from(selectedCustomers).map(id => 
+      customers.find(customer => customer.id === id)
+    ).filter(Boolean);
+    
+    if (selectedCustomerData.length === 0) return;
+    
+    // Export selected customers to CSV
+    const csvContent = exportCustomersToCSV(selectedCustomerData as Customer[]);
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `selected-customers-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
 
   // Form state
   const [formData, setFormData] = useState({
@@ -247,32 +363,6 @@ const Customers = () => {
     setShowAddDialog(false);
   };
 
-  const exportCustomers = () => {
-    const csvContent = [
-      ['Name', 'Email', 'Phone', 'Address', 'City', 'Postal Code', 'Total Orders', 'Total Spent', 'Last Order Date', 'Notes'].join(','),
-      ...filteredCustomers.map(customer => [
-        customer.name,
-        customer.email,
-        customer.phone,
-        customer.address || '',
-        customer.city || '',
-        customer.postalCode || '',
-        customer.totalOrders || customer.orderCount || 0,
-        customer.totalSpent || 0,
-        customer.lastOrderDate || '',
-        customer.notes || ''
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'customers.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
   const stats = {
     total: customers.length,
     recent: customers.filter(c => {
@@ -339,10 +429,10 @@ const Customers = () => {
           <p className="text-gray-600 mt-1">Manage your customer database and relationships</p>
         </div>
         <div className="flex gap-3">
-          <button
+          <Button
             onClick={updateCustomerStats}
             disabled={loading}
-            className={`flex items-center px-4 py-2 rounded-lg transition-all duration-500 ${
+            className={`transition-all duration-500 ${
               loading 
                 ? 'bg-purple-500 text-white cursor-not-allowed shadow-lg scale-105' 
                 : 'bg-purple-600 text-white hover:bg-purple-700 hover:shadow-lg hover:scale-105'
@@ -353,21 +443,30 @@ const Customers = () => {
               loading ? 'animate-spin' : 'hover:rotate-180'
             }`} />
             {loading ? 'Syncing...' : 'Sync Orders'}
-          </button>
-          <button
-            onClick={exportCustomers}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          </Button>
+          <Button
+            onClick={() => {
+              const csvContent = exportCustomersToCSV(filteredCustomers);
+              const blob = new Blob([csvContent], { type: 'text/csv' });
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `all-customers-${new Date().toISOString().split('T')[0]}.csv`;
+              a.click();
+              window.URL.revokeObjectURL(url);
+            }}
+            className="bg-green-600 hover:bg-green-700 text-white"
           >
             <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </button>
-          <button
+            Export All
+          </Button>
+          <Button
             onClick={() => setShowAddDialog(true)}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4" />
             Add Customer
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -450,12 +549,79 @@ const Customers = () => {
         </div>
       </div>
 
+      {/* Bulk Actions */}
+      {showBulkActions && (
+        <div className="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">
+                  {selectedCustomers.size} customer(s) selected
+                </span>
+                <span className="text-xs text-gray-500">
+                  • Total Spent: ${Array.from(selectedCustomers)
+                    .map(id => customers.find(customer => customer.id === id)?.totalSpent || 0)
+                    .reduce((sum, total) => sum + total, 0)
+                    .toFixed(2)}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedCustomers(new Set());
+                  setSelectAll(false);
+                  setShowBulkActions(false);
+                }}
+                className="text-sm text-gray-500 hover:text-gray-700 underline"
+              >
+                Clear Selection
+              </button>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={handleBulkExport}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export ({selectedCustomers.size})
+              </Button>
+              <Button
+                onClick={bulkDeleteCustomers}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete ({selectedCustomers.size})
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Customer List */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedCustomers.size === paginatedCustomers.length && paginatedCustomers.length > 0}
+                      onChange={(e) => handleSelectAllOnPage(e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span>Select</span>
+                    {filteredCustomers.length > paginatedCustomers.length && (
+                      <button
+                        onClick={() => handleSelectAll(true)}
+                        className="text-xs text-blue-600 hover:text-blue-800 underline ml-2"
+                        title={`Select all ${filteredCustomers.length} customers (not just this page)`}
+                      >
+                        All ({filteredCustomers.length})
+                      </button>
+                    )}
+                  </div>
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
@@ -469,13 +635,21 @@ const Customers = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                     {searchQuery || filterType !== 'all' ? 'No customers found matching your criteria.' : 'No customers yet. Add your first customer!'}
                   </td>
                 </tr>
               ) : (
                 paginatedCustomers.map((customer) => (
                   <tr key={customer.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedCustomers.has(customer.id)}
+                        onChange={(e) => handleSelectCustomer(customer.id, e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{customer.name}</div>

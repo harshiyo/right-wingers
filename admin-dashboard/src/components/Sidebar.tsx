@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
-  BarChart3,
+
   ChefHat,
   Layers,
   Users,
   ShoppingCart,
-  MessageSquare,
+
   Settings,
   Pizza,
   Droplets,
@@ -45,7 +45,7 @@ interface NavLinkItem {
 
 export const navLinks: NavLinkItem[] = [
   { id: 'dashboard', to: '/', text: 'Dashboard', icon: LayoutDashboard, order: 0, color: 'blue' },
-  { id: 'analytics', to: '/analytics', text: 'Analytics', icon: BarChart3, order: 0.5, color: 'purple' },
+
   { id: 'stores', to: '/stores', text: 'Store Management', icon: Store, order: 1, color: 'green' },
   { id: 'users', to: '/users', text: 'User Management', icon: UserCheck, order: 2, color: 'purple' },
   { id: 'role-management', to: '/role-management', text: 'Role Management', icon: Shield, order: 2.5, color: 'purple' },
@@ -53,11 +53,11 @@ export const navLinks: NavLinkItem[] = [
   { id: 'categories', to: '/categories', text: 'Categories', icon: Layers, order: 4, color: 'purple' },
   { id: 'toppings', to: '/toppings', text: 'Toppings', icon: Pizza, order: 5, color: 'orange' },
   { id: 'sauces', to: '/sauces', text: 'Sauces', icon: Droplets, order: 6, color: 'red' },
-  { id: 'combos', to: '/combos', text: 'Combos', icon: Package, order: 7, color: 'yellow', badge: 'New' },
+  { id: 'combos', to: '/combos', text: 'Combos', icon: Package, order: 7, color: 'yellow' },
   { id: 'customers', to: '/customers', text: 'Customers', icon: Users, order: 8, color: 'indigo' },
-  { id: 'orders', to: '/orders', text: 'Orders', icon: ShoppingCart, order: 9, color: 'green', badge: '12' },
+  { id: 'orders', to: '/orders', text: 'Orders', icon: ShoppingCart, order: 9, color: 'green' },
   { id: 'kitchen', to: '/kitchen', text: 'Kitchen Display', icon: ChefHat, order: 9.5, color: 'red' },
-  { id: 'feedback', to: '/feedback', text: 'Feedback', icon: MessageSquare, order: 10, color: 'pink' },
+
   { id: 'marketing', to: '/marketing', text: 'Marketing', icon: Megaphone, order: 10.5, color: 'teal' },
   { id: 'inventory', to: '/inventory', text: 'Inventory', icon: Package2, order: 11, color: 'indigo' },
   { id: 'layout', to: '/layout', text: 'Layout Manager', icon: Layout, order: 12, color: 'teal' },
@@ -168,7 +168,7 @@ export const Sidebar = () => {
     // Map navigation IDs to permission IDs
     const permissionMap: Record<string, string> = {
       'dashboard': 'dashboard',
-      'analytics': 'dashboard', // Analytics uses dashboard permission
+
       'stores': 'stores',
       'users': 'user_management',
       'role-management': 'user_management', // Only master admin can see this
@@ -180,12 +180,12 @@ export const Sidebar = () => {
       'customers': 'customers',
       'orders': 'orders',
       'kitchen': 'kitchen',
-      'feedback': 'feedback',
+      'delivery-charges': 'delivery_details', // Uses delivery_details permission
+
       'marketing': 'marketing',
       'inventory': 'inventory',
       'layout': 'layout_manager',
       'appearance': 'appearance',
-      'delivery-charges': 'settings', // Uses settings permission
       'settings': 'settings',
       'live-logs': 'live_logs',
       'job-status': 'job_status',

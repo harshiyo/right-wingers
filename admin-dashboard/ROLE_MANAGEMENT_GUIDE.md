@@ -27,13 +27,14 @@ The Role Management System allows Master Administrators to assign specific permi
 - **Sauces Management**: Manage wing sauces and dips
 - **Combo Management**: Manage combo meals and packages
 - **Categories**: Manage menu categories and organization
-- **Customer Feedback**: View and respond to customer feedback
+
 - **Discount Codes**: Manage promotional codes and discounts
 - **User Management**: Manage user accounts and permissions
 
 #### **Operations Category**
 - **Orders**: View and manage customer orders
 - **Kitchen Display**: View kitchen orders and preparation status
+- **Delivery Details**: Manage delivery zones, charges, and delivery settings
 
 #### **Reports Category**
 - **Job Status**: Monitor automated jobs and schedules
@@ -88,7 +89,8 @@ The system maps navigation items to specific permissions:
 | Customers | `customers` | Customer management |
 | Orders | `orders` | Order management |
 | Kitchen Display | `kitchen` | Kitchen display system |
-| Feedback | `feedback` | Customer feedback |
+| Delivery Details | `delivery_details` | Delivery zones and charges |
+
 | Layout Manager | `layout_manager` | Dashboard layout |
 | Appearance | `appearance` | Store appearance |
 | Settings | `settings` | System settings |
@@ -104,7 +106,6 @@ The system maps navigation items to specific permissions:
 - Orders
 - Kitchen Display
 - Customers
-- Feedback
 
 **Result:** Hamilton manager can only see these 5 items in their sidebar, providing focused access to operational tasks.
 
@@ -120,7 +121,6 @@ The system maps navigation items to specific permissions:
 - Dashboard
 - Orders
 - Customers
-- Feedback
 
 **Result:** Customer service staff can handle orders and customer inquiries without access to menu management.
 

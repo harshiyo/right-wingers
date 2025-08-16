@@ -117,6 +117,14 @@ const RoleManagement = () => {
       isEnabled: true
     },
     {
+      id: 'delivery_details',
+      name: 'Delivery Details',
+      description: 'Manage delivery zones, charges, and delivery settings',
+      category: 'operations',
+      icon: Truck,
+      isEnabled: true
+    },
+    {
       id: 'customers',
       name: 'Customer Management',
       description: 'View and manage customer information',
@@ -164,14 +172,7 @@ const RoleManagement = () => {
       icon: FileText,
       isEnabled: true
     },
-    {
-      id: 'feedback',
-      name: 'Customer Feedback',
-      description: 'View and respond to customer feedback',
-      category: 'management',
-      icon: Bell,
-      isEnabled: true
-    },
+
     {
       id: 'marketing',
       name: 'Marketing',
