@@ -654,8 +654,22 @@ const MenuPage = () => {
     deliveryTimeType,
     scheduledDeliveryDateTime,
     deliveryAddress,
+    distance,
     cartItems: passedCartItems
   } = location.state || {};
+  
+  console.log('🔄 MenuPage: Received location state:', {
+    customer: !!customer,
+    orderType,
+    editingOrderId,
+    pickupTime,
+    scheduledDateTime,
+    deliveryTimeType,
+    scheduledDeliveryDateTime,
+    deliveryAddress: !!deliveryAddress,
+    distance,
+    cartItems: !!passedCartItems
+  });
   
 
 
@@ -1308,6 +1322,7 @@ const MenuPage = () => {
         deliveryTimeType,
         scheduledDeliveryDateTime,
         deliveryAddress,
+        distance: location.state?.distance, // ✅ ADD THIS LINE
         ...(location.state?.originalOrder ? { originalOrder: location.state.originalOrder } : {}),
         ...(location.state?.orderNumber ? { orderNumber: location.state.orderNumber } : {})
       }
@@ -1315,6 +1330,8 @@ const MenuPage = () => {
   };
 
   const handleBackNavigation = () => {
+    console.log('🔄 MenuPage: handleBackNavigation called with state:', location.state);
+    
     // Determine the appropriate back destination based on order type
     if (orderType === 'pickup') {
       navigate('/order/pickup-details', { 
@@ -1325,13 +1342,16 @@ const MenuPage = () => {
         } 
       });
     } else if (orderType === 'delivery') {
-      navigate('/order/delivery-details', { 
-        state: { 
-          customer: customer, 
-          phone: customer?.phone,
-          cartItems: cartItems 
-        } 
-      });
+      const backState = { 
+        customer: customer, 
+        phone: customer?.phone,
+        cartItems: cartItems,
+        distance: location.state?.distance,
+        deliveryAddress: location.state?.deliveryAddress,
+        orderType: orderType
+      };
+      console.log('🔄 MenuPage: Navigating back to delivery-details with state:', backState);
+      navigate('/order/delivery-details', { state: backState });
     } else {
       // Default to order type selection
       navigate('/order', { 

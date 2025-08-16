@@ -24,6 +24,7 @@ import {
   Package2,
   Sparkles,
   Zap,
+  Truck,
 } from 'lucide-react';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -61,6 +62,7 @@ export const navLinks: NavLinkItem[] = [
   { id: 'inventory', to: '/inventory', text: 'Inventory', icon: Package2, order: 11, color: 'indigo' },
   { id: 'layout', to: '/layout', text: 'Layout Manager', icon: Layout, order: 12, color: 'teal' },
   { id: 'appearance', to: '/appearance', text: 'Appearance', icon: Palette, order: 13, color: 'violet' },
+  { id: 'delivery-charges', to: '/delivery-charges', text: 'Delivery Charges', icon: Truck, order: 13.5, color: 'blue' },
   { id: 'settings', to: '/settings', text: 'Settings', icon: Settings, order: 14, color: 'gray' },
   { id: 'live-logs', to: '/live-logs', text: 'Live Logs', icon: Monitor, order: 15, color: 'red' },
   { id: 'job-status', to: '/job-status', text: 'Job Status', icon: Activity, order: 16, color: 'indigo' },
@@ -183,6 +185,7 @@ export const Sidebar = () => {
       'inventory': 'inventory',
       'layout': 'layout_manager',
       'appearance': 'appearance',
+      'delivery-charges': 'settings', // Uses settings permission
       'settings': 'settings',
       'live-logs': 'live_logs',
       'job-status': 'job_status',

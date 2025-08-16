@@ -1,7 +1,7 @@
 // ✅ Redesigned Order Notification Dialog Component
 import { useState, useEffect } from 'react';
 import { Clock, Package, CheckCircle, ChevronDown, X, Printer } from 'lucide-react';
-import { collection, query, where, onSnapshot, orderBy, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, updateDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useStore } from '../../context/StoreContext';
 import { cn } from '../../utils/cn';
@@ -9,6 +9,7 @@ import { useCart } from '../../context/CartContext';
 import { useNavigate } from 'react-router-dom';
 import { getPizzaInstructionLabels, getWingInstructionLabels } from '../../utils/cartHelpers';
 import { useCollection } from 'react-firebase-hooks/firestore';
+import { findCustomerByPhone } from '../../data/customers';
 
 interface OrderNotificationDialogProps {
   open: boolean;
@@ -170,7 +171,7 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
     });
   };
 
-  const handleModifyOrder = (order: any) => {
+  const handleModifyOrder = async (order: any) => {
     const normalized = normalizeOrderItemsForCart(order.items);
     setCartItems(normalized);
     // Store original items for modification tracking
@@ -194,36 +195,57 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
       }
     }
     
-          // Construct customer object with delivery address for delivery orders
-      let customer = order.customerInfo;
-      if (order.orderType === 'delivery') {
-        // Check for delivery address in deliveryDetails (new format)
-        if (order.deliveryDetails && order.deliveryDetails.street) {
-          customer = {
-            ...order.customerInfo,
-            address: {
-              street: order.deliveryDetails.street || '',
-              city: order.deliveryDetails.city || '',
-              postalCode: order.deliveryDetails.postalCode || ''
-            }
-          };
-        }
-        // Check for delivery address in legacy format (if deliveryDetails doesn't have address fields)
-        else if (order.deliveryAddress && typeof order.deliveryAddress === 'string') {
-          // Parse the delivery address string if it's in a specific format
-          const addressParts = order.deliveryAddress.split(',').map((part: string) => part.trim());
-          customer = {
-            ...order.customerInfo,
-            address: {
-              street: addressParts[0] || '',
-              city: addressParts[1] || '',
-              postalCode: addressParts[2] || ''
-            }
-          };
-        }
+    // Construct customer object with delivery address for delivery orders
+    let customer = order.customerInfo;
+    let distance = undefined;
+    
+    if (order.orderType === 'delivery') {
+      // Check for delivery address in deliveryDetails (new format)
+      if (order.deliveryDetails && order.deliveryDetails.street) {
+        customer = {
+          ...order.customerInfo,
+          address: {
+            street: order.deliveryDetails.street || '',
+            city: order.deliveryDetails.city || '',
+            postalCode: order.deliveryDetails.postalCode || ''
+          }
+        };
+      }
+      // Check for delivery address in legacy format (if deliveryDetails doesn't have address fields)
+      else if (order.deliveryAddress && typeof order.deliveryAddress === 'string') {
+        // Parse the delivery address string if it's in a specific format
+        const addressParts = order.deliveryAddress.split(',').map((part: string) => part.trim());
+        customer = {
+          ...order.customerInfo,
+          address: {
+            street: addressParts[0] || '',
+            city: addressParts[1] || '',
+            postalCode: addressParts[2] || ''
+          }
+        };
       }
       
-      // Pass customer info and phone to /menu so it is preselected
+      // Fetch distance from customer data for delivery orders
+      try {
+        if (order.customerInfo?.phone) {
+          console.log('[MODIFY DEBUG] Fetching distance for customer:', order.customerInfo.phone);
+          const customerData = await findCustomerByPhone(order.customerInfo.phone);
+          console.log('[MODIFY DEBUG] Customer data found:', customerData);
+          if (customerData && customerData.distanceFromStore) {
+            distance = customerData.distanceFromStore;
+            console.log('[MODIFY DEBUG] Distance set to:', distance);
+          } else {
+            console.log('[MODIFY DEBUG] No distance found in customer data');
+          }
+        } else {
+          console.log('[MODIFY DEBUG] No customer phone found in order');
+        }
+      } catch (error) {
+        console.warn('Could not fetch customer distance:', error);
+      }
+    }
+    
+    // Pass customer info and phone to /menu so it is preselected
     navigate('/menu', {
       state: {
         customer: customer,
@@ -237,6 +259,15 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
         scheduledDateTime,
         deliveryTimeType,
         scheduledDeliveryDateTime,
+        // Pass delivery address and distance for delivery orders
+        ...(order.orderType === 'delivery' && {
+          deliveryAddress: order.deliveryDetails?.street ? {
+            street: order.deliveryDetails.street,
+            city: order.deliveryDetails.city,
+            postalCode: order.deliveryDetails.postalCode
+          } : undefined,
+          distance: distance
+        })
       }
     });
     

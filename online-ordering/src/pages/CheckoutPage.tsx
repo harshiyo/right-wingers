@@ -8,6 +8,7 @@ import { useCart } from '../context/CartContext';
 import { useCustomer } from '../context/CustomerContext';
 import { useStore } from '../context/StoreContext';
 import { useTaxRate } from '../hooks/useTaxRate';
+import { calculateDeliveryCharge } from '../services/deliveryCharges';
 import { cn } from '../utils/cn';
 
 type PaymentMethod = 'card' | 'cash';
@@ -96,6 +97,7 @@ export default function CheckoutPage() {
       street: string;
       city: string;
       postalCode: string;
+      distance?: number;
     };
   } | null>(null);
 
@@ -312,7 +314,38 @@ export default function CheckoutPage() {
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price + (item.extraCharges || 0)) * item.quantity, 0);
   const tax = subtotal * taxRate;
-  const deliveryFee = orderDetails?.type === 'delivery' ? (subtotal >= 30 ? 0 : 3.99) : 0;
+  
+  // Calculate delivery fee using the new service
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [deliveryChargeDetails, setDeliveryChargeDetails] = useState<any>(null);
+  
+  useEffect(() => {
+    const calculateDelivery = async () => {
+      if (orderDetails?.type === 'delivery' && orderDetails?.deliveryAddress?.distance) {
+        try {
+          const result = await calculateDeliveryCharge(
+            orderDetails.deliveryAddress.distance,
+            subtotal,
+            selectedStore?.id
+          );
+          setDeliveryFee(result.charge);
+          setDeliveryChargeDetails(result);
+        } catch (error) {
+          console.error('Error calculating delivery charge:', error);
+          // Fallback to default calculation
+          const defaultCharge = subtotal >= 30 ? 0 : 3.99;
+          setDeliveryFee(defaultCharge);
+          setDeliveryChargeDetails(null);
+        }
+      } else {
+        setDeliveryFee(0);
+        setDeliveryChargeDetails(null);
+      }
+    };
+
+    calculateDelivery();
+  }, [orderDetails?.type, orderDetails?.deliveryAddress?.distance, subtotal, selectedStore?.id]);
+  
   const total = subtotal + tax + deliveryFee;
 
   const handleSubmit = async (e: React.FormEvent) => {

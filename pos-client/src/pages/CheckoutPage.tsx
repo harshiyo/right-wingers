@@ -38,6 +38,8 @@ const CheckoutPage = () => {
     subtotal,
     tax,
     discountAmount,
+    deliveryCharge,
+    deliveryChargeDetails,
     total,
     currentStore,
     editingOrderId,
@@ -152,20 +154,20 @@ const CheckoutPage = () => {
     const { added, removed, updated } = (() => {
       const origMap = new Map(originalItems.map((item: any) => [item.id, item]));
       const modMap = new Map(cartItems.map(item => [item.id, item]));
-      const added = [];
-      const removed = [];
-      const updated = [];
+      const added: any[] = [];
+      const removed: any[] = [];
+      const updated: any[] = [];
 
       for (const modItem of cartItems) {
         const origItem = origMap.get(modItem.id);
         if (!origItem) {
           added.push({ ...modItem, isNew: true });
         } else {
-          const normOrig = JSON.stringify(origItem.customizations);
+          const normOrig = JSON.stringify((origItem as any).customizations);
           const normMod = JSON.stringify(modItem.customizations);
           if (
-            origItem.quantity !== modItem.quantity ||
-            origItem.price !== modItem.price ||
+            (origItem as any).quantity !== modItem.quantity ||
+            (origItem as any).price !== modItem.price ||
             normOrig !== normMod
           ) {
             updated.push({ ...modItem, isUpdated: true });
@@ -174,8 +176,8 @@ const CheckoutPage = () => {
       }
       
       for (const origItem of originalItems) {
-        if (!modMap.has(origItem.id)) {
-          removed.push({ ...origItem, isRemoved: true });
+        if (!modMap.has((origItem as any).id)) {
+          removed.push({ ...(origItem as any), isRemoved: true });
         }
       }
       
@@ -634,13 +636,15 @@ const CheckoutPage = () => {
                   </span>
                 </h2>
                 <div className="flex-1 min-h-0 overflow-hidden">
-                  <OrderSummary 
-                    cartItems={cartItems} 
-                    subtotal={subtotal} 
-                    tax={tax} 
-                    discount={discountAmount} 
-                    total={total} 
-                  />
+                                <OrderSummary
+                cartItems={cartItems}
+                subtotal={subtotal}
+                tax={tax}
+                discount={discountAmount}
+                deliveryCharge={deliveryCharge}
+                deliveryChargeDetails={deliveryChargeDetails}
+                total={total}
+              />
                 </div>
               </div>
             </div>

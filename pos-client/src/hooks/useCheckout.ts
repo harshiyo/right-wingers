@@ -9,6 +9,7 @@ import { db } from '../services/firebase';
 import { getPizzaInstructionLabels, getWingInstructionLabels } from '../utils/cartHelpers';
 import { DiscountCodeService, type DiscountCode } from '../services/discountCodes';
 import { Order } from '../services/types';
+import { calculateDeliveryCharge, type DeliveryChargeResult } from '../services/deliveryCharges';
 
 // Types
 export interface CartItem {
@@ -68,6 +69,8 @@ export interface CheckoutState {
   showOrderSuccess: boolean;
   showModificationPrompt: boolean;
   pendingOrder: boolean;
+  deliveryCharge: number;
+  deliveryChargeDetails: DeliveryChargeResult | null;
 }
 
 export const useCheckout = () => {
@@ -78,7 +81,20 @@ export const useCheckout = () => {
   const { currentStore } = useStore();
   
   const { customer, phone, orderType = 'Pickup', editingOrderId } = location.state || {};
-  const { pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime, deliveryAddress } = location.state || {};
+  const { pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime, deliveryAddress, distance } = location.state || {};
+  
+  console.log('🔄 useCheckout: Received location state:', {
+    customer: !!customer,
+    phone,
+    orderType,
+    editingOrderId,
+    pickupTime,
+    scheduledDateTime,
+    deliveryTimeType,
+    scheduledDeliveryDateTime,
+    deliveryAddress: !!deliveryAddress,
+    distance
+  });
 
   // State management
   const [state, setState] = useState<CheckoutState>({
@@ -102,6 +118,8 @@ export const useCheckout = () => {
     showOrderSuccess: false,
     showModificationPrompt: false,
     pendingOrder: false,
+    deliveryCharge: 0,
+    deliveryChargeDetails: null,
   });
 
   const modifiedItemsRef = useRef<any[]>([]);
@@ -163,7 +181,14 @@ export const useCheckout = () => {
   const discountAmount = useMemo(() => state.discount, [state.discount]);
   const discountedSubtotal = subtotal - discountAmount;
   const tax = discountedSubtotal * state.taxRate;
-  const total = discountedSubtotal + tax;
+  
+  // Calculate delivery charge if delivery order
+  const deliveryCharge = useMemo(() => {
+    if ((orderType !== 'Delivery' && orderType !== 'delivery') || !distance) return 0;
+    return state.deliveryCharge;
+  }, [orderType, distance, state.deliveryCharge]);
+  
+  const total = discountedSubtotal + tax + deliveryCharge;
 
   // Redirect if no cart data
   useEffect(() => {
@@ -172,6 +197,48 @@ export const useCheckout = () => {
       return;
     }
   }, [cartItems, customer, phone, navigate, orderType]);
+
+  // Calculate delivery charge when distance or subtotal changes
+  useEffect(() => {
+    const calculateDelivery = async () => {
+      console.log('🚚 [CHECKOUT DEBUG] Delivery calculation triggered:', {
+        orderType,
+        distance,
+        subtotal,
+        currentStoreId: currentStore?.id
+      });
+      
+      if ((orderType === 'Delivery' || orderType === 'delivery') && distance && subtotal > 0) {
+        console.log('🚚 [CHECKOUT DEBUG] Calculating delivery charge for delivery order');
+        try {
+          const result = await calculateDeliveryCharge(distance, subtotal, currentStore?.id);
+          console.log('🚚 [CHECKOUT DEBUG] Delivery charge result:', result);
+          updateState({ 
+            deliveryCharge: result.charge,
+            deliveryChargeDetails: result
+          });
+        } catch (error) {
+          console.error('🚚 [CHECKOUT DEBUG] Error calculating delivery charge:', error);
+          // Fallback to default calculation
+          const defaultCharge = subtotal >= 30 ? 0 : 3.99;
+          console.log('🚚 [CHECKOUT DEBUG] Using fallback charge:', defaultCharge);
+          updateState({ 
+            deliveryCharge: defaultCharge,
+            deliveryChargeDetails: null
+          });
+        }
+      } else {
+        console.log('🚚 [CHECKOUT DEBUG] Not calculating delivery charge:', {
+          reason: !orderType ? 'No order type' : 
+                  !distance ? 'No distance' : 
+                  subtotal <= 0 ? 'No subtotal' : 'Unknown'
+        });
+        updateState({ deliveryCharge: 0, deliveryChargeDetails: null });
+      }
+    };
+
+    calculateDelivery();
+  }, [orderType, distance, subtotal, currentStore?.id, updateState]);
 
   // Helper function to convert instruction IDs to names
   const convertInstructionsToNames = useCallback((customizations: any) => {
@@ -239,22 +306,25 @@ export const useCheckout = () => {
 
   // Navigation handlers
   const handleGoBack = useCallback(() => {
-    navigate('/menu', { 
-      state: { 
-        customer, 
-        phone, 
-        orderType,
-        editingOrderId,
-        pickupTime,
-        scheduledDateTime,
-        deliveryTimeType,
-        scheduledDeliveryDateTime,
-        deliveryAddress,
-        ...(location.state?.originalOrder ? { originalOrder: location.state.originalOrder } : {}),
-        ...(location.state?.orderNumber ? { orderNumber: location.state.orderNumber } : {})
-      } 
-    });
-  }, [navigate, customer, phone, orderType, editingOrderId, pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime, deliveryAddress, location.state]);
+    const backState = { 
+      customer, 
+      phone, 
+      orderType,
+      editingOrderId,
+      pickupTime,
+      scheduledDateTime,
+      deliveryTimeType,
+      scheduledDeliveryDateTime,
+      deliveryAddress,
+      distance,
+      ...(location.state?.originalOrder ? { originalOrder: location.state.originalOrder } : {}),
+      ...(location.state?.orderNumber ? { orderNumber: location.state.orderNumber } : {})
+    };
+    
+    console.log('🔄 useCheckout: handleGoBack navigating to menu with state:', backState);
+    
+    navigate('/menu', { state: backState });
+  }, [navigate, customer, phone, orderType, editingOrderId, pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime, deliveryAddress, distance, location.state]);
 
   // Discount code handlers
   const handleDiscountCodeChange = useCallback((value: string) => {
@@ -643,6 +713,8 @@ export const useCheckout = () => {
     subtotal,
     tax,
     discountAmount,
+    deliveryCharge: state.deliveryCharge,
+    deliveryChargeDetails: state.deliveryChargeDetails,
     total,
     currentStore,
     editingOrderId,

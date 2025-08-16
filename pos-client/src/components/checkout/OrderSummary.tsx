@@ -10,6 +10,8 @@ interface OrderSummaryProps {
   subtotal: number;
   tax: number;
   discount: number;
+  deliveryCharge?: number;
+  deliveryChargeDetails?: any;
   total: number;
 }
 
@@ -18,6 +20,8 @@ export const OrderSummary = memo(({
   subtotal, 
   tax, 
   discount, 
+  deliveryCharge,
+  deliveryChargeDetails,
   total 
 }: OrderSummaryProps) => {
   // Fetch instruction tiles for converting IDs to labels
@@ -283,8 +287,20 @@ export const OrderSummary = memo(({
               <span className="font-medium text-red-600">-${discount.toFixed(2)}</span>
             </div>
           )}
+          {deliveryCharge && deliveryCharge > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Delivery Fee</span>
+              <span className="font-medium text-gray-900">${deliveryCharge.toFixed(2)}</span>
+            </div>
+          )}
+          {deliveryCharge === 0 && deliveryChargeDetails?.isFree && (
+            <div className="flex justify-between text-sm">
+              <span className="text-green-600">Delivery</span>
+              <span className="font-medium text-green-600">Free</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Tax (13%)</span>
+            <span className="text-gray-600">Tax ({(tax / subtotal * 100).toFixed(0)}%)</span>
             <span className="font-medium text-gray-900">${tax.toFixed(2)}</span>
           </div>
           <div className="border-t border-gray-300 pt-2 mt-2">

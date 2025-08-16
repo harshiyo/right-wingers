@@ -343,7 +343,14 @@ const DeliveryDetailsPage = () => {
   const location = useLocation();
   const { currentStore } = useStore();
   
-  const { customer: initialCustomer, phone, cartItems } = location.state || {};
+  const { 
+    customer: initialCustomer, 
+    phone, 
+    cartItems, 
+    distance: incomingDistance, 
+    deliveryAddress: incomingDeliveryAddress, 
+    orderType: incomingOrderType 
+  } = location.state || {};
 
   const [customer, setCustomer] = useState<Customer | null>(initialCustomer || null);
   const [deliveryAddress, setDeliveryAddress] = useState<{
@@ -356,7 +363,7 @@ const DeliveryDetailsPage = () => {
     street: '', city: '', postalCode: '', lat: undefined, lon: undefined
   });
   const [fullAddress, setFullAddress] = useState('');
-  const [distance, setDistance] = useState<number | null>(null);
+  const [distance, setDistance] = useState<number | null>(incomingDistance || null);
   const [isLoadingDistance, setIsLoadingDistance] = useState(false);
   const [isCachedDistance, setIsCachedDistance] = useState(false);
   const [deliveryTimeType, setDeliveryTimeType] = useState<'asap' | 'scheduled'>('asap');
@@ -452,6 +459,26 @@ const DeliveryDetailsPage = () => {
 
     refreshCustomerData();
   }, [phone, navigate, currentStore, initialCustomer]);
+
+  // Handle incoming state from navigation (e.g., when coming back from menu)
+  useEffect(() => {
+    console.log('🔄 DeliveryDetailsPage: Received navigation state:', {
+      incomingDistance,
+      incomingDeliveryAddress,
+      incomingOrderType
+    });
+    
+    if (incomingDistance !== undefined) {
+      setDistance(incomingDistance);
+      console.log('🔄 DeliveryDetailsPage: Restored distance from navigation state:', incomingDistance);
+    }
+    
+    if (incomingDeliveryAddress) {
+      setDeliveryAddress(incomingDeliveryAddress);
+      setFullAddress(`${incomingDeliveryAddress.street}, ${incomingDeliveryAddress.city}, ${incomingDeliveryAddress.postalCode}`);
+      console.log('🔄 DeliveryDetailsPage: Restored delivery address from navigation state:', incomingDeliveryAddress);
+    }
+  }, [incomingDistance, incomingDeliveryAddress, incomingOrderType]);
   
   // Memoized handlers
   const handleAddressSelect = useCallback(async (address: {

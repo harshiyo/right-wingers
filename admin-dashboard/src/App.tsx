@@ -26,6 +26,7 @@ import DiscountCodes from './pages/DiscountCodes';
 import Analytics from './pages/Analytics';
 import Marketing from './pages/Marketing';
 import Inventory from './pages/Inventory';
+import DeliveryCharges from './pages/DeliveryCharges';
 import { SelectedStoreProvider } from './context/SelectedStoreContext';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -74,6 +75,7 @@ function App() {
                 <Route path="feedback" element={<Feedback />} />
                 <Route path="layout" element={<LayoutManager />} />
                 <Route path="appearance" element={<Appearance />} />
+                <Route path="delivery-charges" element={<DeliveryCharges />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="live-logs" element={<LiveLogs />} />
                 <Route path="job-status" element={<JobStatus />} />
