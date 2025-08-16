@@ -98,8 +98,8 @@ export function Login() {
   const navigate = useNavigate()
   const { loginWithCredentials, currentUser } = useStore()
 
-  const version = (import.meta.env as any).__APP_VERSION__ || '1.0.0'
-  const buildDate = (import.meta.env as any).__BUILD_DATE__ || new Date().toISOString().split('T')[0]
+  const version = __APP_VERSION__ || '1.0.0'
+  const buildDate = __BUILD_DATE__ || new Date().toISOString().split('T')[0]
   const [festiveType, setFestiveType] = useState(getFestiveType())
 
   const [snapshot, loading] = useDocument(doc(db, 'settings', 'loginScreen'))
