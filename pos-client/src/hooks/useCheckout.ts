@@ -82,19 +82,6 @@ export const useCheckout = () => {
   
   const { customer, phone, orderType = 'Pickup', editingOrderId } = location.state || {};
   const { pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime, deliveryAddress, distance } = location.state || {};
-  
-  console.log('🔄 useCheckout: Received location state:', {
-    customer: !!customer,
-    phone,
-    orderType,
-    editingOrderId,
-    pickupTime,
-    scheduledDateTime,
-    deliveryTimeType,
-    scheduledDeliveryDateTime,
-    deliveryAddress: !!deliveryAddress,
-    distance
-  });
 
   // State management
   const [state, setState] = useState<CheckoutState>({
@@ -149,7 +136,7 @@ export const useCheckout = () => {
           updateState({ taxRate: storeTaxRate / 100 });
         }
       } catch (error) {
-        console.error('Error loading tax rate:', error);
+        // Error loading tax rate - using default
       }
     };
 
@@ -320,8 +307,6 @@ export const useCheckout = () => {
       ...(location.state?.originalOrder ? { originalOrder: location.state.originalOrder } : {}),
       ...(location.state?.orderNumber ? { orderNumber: location.state.orderNumber } : {})
     };
-    
-    console.log('🔄 useCheckout: handleGoBack navigating to menu with state:', backState);
     
     navigate('/menu', { state: backState });
   }, [navigate, customer, phone, orderType, editingOrderId, pickupTime, scheduledDateTime, deliveryTimeType, scheduledDeliveryDateTime, deliveryAddress, distance, location.state]);
@@ -734,6 +719,8 @@ export const useCheckout = () => {
     handleCompleteOrderClick,
     handleModificationPromptChoice,
     generateModifiedReceipt,
+    navigate,
+    clearCart,
     
     // Utilities
     convertInstructionsToNames,

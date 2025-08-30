@@ -435,7 +435,6 @@ const DeliveryDetailsPage = () => {
           navigate('/customer-lookup');
         }
       } catch (error) {
-        console.error('Error refreshing customer data:', error);
         setErrorDialog({
           isOpen: true,
           title: 'Error Loading Customer',
@@ -462,21 +461,13 @@ const DeliveryDetailsPage = () => {
 
   // Handle incoming state from navigation (e.g., when coming back from menu)
   useEffect(() => {
-    console.log('🔄 DeliveryDetailsPage: Received navigation state:', {
-      incomingDistance,
-      incomingDeliveryAddress,
-      incomingOrderType
-    });
-    
     if (incomingDistance !== undefined) {
       setDistance(incomingDistance);
-      console.log('🔄 DeliveryDetailsPage: Restored distance from navigation state:', incomingDistance);
     }
     
     if (incomingDeliveryAddress) {
       setDeliveryAddress(incomingDeliveryAddress);
       setFullAddress(`${incomingDeliveryAddress.street}, ${incomingDeliveryAddress.city}, ${incomingDeliveryAddress.postalCode}`);
-      console.log('🔄 DeliveryDetailsPage: Restored delivery address from navigation state:', incomingDeliveryAddress);
     }
   }, [incomingDistance, incomingDeliveryAddress, incomingOrderType]);
   
@@ -602,7 +593,6 @@ const DeliveryDetailsPage = () => {
         } 
       });
     } catch (error) {
-      console.error('Error updating customer address:', error);
       setErrorDialog({
         isOpen: true,
         title: 'Error Updating Address',

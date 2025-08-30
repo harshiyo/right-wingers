@@ -362,7 +362,6 @@ const OrderTypePage = () => {
         setPreviousOrdersCache(prev => new Map(prev).set(cleanPhone, []));
       }
     } catch (error) {
-      console.error('❌ Error pre-fetching previous orders:', error);
       // Cache empty result on error
       setPreviousOrdersCache(prev => new Map(prev).set(cleanPhone, []));
     }
@@ -480,7 +479,6 @@ const OrderTypePage = () => {
           setPreviousOrdersCache(prev => new Map(prev).set(cleanPhone, []));
         }
       } catch (error) {
-        console.error('❌ Error fetching previous orders:', error);
         setPreviousOrders([]);
         // Cache empty result on error
         setPreviousOrdersCache(prev => new Map(prev).set(cleanPhone, []));
@@ -554,7 +552,6 @@ const OrderTypePage = () => {
       });
       
     } catch (error) {
-      console.error('❌ Error processing reorder:', error);
       setErrorDialog({
         isOpen: true,
         title: 'Reorder Error',

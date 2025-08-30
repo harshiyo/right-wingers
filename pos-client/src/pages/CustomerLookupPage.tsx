@@ -139,7 +139,6 @@ const CustomerLookupPage = () => {
   // Validate store ID and provide fallback
   const storeId = useMemo(() => {
     if (!currentStore?.id) {
-      console.warn('⚠️ No current store selected, using fallback store ID');
       return 'store_001'; // This should be replaced with actual fallback logic
     }
     return currentStore.id;
@@ -203,7 +202,6 @@ const CustomerLookupPage = () => {
       const results = await searchCustomers(query);
       setSearchResults(results);
     } catch (error) {
-      console.error('❌ Search failed:', error);
       setSearchResults([]);
       setErrorDialog({
         isOpen: true,
@@ -332,8 +330,6 @@ const CustomerLookupPage = () => {
         } 
       });
     } catch (error) {
-      console.error('❌ Failed to save customer:', error);
-      
       // Show error dialog
       setErrorDialog({
         isOpen: true,

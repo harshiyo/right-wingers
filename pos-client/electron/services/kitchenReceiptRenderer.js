@@ -98,8 +98,6 @@ export class KitchenReceiptRenderer {
   }
 
   renderKitchenReceipt(order, type) {
-    // DEBUG: Log the full order object to troubleshoot combo rendering
-    console.log('DEBUG KITCHEN RECEIPT ORDER:', JSON.stringify(order, null, 2));
     const lines = [];
     
     // Kitchen header - simplified

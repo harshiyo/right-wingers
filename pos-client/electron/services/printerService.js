@@ -270,6 +270,16 @@ export class PrinterService {
     return this.queueManager.clearPendingQueue();
   }
 
+  // Print report method for sales reports
+  async printReport(reportText) {
+    if (!this.persistentPort || !this.persistentPort.isOpen) {
+      throw new Error('Printer not connected');
+    }
+    
+    const lines = reportText.split('\n');
+    await this.executePrint(this.persistentPort, lines);
+  }
+
   cleanup() {
     this.paperMonitor.stopMonitoring();
     

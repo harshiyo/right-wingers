@@ -26,10 +26,6 @@ function AppContent() {
   // Cache menu data for the current store
   const { error: cacheError } = useMenuCache(currentStore?.id || '');
 
-  if (cacheError) {
-    console.error('Menu cache error:', cacheError);
-  }
-
   return (
     <div className="h-screen flex flex-col bg-gray-100">
       <OfflineIndicator />

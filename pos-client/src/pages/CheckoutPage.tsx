@@ -59,6 +59,8 @@ const CheckoutPage = () => {
     handleCompleteOrderClick,
     handleModificationPromptChoice,
     generateModifiedReceipt,
+    navigate,
+    clearCart,
     
     // Utilities
     convertInstructionsToNames,
@@ -541,8 +543,19 @@ const CheckoutPage = () => {
                           </Button>
                           <Button
                             onClick={() => {
-                              // Clear cart and navigate - this would need to be handled in the hook
-                              window.location.href = '/customer-lookup';
+                              // Clear cart and all order-related localStorage
+                              clearCart();
+                              localStorage.removeItem('originalOrderItems');
+                              localStorage.removeItem('pos-cart');
+                              
+                              // Clear any potential session storage
+                              sessionStorage.clear();
+                              
+                              // Force a complete page reload to customer lookup
+                              setTimeout(() => {
+                                window.location.hash = '#/customer-lookup';
+                                window.location.reload();
+                              }, 100);
                             }}
                             className="flex-1 bg-red-600 hover:bg-red-700"
                           >
@@ -604,7 +617,19 @@ const CheckoutPage = () => {
                           </Button>
                           <Button
                             onClick={() => {
-                              window.location.href = '/customer-lookup';
+                              // Clear cart and all order-related localStorage
+                              clearCart();
+                              localStorage.removeItem('originalOrderItems');
+                              localStorage.removeItem('pos-cart');
+                              
+                              // Clear any potential session storage
+                              sessionStorage.clear();
+                              
+                              // Force a complete page reload to customer lookup
+                              setTimeout(() => {
+                                window.location.hash = '#/customer-lookup';
+                                window.location.reload();
+                              }, 100);
                             }}
                             className="flex-1 bg-red-600 hover:bg-red-700"
                           >

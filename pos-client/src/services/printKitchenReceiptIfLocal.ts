@@ -14,12 +14,10 @@ export async function printKitchenReceiptIfLocal(
   type: 'new' | 'reprint' | 'modified-partial' | 'modified-full'
 ): Promise<boolean> {
   if (order.storeId !== currentStoreId) {
-    console.warn(`Kitchen receipt print skipped: Order store (${order.storeId}) does not match current store (${currentStoreId})`);
     return false;
   }
 
   if (!window.electronAPI || typeof window.electronAPI.printReceipt !== 'function') {
-    console.error('Electron printReceipt API not available for kitchen receipt');
     return false;
   }
 
@@ -33,7 +31,6 @@ export async function printKitchenReceiptIfLocal(
     await window.electronAPI.printReceipt(kitchenOrder, type);
     return true;
   } catch (err) {
-    console.error('Failed to print kitchen receipt:', err);
     return false;
   }
 }

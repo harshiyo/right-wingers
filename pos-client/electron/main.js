@@ -56,11 +56,8 @@ function createWindow() {
     const kitchenLines = printerService.kitchenReceiptRenderer.renderKitchenReceipt(order, type);
     const storeId = order.storeId || 'hamilton'; // Default to hamilton for testing
     
-    console.log(`🖨️ Print request: store=${storeId}, type=${type}, showPreview=${showPreview}`);
-    
     // If preview is explicitly requested, show both previews
     if (showPreview) {
-      console.log('📄 Showing preview windows as requested');
       showReceiptPreview(customerLines, 'Customer Receipt');
       showReceiptPreview(kitchenLines, 'Kitchen Receipt');
       return { success: true, mode: 'preview' };
@@ -71,8 +68,6 @@ function createWindow() {
       const result = await printerService.printReceipt(order, type);
       return { success: true, mode: 'thermal', ...result };
     } catch (err) {
-      console.error('Printing failed:', err.message);
-      
       // Show error dialog to user
       dialog.showErrorBox('Print Error', `Failed to print receipts: ${err.message}`);
       
@@ -169,6 +164,119 @@ function createWindow() {
       return { success: true, message: 'Connection test successful' };
     } catch (error) {
       return { success: false, message: error.message };
+    }
+  });
+
+  // Daily Sales Report Handler
+  ipcMain.handle('print-daily-sales-report', async (event, reportData, storeName) => {
+    try {
+      // Generate report text
+      const reportText = `
+${storeName || 'Store'} - DAILY SALES REPORT
+${new Date().toLocaleDateString('en-US', { 
+  weekday: 'long', 
+  year: 'numeric', 
+  month: 'long', 
+  day: 'numeric' 
+})}
+========================================
+
+ORDER SUMMARY:
+- Total Orders: ${reportData.totalOrders}
+- Delivery Orders: ${reportData.deliveryOrders} (${reportData.totalOrders > 0 ? ((reportData.deliveryOrders / reportData.totalOrders) * 100).toFixed(1) : 0}%)
+- Pickup Orders: ${reportData.pickupOrders} (${reportData.totalOrders > 0 ? ((reportData.pickupOrders / reportData.totalOrders) * 100).toFixed(1) : 0}%)
+- Cancelled Orders: ${reportData.cancelledOrders}
+
+FINANCIAL SUMMARY:
+- Gross Sales (with tax): $${reportData.grossSalesWithTax.toFixed(2)}
+- Gross Sales (without tax): $${reportData.grossSalesWithoutTax.toFixed(2)}
+- Total Tax Collected: $${reportData.totalTaxCollected.toFixed(2)}
+- Average Order Value: $${reportData.averageOrderValue.toFixed(2)}
+
+CUSTOMER INSIGHTS:
+- Unique Customers: ${reportData.uniqueCustomers}
+- First Order: ${reportData.firstOrderTime}
+- Last Order: ${reportData.lastOrderTime}
+- Peak Hour: ${reportData.peakHour}
+
+ORDERS BY HOUR:
+${Object.entries(reportData.ordersByHour || {})
+  .sort(([a], [b]) => parseInt(a) - parseInt(b))
+  .map(([hour, count]) => `${hour}: ${count} orders`)
+  .join('\n')}
+
+========================================
+Generated: ${new Date().toLocaleString()}
+      `;
+
+      // Try to print through thermal printer
+      if (printerService.persistentPort && printerService.persistentPort.isOpen) {
+        await printerService.printReport(reportText);
+        return { success: true, mode: 'thermal' };
+      } else {
+        // Show preview if printer not available
+        showReceiptPreview(reportText.split('\n'), 'Daily Sales Report');
+        return { success: true, mode: 'preview' };
+      }
+    } catch (error) {
+      // Show preview as fallback
+      const reportLines = reportText.split('\n');
+      showReceiptPreview(reportLines, 'Daily Sales Report (Fallback)');
+      return { success: false, mode: 'fallback', error: error.message };
+    }
+  });
+
+  // Custom Sales Report Handler
+  ipcMain.handle('print-custom-sales-report', async (event, reportData, storeName, startDate, endDate) => {
+    try {
+      // Generate report text
+      const reportText = `
+${storeName || 'Store'} - CUSTOM SALES REPORT
+Period: ${startDate} to ${endDate}
+========================================
+
+ORDER SUMMARY:
+- Total Orders: ${reportData.totalOrders}
+- Delivery Orders: ${reportData.deliveryOrders} (${reportData.totalOrders > 0 ? ((reportData.deliveryOrders / reportData.totalOrders) * 100).toFixed(1) : 0}%)
+- Pickup Orders: ${reportData.pickupOrders} (${reportData.totalOrders > 0 ? ((reportData.pickupOrders / reportData.totalOrders) * 100).toFixed(1) : 0}%)
+- Cancelled Orders: ${reportData.cancelledOrders}
+
+FINANCIAL SUMMARY:
+- Gross Sales (with tax): $${reportData.grossSalesWithTax.toFixed(2)}
+- Gross Sales (without tax): $${reportData.grossSalesWithoutTax.toFixed(2)}
+- Total Tax Collected: $${reportData.totalTaxCollected.toFixed(2)}
+- Average Order Value: $${reportData.averageOrderValue.toFixed(2)}
+
+CUSTOMER INSIGHTS:
+- Unique Customers: ${reportData.uniqueCustomers}
+- First Order: ${reportData.firstOrderTime}
+- Last Order: ${reportData.lastOrderTime}
+- Peak Hour: ${reportData.peakHour}
+
+ORDERS BY HOUR:
+${Object.entries(reportData.ordersByHour || {})
+  .sort(([a], [b]) => parseInt(a) - parseInt(b))
+  .map(([hour, count]) => `${hour}: ${count} orders`)
+  .join('\n')}
+
+========================================
+Generated: ${new Date().toLocaleString()}
+      `;
+
+      // Try to print through thermal printer
+      if (printerService.persistentPort && printerService.persistentPort.isOpen) {
+        await printerService.printReport(reportText);
+        return { success: true, mode: 'thermal' };
+      } else {
+        // Show preview if printer not available
+        showReceiptPreview(reportText.split('\n'), 'Custom Sales Report');
+        return { success: true, mode: 'preview' };
+      }
+    } catch (error) {
+      // Show preview as fallback
+      const reportLines = reportText.split('\n');
+      showReceiptPreview(reportLines, 'Custom Sales Report (Fallback)');
+      return { success: false, mode: 'fallback', error: error.message };
     }
   });
 

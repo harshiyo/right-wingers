@@ -126,7 +126,7 @@ export const DailySalesReport: React.FC<DailySalesReportProps> = ({ open, onClos
 
       setReportData(data);
     } catch (error) {
-      console.error('Error generating daily report:', error);
+      // Error handled silently - user will see no data message
     } finally {
       setIsLoading(false);
     }
