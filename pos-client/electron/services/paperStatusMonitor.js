@@ -9,12 +9,16 @@ export class PaperStatusMonitor {
   async checkPaperStatus(port) {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
+        // Clean up listener on timeout
+        port.removeListener('data', onData);
+        port.removeListener('error', onError);
         resolve({ paperOut: false, offline: false });
       }, 2000);
       
       const onData = (data) => {
         clearTimeout(timeout);
         port.removeListener('data', onData);
+        port.removeListener('error', onError);
         
         if (data.length > 0) {
           const statusByte = data[0];
@@ -35,8 +39,26 @@ export class PaperStatusMonitor {
         }
       };
       
+      const onError = (error) => {
+        clearTimeout(timeout);
+        port.removeListener('data', onData);
+        port.removeListener('error', onError);
+        resolve({ paperOut: false, offline: true });
+      };
+      
+      // Add listeners
       port.on('data', onData);
-      port.write('\x10\x04\x04'); // DLE EOT 4 command
+      port.on('error', onError);
+      
+      // Send status request command
+      try {
+        port.write('\x10\x04\x04'); // DLE EOT 4 command
+      } catch (writeError) {
+        clearTimeout(timeout);
+        port.removeListener('data', onData);
+        port.removeListener('error', onError);
+        resolve({ paperOut: false, offline: true });
+      }
     });
   }
 

@@ -49,13 +49,7 @@ export class PrinterService {
     
     // Close any existing connection first
     if (this.persistentPort) {
-      try {
-        this.persistentPort.close();
-        this.persistentPort = null;
-        await new Promise(resolve => setTimeout(resolve, 500));
-      } catch (err) {
-        console.log('💡 Cleaned up previous connection');
-      }
+      await this.cleanupConnection();
     }
     
     try {
@@ -68,6 +62,9 @@ export class PrinterService {
         stopBits: 1,
         parity: 'none'
       });
+      
+      // Increase max listeners to prevent warning (we have multiple monitoring functions)
+      this.persistentPort.setMaxListeners(20);
       
       // Update current settings
       this.currentPort = usePort;
@@ -100,6 +97,34 @@ export class PrinterService {
       console.error(`❌ Failed to initialize ${usePort}:`, error.message);
       this.persistentPort = null;
       throw error;
+    }
+  }
+
+  // Clean up connection and remove all listeners
+  async cleanupConnection() {
+    if (this.persistentPort) {
+      try {
+        // Stop monitoring first
+        this.paperMonitor.stopMonitoring();
+        
+        // Remove all listeners to prevent memory leaks
+        this.persistentPort.removeAllListeners();
+        
+        // Close the port
+        if (this.persistentPort.isOpen) {
+          this.persistentPort.close();
+        }
+        
+        this.persistentPort = null;
+        
+        // Small delay to ensure cleanup
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        console.log('💡 Connection cleaned up successfully');
+      } catch (err) {
+        console.warn('Warning during connection cleanup:', err.message);
+        this.persistentPort = null;
+      }
     }
   }
 
@@ -159,12 +184,17 @@ export class PrinterService {
           } else {
             lines = this.receiptRenderer.renderReceipt(job.order, job.type);
           }
-          await this.executePrint(port, lines);
+          
+          // Print with cutting enabled for each individual receipt
+          await this.executePrint(port, lines, true);
           
           job.status = 'completed';
           if (this.onPrintJobCompleted) {
             this.onPrintJobCompleted(job);
           }
+          
+          // Add a longer delay after each print to ensure complete processing
+          await new Promise(resolve => setTimeout(resolve, 500));
           
         } catch (error) {
           if (error.message.includes('PAPER_OUT')) {
@@ -195,10 +225,8 @@ export class PrinterService {
             }
           }
         }
-        
-        // Small delay between jobs
-        await new Promise(resolve => setTimeout(resolve, 200));
       }
+      
     } catch (error) {
       console.error('Print queue processing error:', error);
     } finally {
@@ -206,7 +234,9 @@ export class PrinterService {
     }
   }
 
-  async executePrint(port, lines) {
+
+
+  async executePrint(port, lines, shouldCut = true) {
     return new Promise((resolve, reject) => {
       try {
         // Check paper status before printing
@@ -251,8 +281,12 @@ export class PrinterService {
           data += line + '\n';
         });
         
-        // Add cut command
-        data += '\x1D\x56\x00';
+        // Add some blank lines before cutting to ensure content is fully printed
+        if (shouldCut) {
+          data += '\n\n\n'; // Add extra lines for spacing
+          data += '\n\n\n'; // Add extra lines for spacing
+          data += '\x1D\x56\x00'; // Cut command
+        }
         
         port.write(data, (err) => {
           if (err) {
@@ -260,8 +294,16 @@ export class PrinterService {
             return;
           }
           
+          // Wait for all data to be transmitted and processed
           port.drain(() => {
-            resolve();
+            // Add additional delay to ensure printer has processed the cut command
+            if (shouldCut) {
+              setTimeout(() => {
+                resolve();
+              }, 300); // 300ms delay after cutting
+            } else {
+              resolve();
+            }
           });
         });
         
@@ -553,30 +595,13 @@ export class PrinterService {
 
   // Close current connection
   async closeConnection() {
-    if (this.persistentPort && this.persistentPort.isOpen) {
-      return new Promise((resolve) => {
-        this.paperMonitor.stopMonitoring();
-        
-        this.persistentPort.close((err) => {
-          if (err) {
-            console.log('Connection close error (ignored):', err.message);
-          }
-          this.persistentPort = null;
-          resolve();
-        });
-      });
-    }
+    await this.cleanupConnection();
   }
 
   cleanup() {
-    this.paperMonitor.stopMonitoring();
-    
-    if (this.persistentPort && this.persistentPort.isOpen) {
-      try {
-        this.persistentPort.close();
-      } catch (err) {
-        // Silent cleanup error
-      }
-    }
+    // Use the async cleanup method but don't wait for it
+    this.cleanupConnection().catch(() => {
+      // Silent cleanup error
+    });
   }
 } 
