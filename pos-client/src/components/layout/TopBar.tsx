@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import {
-  LogOut, User, ShoppingCart, Truck, MapPin, CheckCircle, Search, Sun, Moon
+  LogOut, User, ShoppingCart, Truck, MapPin, CheckCircle, Search, Sun, Moon, Settings
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../context/StoreContext';
 import Logo from '../../assets/logo.png';
 import { OrderNotificationDialog } from './OrderNotificationDialog';
+import { SettingsDialog } from './SettingsDialog';
 
 interface TopBarProps {
   cartItemsCount?: number;
@@ -26,6 +27,7 @@ export const TopBar = ({
 }: TopBarProps) => {
   const [dark, setDark] = useState(false);
   const [ordersOpen, setOrdersOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { currentStore, currentUser, logout } = useStore();
   const navigate = useNavigate();
 
@@ -142,6 +144,14 @@ export const TopBar = ({
             </div>
           )}
           
+          <button 
+            onClick={() => setSettingsOpen(true)} 
+            className="p-2 rounded-full hover:bg-red-100 transition-colors"
+            title="Settings"
+          >
+            <Settings className="w-5 h-5 text-gray-600" />
+          </button>
+          
           <button onClick={logout} className="p-2 rounded-full hover:bg-red-100">
             <LogOut className="text-red-600" />
           </button>
@@ -150,6 +160,9 @@ export const TopBar = ({
 
       {/* Order Dialog */}
       <OrderNotificationDialog open={ordersOpen} onClose={() => setOrdersOpen(false)} />
+      
+      {/* Settings Dialog */}
+      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </>
   );
 };

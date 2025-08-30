@@ -51,7 +51,7 @@ function createWindow() {
   });
 
   // IPC handlers for printer service
-  ipcMain.handle('print-receipt', async (event, order, type, showPreview = true) => {
+  ipcMain.handle('print-receipt', async (event, order, type, showPreview = false) => {
     const customerLines = printerService.receiptRenderer.renderReceipt(order, type);
     const kitchenLines = printerService.kitchenReceiptRenderer.renderKitchenReceipt(order, type);
     const storeId = order.storeId || 'hamilton'; // Default to hamilton for testing
@@ -149,21 +149,45 @@ function createWindow() {
     }
   });
 
-  ipcMain.handle('update-printer-settings', async (event, settings) => {
+  ipcMain.handle('update-printer-settings', async (event, port, baudRate) => {
     try {
-      // For now, just return success - settings will be handled later
-      return { success: true, message: 'Settings updated' };
+      console.log(`🔧 Updating printer settings: ${port} at ${baudRate} baud`);
+      
+      // Update printer service with new settings
+      printerService.updateSettings(port, baudRate);
+      
+      return { success: true, message: 'Printer settings updated successfully' };
     } catch (error) {
+      console.error('Error updating printer settings:', error);
       return { success: false, message: error.message };
     }
   });
 
-  ipcMain.handle('test-printer-connection', async (event, settings) => {
+  ipcMain.handle('test-printer-connection', async (event, port, baudRate, printTest = false) => {
     try {
-      // For now, just return success - testing will be handled later
-      return { success: true, message: 'Connection test successful' };
+      console.log(`🧪 Testing printer connection: ${port} at ${baudRate} baud${printTest ? ' (with test print)' : ''}`);
+      
+      // Test the connection with new settings
+      const result = await printerService.testConnection(port, baudRate, printTest);
+      
+      let message;
+      if (result.success) {
+        message = result.message || 'Printer connection test successful';
+      } else {
+        message = result.error || result.message || 'Unknown connection error occurred';
+      }
+      
+      return { 
+        success: result.success, 
+        message: message
+      };
     } catch (error) {
-      return { success: false, message: error.message };
+      console.error('Error testing printer connection:', error);
+      const errorMessage = error.message || error.toString() || 'Unknown error occurred during connection test';
+      return { 
+        success: false, 
+        message: `Connection test failed: ${errorMessage}` 
+      };
     }
   });
 

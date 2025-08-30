@@ -3,7 +3,9 @@ import { Order } from './types';
 declare global {
   interface Window {
     electronAPI?: {
-      printReceipt: (order: Order, type: string) => Promise<void>;
+      printReceipt: (order: any, type: string) => Promise<void>;
+      updatePrinterSettings: (port: string, baudRate: number) => Promise<void>;
+      testPrinterConnection: (port: string, baudRate: number, printTest?: boolean) => Promise<{ success: boolean; message?: string; error?: string }>;
     };
   }
 }

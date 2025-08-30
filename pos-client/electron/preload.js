@@ -12,5 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPendingQueue: () => ipcRenderer.invoke('get-pending-queue'),
   retryPendingJob: (jobId) => ipcRenderer.invoke('retry-pending-job', jobId),
   cancelPendingJob: (jobId) => ipcRenderer.invoke('cancel-pending-job', jobId),
-  clearPendingQueue: () => ipcRenderer.invoke('clear-pending-queue')
+  clearPendingQueue: () => ipcRenderer.invoke('clear-pending-queue'),
+  updatePrinterSettings: (port, baudRate) => ipcRenderer.invoke('update-printer-settings', port, baudRate),
+  testPrinterConnection: (port, baudRate, printTest) => ipcRenderer.invoke('test-printer-connection', port, baudRate, printTest)
 });

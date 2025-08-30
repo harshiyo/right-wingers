@@ -16,6 +16,10 @@ export class PrinterService {
     this.persistentPort = null;
     this.queueId = 0;
     
+    // Default printer settings
+    this.currentPort = 'COM6';
+    this.currentBaudRate = 38400;
+    
     // Initialize managers
     this.queueManager = new PrintQueueManager(this);
     this.receiptRenderer = new ReceiptRenderer();
@@ -28,9 +32,19 @@ export class PrinterService {
     this.onPrintJobFailed = null;
   }
 
-  async initializeConnection(port = 'COM6', baudRate = 38400) {
+  async initializeConnection(port = null, baudRate = null) {
+    // Use provided settings or fall back to current settings
+    const usePort = port || this.currentPort;
+    const useBaudRate = baudRate || this.currentBaudRate;
+    
     if (this.persistentPort && this.persistentPort.isOpen) {
-      return this.persistentPort;
+      // Check if we need to reinitialize with different settings
+      if (usePort === this.currentPort && useBaudRate === this.currentBaudRate) {
+        return this.persistentPort;
+      } else {
+        // Close existing connection to reinitialize with new settings
+        await this.closeConnection();
+      }
     }
     
     // Close any existing connection first
@@ -45,32 +59,36 @@ export class PrinterService {
     }
     
     try {
-      console.log('🔌 Initializing COM6 connection...');
+      console.log(`🔌 Initializing ${usePort} connection at ${useBaudRate} baud...`);
       
       this.persistentPort = new SerialPort({
-        path: port,
-        baudRate: baudRate,
+        path: usePort,
+        baudRate: useBaudRate,
         dataBits: 8,
         stopBits: 1,
         parity: 'none'
       });
       
+      // Update current settings
+      this.currentPort = usePort;
+      this.currentBaudRate = useBaudRate;
+      
       // Wait for port to open with promise wrapper
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
-          reject(new Error('COM6 connection timeout'));
+          reject(new Error(`${usePort} connection timeout`));
         }, 5000);
         
         this.persistentPort.on('open', () => {
           clearTimeout(timeout);
-          console.log('✅ COM6 connection established');
+          console.log(`✅ ${usePort} connection established`);
           resolve();
         });
         
         this.persistentPort.on('error', (err) => {
           clearTimeout(timeout);
-          console.error('❌ COM6 connection error:', err.message);
-          reject(new Error(`COM6 error: ${err.message}`));
+          console.error(`❌ ${usePort} connection error:`, err.message);
+          reject(new Error(`${usePort} error: ${err.message}`));
         });
       });
       
@@ -79,7 +97,7 @@ export class PrinterService {
       
       return this.persistentPort;
     } catch (error) {
-      console.error('❌ Failed to initialize COM6:', error.message);
+      console.error(`❌ Failed to initialize ${usePort}:`, error.message);
       this.persistentPort = null;
       throw error;
     }
@@ -278,6 +296,276 @@ export class PrinterService {
     
     const lines = reportText.split('\n');
     await this.executePrint(this.persistentPort, lines);
+  }
+
+  // Update printer settings and reinitialize connection
+  async updateSettings(port, baudRate) {
+    console.log(`🔧 Updating printer settings to ${port} at ${baudRate} baud`);
+    
+    // Store new settings
+    this.currentPort = port;
+    this.currentBaudRate = baudRate;
+    
+    // If there's an active connection, reinitialize with new settings
+    if (this.persistentPort && this.persistentPort.isOpen) {
+      try {
+        await this.closeConnection();
+        // The next print operation will automatically initialize with new settings
+        console.log('🔄 Connection will be reinitialized with new settings on next print');
+      } catch (error) {
+        console.error('Error reinitializing connection:', error);
+        throw error;
+      }
+    }
+    
+    return { success: true };
+  }
+
+    // Test connection with specific settings
+  async testConnection(port, baudRate, printTest = false) {
+    console.log(`🧪 Testing connection to ${port} at ${baudRate} baud${printTest ? ' (with test print)' : ''}`);
+    console.log(`📋 Print test mode: ${printTest}`);
+    
+    let testPort = null;
+    try {
+      testPort = new SerialPort({
+        path: port,
+        baudRate: baudRate,
+        dataBits: 8,
+        stopBits: 1,
+        parity: 'none',
+        autoOpen: false
+      });
+
+      // Open the port
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error(`Connection timeout to ${port}`));
+        }, 5000);
+
+        testPort.open((err) => {
+          clearTimeout(timeout);
+          if (err) {
+            // Map common error messages to user-friendly descriptions
+            let userFriendlyError = err.message || 'Unknown error';
+            
+            if (err.message && err.message.includes('Access is denied')) {
+              userFriendlyError = `Port ${port} is already in use by another application`;
+            } else if (err.message && err.message.includes('cannot find the path')) {
+              userFriendlyError = `Port ${port} does not exist. Check if the printer is connected and drivers are installed`;
+            } else if (err.message && err.message.includes('system cannot find')) {
+              userFriendlyError = `Port ${port} not found. Verify the correct port name`;
+            }
+            
+            reject(new Error(`Failed to open ${port}: ${userFriendlyError}`));
+          } else {
+            resolve();
+          }
+        });
+      });
+
+      console.log(`✅ Port ${port} opened, testing printer response...`);
+
+      // Send a test command and wait for response
+      const testResult = await this.sendTestPrintCommand(testPort, printTest);
+      
+      // Always close test connection - regardless of success or failure
+      try {
+        if (testPort && testPort.isOpen) {
+          testPort.close();
+          console.log(`🔌 Closed test connection to ${port}`);
+        }
+      } catch (closeError) {
+        console.log(`⚠️ Warning: Could not close test port ${port}:`, closeError.message);
+      }
+      
+      if (testResult.success) {
+        return { 
+          success: true, 
+          message: `Printer connected and responding on ${port} at ${baudRate} baud` 
+        };
+      } else {
+        const errorMsg = testResult.error || 'No response from printer';
+        return {
+          success: false,
+          error: `Port ${port} opened but no printer response: ${errorMsg}`
+        };
+      }
+      
+    } catch (error) {
+      // Ensure port is closed even if an exception occurs
+      try {
+        if (testPort && testPort.isOpen) {
+          testPort.close();
+          console.log(`🔌 Closed test connection to ${port} (after error)`);
+        }
+      } catch (closeError) {
+        console.log(`⚠️ Warning: Could not close test port ${port} after error:`, closeError.message);
+      }
+      
+      const errorMessage = error.message || error.toString() || 'Unknown connection error';
+      return { 
+        success: false, 
+        error: errorMessage
+      };
+    }
+  }
+
+  // Send test print command to verify printer is connected and responding
+  async sendTestPrintCommand(port, printTestReceipt = false) {
+    return new Promise((resolve) => {
+      let responseReceived = false;
+      let errorOccurred = false;
+      
+      // Set up timeout for printer response
+      const responseTimeout = setTimeout(() => {
+        if (!responseReceived && !errorOccurred) {
+          port.removeListener('data', dataHandler);
+          port.removeListener('error', errorHandler);
+          resolve({
+            success: false,
+            error: 'Printer not responding (timeout after 3 seconds)'
+          });
+        }
+      }, 5000); // Increased timeout for test print
+
+      // Listen for any response from printer
+      const dataHandler = (data) => {
+        responseReceived = true;
+        clearTimeout(responseTimeout);
+        port.removeListener('data', dataHandler);
+        port.removeListener('error', errorHandler);
+        
+        resolve({
+          success: true,
+          message: 'Printer responded successfully'
+        });
+      };
+
+      // Listen for errors
+      const errorHandler = (err) => {
+        errorOccurred = true;
+        clearTimeout(responseTimeout);
+        port.removeListener('data', dataHandler);
+        port.removeListener('error', errorHandler);
+        
+        const errorMessage = err?.message || err?.toString() || 'Unknown printer communication error';
+        resolve({
+          success: false,
+          error: `Printer communication error: ${errorMessage}`
+        });
+      };
+
+      port.on('data', dataHandler);
+      port.on('error', errorHandler);
+
+      if (printTestReceipt) {
+        // Send a small test receipt that will actually print
+        console.log('📤 Sending test print receipt');
+        const testReceipt = 
+          '\x1B\x40' +                    // ESC @ - Initialize printer
+          '\x1B\x61\x01' +                // ESC a 1 - Center align
+          '\x1B\x45\x01' +                // ESC E 1 - Bold on
+          'PRINTER TEST\n' +
+          '\x1B\x45\x00' +                // ESC E 0 - Bold off
+          '\x1B\x61\x00' +                // ESC a 0 - Left align
+          'Connection: OK\n' +
+          'Port: ' + port.path + '\n' +
+          'Time: ' + new Date().toLocaleTimeString() + '\n' +
+          '\n\n\n' +                      // Feed some paper
+          '\x1D\x56\x00';                 // GS V 0 - Cut paper
+        
+        port.write(testReceipt, (writeErr) => {
+          if (writeErr) {
+            errorOccurred = true;
+            clearTimeout(responseTimeout);
+            port.removeListener('data', dataHandler);
+            port.removeListener('error', errorHandler);
+            
+            const writeErrorMessage = writeErr?.message || writeErr?.toString() || 'Unknown write error';
+            resolve({
+              success: false,
+              error: `Failed to send test print: ${writeErrorMessage}`
+            });
+          } else {
+            console.log('✅ Test receipt sent successfully');
+            // For test print, we consider it successful if we can send the data
+            // without waiting for electronic response
+            setTimeout(() => {
+              if (!errorOccurred) {
+                responseReceived = true;
+                clearTimeout(responseTimeout);
+                port.removeListener('data', dataHandler);
+                port.removeListener('error', errorHandler);
+                resolve({
+                  success: true,
+                  message: 'Test receipt printed successfully'
+                });
+              }
+            }, 2000); // Give time for print to complete
+          }
+        });
+      } else {
+        // Send printer status inquiry command (ESC/POS DLE EOT)
+        // This command requests the printer status and most thermal printers will respond
+        const statusCommand = Buffer.from([0x10, 0x04, 0x01]); // DLE EOT n (n=1 for printer status)
+        
+        port.write(statusCommand, (writeErr) => {
+          if (writeErr) {
+            errorOccurred = true;
+            clearTimeout(responseTimeout);
+            port.removeListener('data', dataHandler);
+            port.removeListener('error', errorHandler);
+            
+            const writeErrorMessage = writeErr?.message || writeErr?.toString() || 'Unknown write error';
+            resolve({
+              success: false,
+              error: `Failed to send test command: ${writeErrorMessage}`
+            });
+          } else {
+            console.log('📤 Sent printer status inquiry command');
+            
+            // Also send a simple ESC @ (initialize printer) command as backup
+            // Some printers respond better to this than status requests
+            setTimeout(() => {
+              if (!responseReceived && !errorOccurred) {
+                console.log('📤 Sending backup initialization command');
+                const initCommand = Buffer.from([0x1B, 0x40]); // ESC @
+                port.write(initCommand, (initErr) => {
+                  if (initErr) {
+                    console.log('⚠️ Backup command failed:', initErr.message);
+                  }
+                });
+              }
+            }, 1000);
+          }
+        });
+      }
+
+      // Drain the write to ensure command is sent
+      port.drain((drainErr) => {
+        if (drainErr) {
+          console.log('⚠️ Drain error (non-critical):', drainErr.message);
+        }
+      });
+    });
+  }
+
+  // Close current connection
+  async closeConnection() {
+    if (this.persistentPort && this.persistentPort.isOpen) {
+      return new Promise((resolve) => {
+        this.paperMonitor.stopMonitoring();
+        
+        this.persistentPort.close((err) => {
+          if (err) {
+            console.log('Connection close error (ignored):', err.message);
+          }
+          this.persistentPort = null;
+          resolve();
+        });
+      });
+    }
   }
 
   cleanup() {

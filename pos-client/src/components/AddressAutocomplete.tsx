@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin } from 'lucide-react';
+import { MapPin, AlertCircle } from 'lucide-react';
+import { useStoreSettings } from '../hooks/useStoreSettings';
 
 interface GeoapifySuggestion {
   formatted: string;
@@ -37,7 +38,10 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   const [suggestions, setSuggestions] = useState<GeoapifySuggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [apiKeyError, setApiKeyError] = useState(false);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  
+  const { getGeoapifyApiKey } = useStoreSettings();
 
   const fetchSuggestions = async (text: string) => {
     const meaningfulChars = text.replace(/\s/g, '').length;
@@ -48,10 +52,21 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
       return;
     }
 
+    // Get API key from store settings
+    const API_KEY = getGeoapifyApiKey();
+    
+    if (!API_KEY) {
+      console.warn('Geoapify API key not configured for this store');
+      setApiKeyError(true);
+      setSuggestions([]);
+      setIsOpen(false);
+      return;
+    }
+
     setIsLoading(true);
+    setApiKeyError(false);
     
     try {
-      const API_KEY = "34fdfa74334e4230b1153e219ddf8dcd";
       const params = new URLSearchParams({
         text: text,
         format: 'json',
@@ -170,10 +185,29 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
           onFocus={handleInputFocus}
           onBlur={handleInputBlur}
           placeholder={placeholder}
-          className="w-full text-base py-3 px-4 pr-10 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-300 focus:border-transparent"
+          className={`w-full text-base py-3 px-4 pr-10 rounded-lg border focus:ring-2 focus:ring-red-300 focus:border-transparent ${
+            apiKeyError ? 'border-red-300 bg-red-50' : 'border-gray-300'
+          }`}
+          disabled={apiKeyError}
         />
-        <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        {apiKeyError ? (
+          <AlertCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-red-500" />
+        ) : (
+          <MapPin className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        )}
       </div>
+
+      {/* API Key Error Message */}
+      {apiKeyError && (
+        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center gap-2 text-red-700">
+            <AlertCircle className="w-4 h-4" />
+            <span className="text-sm">
+              Address autocomplete is not available. Please configure the Geoapify API key in Settings.
+            </span>
+          </div>
+        </div>
+      )}
 
       {isOpen && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
