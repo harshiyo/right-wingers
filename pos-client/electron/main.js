@@ -52,19 +52,21 @@ function createWindow() {
 
   // IPC handlers for printer service
   ipcMain.handle('print-receipt', async (event, order, type, showPreview = true) => {
-    const lines = printerService.receiptRenderer.renderReceipt(order, type);
+    const customerLines = printerService.receiptRenderer.renderReceipt(order, type);
+    const kitchenLines = printerService.kitchenReceiptRenderer.renderKitchenReceipt(order, type);
     const storeId = order.storeId || 'hamilton'; // Default to hamilton for testing
     
     console.log(`🖨️ Print request: store=${storeId}, type=${type}, showPreview=${showPreview}`);
     
-    // If preview is explicitly requested, show it
+    // If preview is explicitly requested, show both previews
     if (showPreview) {
-      console.log('📄 Showing preview window as requested');
-      showReceiptPreview(lines);
+      console.log('📄 Showing preview windows as requested');
+      showReceiptPreview(customerLines, 'Customer Receipt');
+      showReceiptPreview(kitchenLines, 'Kitchen Receipt');
       return { success: true, mode: 'preview' };
     }
 
-    // Otherwise, print to thermal printer
+    // Otherwise, print both receipts to thermal printer
     try {
       const result = await printerService.printReceipt(order, type);
       return { success: true, mode: 'thermal', ...result };
@@ -72,10 +74,11 @@ function createWindow() {
       console.error('Printing failed:', err.message);
       
       // Show error dialog to user
-      dialog.showErrorBox('Print Error', `Failed to print receipt: ${err.message}`);
+      dialog.showErrorBox('Print Error', `Failed to print receipts: ${err.message}`);
       
       // Also show preview as fallback
-      showReceiptPreview(lines);
+      showReceiptPreview(customerLines, 'Customer Receipt (Fallback)');
+      showReceiptPreview(kitchenLines, 'Kitchen Receipt (Fallback)');
       
       return { success: false, mode: 'fallback', error: err.message };
     }
@@ -264,12 +267,12 @@ function createWindow() {
   });
 }
 
-function showReceiptPreview(lines) {
+function showReceiptPreview(lines, title = 'Receipt Preview') {
   // Create a new window for receipt preview
   const previewWindow = new BrowserWindow({
     width: 400,
     height: 600,
-    title: 'Receipt Preview',
+    title: title,
     resizable: true,
     minimizable: true,
     maximizable: true,

@@ -3,6 +3,7 @@ import escpos from 'escpos';
 import escposUSB from 'escpos-usb';
 import { PrintQueueManager } from './printQueueManager.js';
 import { ReceiptRenderer } from './receiptRenderer.js';
+import { KitchenReceiptRenderer } from './kitchenReceiptRenderer.js';
 import { PaperStatusMonitor } from './paperStatusMonitor.js';
 
 escpos.USB = escposUSB;
@@ -18,6 +19,7 @@ export class PrinterService {
     // Initialize managers
     this.queueManager = new PrintQueueManager(this);
     this.receiptRenderer = new ReceiptRenderer();
+    this.kitchenReceiptRenderer = new KitchenReceiptRenderer();
     this.paperMonitor = new PaperStatusMonitor(this);
     
     // Event handlers
@@ -84,23 +86,39 @@ export class PrinterService {
   }
 
   async printReceipt(order, type) {
-    const jobId = ++this.queueId;
-    const printJob = {
-      id: jobId,
+    // Create customer receipt job
+    const customerJobId = ++this.queueId;
+    const customerPrintJob = {
+      id: customerJobId,
       order,
       type,
+      receiptType: 'customer',
       status: 'pending',
       retryCount: 0,
       maxRetries: 3
     };
     
-    this.printQueue.push(printJob);
+    // Create kitchen receipt job
+    const kitchenJobId = ++this.queueId;
+    const kitchenPrintJob = {
+      id: kitchenJobId,
+      order,
+      type,
+      receiptType: 'kitchen',
+      status: 'pending',
+      retryCount: 0,
+      maxRetries: 3
+    };
+    
+    // Add both jobs to queue
+    this.printQueue.push(customerPrintJob);
+    this.printQueue.push(kitchenPrintJob);
     
     if (!this.isProcessingQueue) {
       this.processPrintQueue();
     }
     
-    return { success: true, jobId };
+    return { success: true, customerJobId, kitchenJobId };
   }
 
   async processPrintQueue() {
@@ -117,7 +135,12 @@ export class PrinterService {
       while (this.printQueue.length > 0) {
         const job = this.printQueue.shift();
         try {
-          const lines = this.receiptRenderer.renderReceipt(job.order, job.type);
+          let lines;
+          if (job.receiptType === 'kitchen') {
+            lines = this.kitchenReceiptRenderer.renderKitchenReceipt(job.order, job.type);
+          } else {
+            lines = this.receiptRenderer.renderReceipt(job.order, job.type);
+          }
           await this.executePrint(port, lines);
           
           job.status = 'completed';
