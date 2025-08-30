@@ -4,6 +4,7 @@ export class PaperStatusMonitor {
     this.paperStatusInterval = null;
     this.lastPaperStatus = 'unknown';
     this.isPaperOut = false;
+    this.notificationSent = false; // Track if we've already sent a notification
   }
 
   async checkPaperStatus(port) {
@@ -26,11 +27,28 @@ export class PaperStatusMonitor {
           this.lastPaperStatus = status;
           
           if (status.paperOut) {
-            this.isPaperOut = true;
-            this.sendPaperOutNotification();
+            // Only send notification once until paper is restored
+            if (!this.isPaperOut || !this.notificationSent) {
+              this.isPaperOut = true;
+              this.notificationSent = true;
+              this.sendPaperOutNotification();
+            }
+          } else if (status.paperNearEnd) {
+            // Only send low paper notification once
+            if (this.isPaperOut || !this.notificationSent) {
+              this.isPaperOut = false;
+              this.notificationSent = true;
+              this.sendPaperLowNotification();
+            }
           } else {
-            this.isPaperOut = false;
-            this.printerService.queueManager.resumePendingJobs();
+            // Paper is OK
+            if (this.isPaperOut || this.notificationSent) {
+              // Paper was out/low but now it's OK - send OK notification and resume jobs
+              this.isPaperOut = false;
+              this.notificationSent = false; // Reset notification flag
+              this.sendPaperOkNotification();
+              this.printerService.queueManager.resumePendingJobs();
+            }
           }
           
           resolve(status);
@@ -94,7 +112,37 @@ export class PaperStatusMonitor {
 
   sendPaperOutNotification() {
     if (this.printerService.onPaperStatusChanged) {
-      this.printerService.onPaperStatusChanged({ paperOut: true });
+      this.printerService.onPaperStatusChanged({ 
+        status: 'out',
+        message: 'Paper roll is empty! Please replace the paper roll to continue printing.',
+        paperOut: true 
+      });
     }
+  }
+
+  sendPaperLowNotification() {
+    if (this.printerService.onPaperStatusChanged) {
+      this.printerService.onPaperStatusChanged({ 
+        status: 'low',
+        message: 'Paper level is low. Consider replacing the paper roll soon.',
+        paperNearEnd: true 
+      });
+    }
+  }
+
+  sendPaperOkNotification() {
+    if (this.printerService.onPaperStatusChanged) {
+      this.printerService.onPaperStatusChanged({ 
+        status: 'ok',
+        message: 'Paper level is OK. Printer ready.',
+        paperOut: false,
+        paperNearEnd: false 
+      });
+    }
+  }
+
+  // Allow manual acknowledgment of paper status (resets notification flag)
+  acknowledgeNotification() {
+    this.notificationSent = false;
   }
 }

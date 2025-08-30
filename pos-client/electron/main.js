@@ -17,6 +17,9 @@ if (process.env.USER_DATA_DIR) {
 // Initialize printer service
 const printerService = new PrinterService();
 
+// Declare mainWindow in global scope
+let mainWindow;
+
 // Set up event handlers
 printerService.onPaperStatusChanged = (status) => {
   if (mainWindow && mainWindow.webContents) {
@@ -33,7 +36,7 @@ printerService.onPrintJobFailed = (job, error) => {
 };
 
 function createWindow() {
-  let mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
