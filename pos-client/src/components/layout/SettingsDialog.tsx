@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Settings, Key, Save, AlertCircle, CheckCircle, Printer, TestTube, FileText, Monitor, ChefHat, ToggleLeft, ToggleRight, Palette, Shield } from 'lucide-react';
+import { X, Settings, Key, Save, AlertCircle, CheckCircle, Printer, TestTube, FileText, Monitor, ChefHat, ToggleLeft, ToggleRight, Shield } from 'lucide-react';
 import { useStoreSettings } from '../../hooks/useStoreSettings';
 import { useStore } from '../../context/StoreContext';
 import { getDualPrinterSettings, updateDualPrinterSettings } from '../../services/storeSettings';
@@ -20,34 +20,34 @@ interface SettingsDialogProps {
 
 type TabType = 'api' | 'printer' | 'dual-printer';
 
-// Theme configuration for consistent styling
+// Theme configuration using brand colors - all based on #800000 maroon palette
 const themes = {
   api: {
-    primary: 'emerald',
-    bg: 'from-emerald-50 to-green-50',
-    border: 'border-emerald-200',
-    icon: 'bg-emerald-100 text-emerald-600',
-    button: 'bg-emerald-600 hover:bg-emerald-700',
-    focus: 'focus:ring-emerald-500',
-    tab: 'text-emerald-600 border-emerald-600'
+    primary: 'red',
+    bg: 'from-red-50 to-red-100',
+    border: 'border-red-200',
+    icon: 'bg-red-100 text-red-700',
+    button: 'bg-red-700 hover:bg-red-800',
+    focus: 'focus:ring-red-500',
+    tab: 'text-red-700 border-red-600'
   },
   'dual-printer': {
-    primary: 'blue',
-    bg: 'from-blue-50 to-indigo-50',
-    border: 'border-blue-200',
-    icon: 'bg-blue-100 text-blue-600',
-    button: 'bg-blue-600 hover:bg-blue-700',
-    focus: 'focus:ring-blue-500',
-    tab: 'text-blue-600 border-blue-600'
+    primary: 'red',
+    bg: 'from-red-50 to-red-100',
+    border: 'border-red-200',
+    icon: 'bg-red-100 text-red-700',
+    button: 'bg-red-700 hover:bg-red-800',
+    focus: 'focus:ring-red-500',
+    tab: 'text-red-700 border-red-600'
   },
   printer: {
-    primary: 'purple',
-    bg: 'from-purple-50 to-violet-50',
-    border: 'border-purple-200',
-    icon: 'bg-purple-100 text-purple-600',
-    button: 'bg-purple-600 hover:bg-purple-700',
-    focus: 'focus:ring-purple-500',
-    tab: 'text-purple-600 border-purple-600'
+    primary: 'red',
+    bg: 'from-red-50 to-red-100',
+    border: 'border-red-200',
+    icon: 'bg-red-100 text-red-700',
+    button: 'bg-red-700 hover:bg-red-800',
+    focus: 'focus:ring-red-500',
+    tab: 'text-red-700 border-red-600'
   }
 };
 
@@ -522,8 +522,8 @@ export const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
               {/* API Information & Status Card */}
               <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm h-fit">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-blue-600" />
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-gray-600" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">API Status</h3>
@@ -546,10 +546,10 @@ export const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
                   {/* Help Information */}
                   <div className={`${themes.api.bg} border ${themes.api.border} rounded-lg p-4`}>
                     <div className="flex items-start gap-3">
-                      <div className="w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <div className="w-5 h-5 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                         <span className="text-white text-xs font-bold">i</span>
                       </div>
-                      <div className="text-sm text-emerald-800">
+                      <div className="text-sm text-red-800">
                         <p className="font-medium mb-1">How to get your API key:</p>
                         <p>Visit{' '}
                           <a 
@@ -619,8 +619,8 @@ export const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
                   {/* Front Printer Configuration */}
                   <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                        <FileText className="w-4 h-4 text-green-600" />
+                      <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <FileText className="w-4 h-4 text-gray-600" />
                       </div>
                       <div>
                         <h3 className="text-base font-semibold text-gray-900">Front Printer</h3>
@@ -659,8 +659,8 @@ export const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
                   {/* Kitchen Printer Configuration */}
                   <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <ChefHat className="w-4 h-4 text-orange-600" />
+                      <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <ChefHat className="w-4 h-4 text-gray-600" />
                       </div>
                       <div>
                         <h3 className="text-base font-semibold text-gray-900">Kitchen Printer</h3>
@@ -735,8 +735,8 @@ export const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
                 {/* Printer Detection */}
                 <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center">
-                      <TestTube className="w-3 h-3 text-indigo-600" />
+                    <div className="w-6 h-6 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <TestTube className="w-3 h-3 text-gray-600" />
                     </div>
                     <h3 className="text-sm font-semibold text-gray-900">Scanner</h3>
                   </div>
@@ -783,8 +783,8 @@ export const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
                 {/* Printer Behavior Settings */}
                 <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center">
-                      <Settings className="w-3 h-3 text-purple-600" />
+                    <div className="w-6 h-6 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <Settings className="w-3 h-3 text-gray-600" />
                     </div>
                     <h3 className="text-sm font-semibold text-gray-900">Behavior</h3>
                   </div>
@@ -959,8 +959,8 @@ export const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
               {/* Status & Information Card */}
               <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm h-fit">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-blue-600" />
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-gray-600" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">Printer Status</h3>
@@ -985,7 +985,7 @@ export const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
                       <p className="text-sm font-medium text-gray-700">Baud Rate</p>
                       <p className="text-xs text-gray-500">{printerBaudRate} bps</p>
                     </div>
-                    <div className="w-3 h-3 rounded-full bg-blue-500" />
+                    <div className="w-3 h-3 rounded-full bg-gray-500" />
                   </div>
 
                   {/* Settings Changed Indicator */}
@@ -997,17 +997,17 @@ export const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
                       </p>
                     </div>
                     <div className={`w-3 h-3 rounded-full ${
-                      isPrinterSettingsChanged ? 'bg-yellow-500' : 'bg-green-500'
+                      isPrinterSettingsChanged ? 'bg-red-500' : 'bg-green-500'
                     }`} />
                   </div>
 
                   {/* Information */}
                   <div className={`${themes.printer.bg} border ${themes.printer.border} rounded-lg p-4`}>
                     <div className="flex items-start gap-3">
-                      <div className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <div className="w-5 h-5 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                         <span className="text-white text-xs font-bold">i</span>
                       </div>
-                      <div className="text-sm text-purple-800">
+                      <div className="text-sm text-red-800">
                         <p className="font-medium mb-1">Legacy Mode:</p>
                         <p>This mode uses a single printer for both customer receipts and kitchen orders. For separate printers, use Dual Printer mode.</p>
                       </div>
