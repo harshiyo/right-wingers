@@ -205,54 +205,82 @@ const MenuItemGrid = ({
             <div
               key={item.id}
               onClick={() => onAddToCart(item)}
-              className="group rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col overflow-hidden cursor-pointer"
+              className="group relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer overflow-hidden h-full flex flex-col"
               style={{
-                backgroundColor: item.tileColor || '#ffffff',
-                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1)'
+                border: `3px solid ${item.tileColor || '#e5e7eb'}`
               }}
             >
-              <div className="relative p-6 flex flex-col items-center h-full">
-                {/* Circular Image */}
-                <div className="relative mb-4">
-                  <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-white border-opacity-80 shadow-lg">
-                    <img 
-                      src={item.imageUrl} 
-                      alt={item.name} 
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" 
-                    />
+              {/* Image Container */}
+              <div className="relative h-32 sm:h-40 overflow-hidden">
+                {item.imageUrl ? (
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
+                    <span className="text-4xl sm:text-5xl opacity-60">🍕</span>
                   </div>
-                </div>
+                )}
                 
-                {/* Content */}
-                <div className="text-center flex-1 w-full flex flex-col">
-                  {/* Title - fixed height */}
-                  <div className="h-12 flex items-center justify-center mb-2">
-                    <h3 className="font-bold text-lg text-white line-clamp-2 drop-shadow-md">{item.name}</h3>
-                  </div>
-                  
-                  {/* Price */}
-                  <p className="text-2xl font-bold text-white mb-4 drop-shadow-md">
-                    {(item.isSpecialtyPizza && item.sizePricing) || (item.sizePricing && !item.isSpecialtyPizza) ? 
-                      `Starting from $${item.sizePricing.small.toFixed(2)}` : 
-                      `$${item.price.toFixed(2)}`
-                    }
-                  </p>
-                  
-                  {/* Spacer to push badge to bottom */}
-                  <div className="flex-1"></div>
-                  
-                  {/* Customizable badge - fixed position at bottom */}
-                  <div className="h-8 flex items-center justify-center">
-                    {(item.isCustomizable || (item.sizePricing && !item.isSpecialtyPizza)) && (
-                      <div className="inline-flex items-center justify-center bg-gray-900 bg-opacity-80 text-white text-xs font-semibold px-4 py-2 rounded-full shadow-md">
-                        {item.sizePricing && !item.isSpecialtyPizza ? 'Size Options' : 'Customizable'}
-                      </div>
-                    )}
-                  </div>
+                {/* Overlay gradient */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+                
+                {/* Badges - Mobile optimized */}
+                <div className="absolute top-2 right-2 flex flex-col gap-1">
+                  {item.isCustomizable && (
+                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-lg flex items-center gap-1">
+                      <span className="hidden sm:inline">Custom</span>
+                    </div>
+                  )}
+                  {item.sizePricing && (
+                    <div className="bg-gradient-to-r from-green-600 to-green-700 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-lg flex items-center gap-1">
+                      <span className="hidden sm:inline">Sizes</span>
+                    </div>
+                  )}
+                  {item.isSpecialtyPizza && (
+                    <div className="bg-gradient-to-r from-red-600 to-red-700 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-lg flex items-center gap-1">
+                      <span className="hidden sm:inline">Specialty</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Hover effect overlay */}
-                <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity duration-300 rounded-xl"></div>
+                {/* Category indicator */}
+                <div className="absolute bottom-2 left-2">
+                  <div className={cn(
+                    "px-2 py-1 rounded-full text-xs font-semibold text-white shadow-lg",
+                    item.category === "Pizza" ? "bg-gradient-to-r from-red-600 to-red-700" :
+                    item.category === "Wings" ? "bg-gradient-to-r from-orange-600 to-orange-700" :
+                    item.category === "Sides" ? "bg-gradient-to-r from-yellow-600 to-yellow-700" :
+                    item.category === "Drinks" ? "bg-gradient-to-r from-blue-600 to-blue-700" :
+                    "bg-gradient-to-r from-gray-600 to-gray-700"
+                  )}>
+                    {item.category}
+                  </div>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-3 sm:p-4 flex-1 flex flex-col">
+                <h3 className="font-bold text-gray-900 mb-1 sm:mb-2 text-sm sm:text-base leading-tight line-clamp-2 flex-1">{item.name}</h3>
+                
+                <div className="flex items-center justify-between mt-auto">
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <span className="text-lg sm:text-xl font-bold text-red-600">
+                      {item.sizePricing ? (
+                        `$${Math.min(...Object.values(item.sizePricing)).toFixed(2)}+`
+                      ) : (
+                        `$${item.price.toFixed(2)}`
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Add to cart button */}
+                  <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-1.5 sm:p-2 rounded-full shadow-lg group-hover:scale-110 transition-transform duration-200">
+                    <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </div>
+                </div>
               </div>
             </div>
           )

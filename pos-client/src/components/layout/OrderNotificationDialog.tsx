@@ -1,6 +1,6 @@
 // ✅ Redesigned Order Notification Dialog Component
 import { useState, useEffect } from 'react';
-import { Clock, Package, CheckCircle, ChevronDown, X, Printer } from 'lucide-react';
+import { Clock, Package, CheckCircle, ChevronDown, X, Printer, Phone } from 'lucide-react';
 import { collection, query, where, onSnapshot, orderBy, updateDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useStore } from '../../context/StoreContext';
@@ -101,7 +101,7 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
    const [searchTerm, setSearchTerm] = useState('');
    const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
    const { currentStore } = useStore();
-  const [orderFilter, setOrderFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const [orderTypeFilter, setOrderTypeFilter] = useState<'all' | 'pickup' | 'delivery'>('all');
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'paid' | 'unpaid' | 'pending'>('all');
   const { setCartItems } = useCart();
   const navigate = useNavigate();
@@ -304,15 +304,15 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
     }
   };
 
-  // Filter by status
-  const statusFiltered = orderFilter === 'all'
+  // Filter by order type
+  const orderTypeFiltered = orderTypeFilter === 'all'
     ? orders
-    : orders.filter(order => order.status === orderFilter);
+    : orders.filter(order => order.orderType === orderTypeFilter);
 
   // Filter by payment status
   const paymentFiltered = paymentFilter === 'all'
-    ? statusFiltered
-    : statusFiltered.filter(order => order.paymentStatus === paymentFilter);
+    ? orderTypeFiltered
+    : orderTypeFiltered.filter(order => order.paymentStatus === paymentFilter);
 
   // Filter by search
   const filtered = paymentFiltered.filter(order => {
@@ -357,21 +357,10 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
 
            {/* Sidebar */}
            <div className="w-[220px] bg-gray-50 border-r p-4 space-y-2 flex-shrink-0">
+             {/* Today's Orders */}
              <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-               <Package className="w-4 h-4" /> Order Actions
-             </h3>
-             <button
-               className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${orderFilter === 'all' ? 'bg-red-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
-               onClick={() => setOrderFilter('all')}
-             >
                <Clock className="w-4 h-4" /> Today's Orders
-             </button>
-             <button
-               className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${orderFilter === 'completed' ? 'bg-green-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
-               onClick={() => setOrderFilter('completed')}
-             >
-               <CheckCircle className="w-4 h-4" /> Completed
-             </button>
+             </h3>
              
              {/* Payment Status Filters */}
              <div className="border-t pt-3 mt-3">
@@ -392,13 +381,36 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
                  className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${paymentFilter === 'unpaid' ? 'bg-red-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
                  onClick={() => setPaymentFilter('unpaid')}
                >
-                 <Package className="w-4 h-4" /> Unpaid
+                 <X className="w-4 h-4" /> Unpaid
                </button>
                <button
                  className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${paymentFilter === 'pending' ? 'bg-yellow-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
                  onClick={() => setPaymentFilter('pending')}
                >
                  <Clock className="w-4 h-4" /> Pending
+               </button>
+             </div>
+
+             {/* Order Type Filters */}
+             <div className="border-t pt-3 mt-3">
+               <h4 className="text-xs font-semibold text-gray-600 mb-2">Order Type</h4>
+               <button
+                 className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${orderTypeFilter === 'all' ? 'bg-blue-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
+                 onClick={() => setOrderTypeFilter('all')}
+               >
+                 <Package className="w-4 h-4" /> All Types
+               </button>
+               <button
+                 className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${orderTypeFilter === 'pickup' ? 'bg-orange-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
+                 onClick={() => setOrderTypeFilter('pickup')}
+               >
+                 <Package className="w-4 h-4" /> Pickup
+               </button>
+               <button
+                 className={`w-full py-2 px-3 text-sm rounded-lg flex gap-2 items-center ${orderTypeFilter === 'delivery' ? 'bg-purple-600 text-white' : 'text-gray-800 hover:bg-gray-100'}`}
+                 onClick={() => setOrderTypeFilter('delivery')}
+               >
+                 <Package className="w-4 h-4" /> Delivery
                </button>
              </div>
             
@@ -428,24 +440,29 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
                />
              </div>
 
-                           <div className="overflow-y-auto flex-1 space-y-3 pr-4 pl-2 min-h-0">
-               {filtered.map((order, index) => (
+                          <div className="overflow-y-auto flex-1 space-y-3 pr-4 pl-2 min-h-0">
+              {filtered.map((order, index) => (
                  <div 
                    key={order.id} 
                    className="bg-white rounded-xl shadow-md p-4 mb-4 border border-gray-200 transition-all duration-200 cursor-pointer hover:shadow-lg"
                    onClick={() => toggleOrderExpansion(order.id)}
                  >
-                   <div className="flex justify-between items-center">
-                     <div>
-                       <div className="font-bold text-gray-900">Order #{order.orderNumber}</div>
-                       <div className="text-xs text-gray-600">{formatTime(order.timestamp)} • {order.customerInfo?.name} • ${order.total.toFixed(2)}</div>
-                       <div className="text-xs text-gray-500 mt-1">
-                         {order.customerInfo?.phone && (
-                           <span>Phone: {order.customerInfo.phone} • </span>
-                         )}
-                         <span className={order.source === 'online' ? 'text-green-700 font-semibold' : 'text-blue-700 font-semibold'}>
-                           {order.source === 'online' ? 'Online Order' : 'POS Order'}
-                         </span>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="font-bold text-gray-900">Order #{order.orderNumber}</div>
+                        {order.customerInfo?.phone && (
+                          <div className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium">
+                            <Phone className="w-3 h-3" />
+                            <span>{order.customerInfo.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-600 mb-1">{formatTime(order.timestamp)} • {order.customerInfo?.name}</div>
+                      <div className="text-xs text-gray-500">
+                        <span className={order.source === 'online' ? 'text-green-700 font-semibold' : 'text-blue-700 font-semibold'}>
+                          {order.source === 'online' ? 'Online Order' : 'POS Order'}
+                        </span>
                          {order.paymentStatus && (
                            <span className={`ml-2 px-2 py-0.5 text-xs font-medium rounded-full ${
                              order.paymentStatus === 'paid' 
@@ -461,11 +478,27 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
                          )}
                        </div>
                      </div>
-                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                       {/* Reprint Receipt Button */}
-                       <button
-                         className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-semibold flex items-center gap-1"
-                         onClick={async () => {
+
+                    <div className="flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
+                      {/* Total Amount - Compact but prominent */}
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-gray-900">
+                          ${order.total.toFixed(2)}
+                        </div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wide">
+                          Total
+                        </div>
+                      </div>
+                      
+                      {/* Vertical Separator */}
+                      <div className="h-12 w-px bg-gray-300"></div>
+                      
+                      {/* Action Buttons */}
+                      <div className="flex gap-3">
+                      {/* Reprint Receipt Button */}
+                      <button
+                        className="px-4 py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-semibold flex items-center gap-2 min-w-[44px] min-h-[44px] transition-colors"
+                        onClick={async () => {
                           // Prepare order data for reprint (match printReceiptIfLocal structure)
                           const orderForPrint = {
                             id: order.id,
@@ -497,27 +530,24 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
                           }
                         }}
                       >
-                        <Printer className="w-3 h-3" /> Reprint
+                        <Printer className="w-4 h-4" /> Reprint
                       </button>
                       {/* Mark as Paid Button - only show for unpaid orders */}
                       {order.paymentStatus !== 'paid' && (
                         <button
-                          className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs font-semibold flex items-center gap-1"
+                          className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold flex items-center gap-2 min-w-[44px] min-h-[44px] transition-colors"
                           onClick={() => markAsPaid(order.id)}
                         >
-                          <CheckCircle className="w-3 h-3" /> Mark Paid
+                          <CheckCircle className="w-4 h-4" /> Mark Paid
                         </button>
                       )}
-                      {/* Chevron indicator - now just visual */}
-                      <div className="flex items-center">
-                        <ChevronDown className={cn('w-5 h-5 text-gray-400 transition-transform duration-200', expandedOrders.has(order.id) && 'rotate-180')} />
-                      </div>
                       <button
-                        className="px-2 py-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded"
+                        className="px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg min-w-[44px] min-h-[44px] transition-colors"
                         onClick={() => handleModifyOrder(order)}
                       >
                         Modify
                       </button>
+                      </div>
                     </div>
                   </div>
 
