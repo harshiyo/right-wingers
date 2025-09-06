@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { X, Settings, Key, Save, AlertCircle, CheckCircle, Printer, TestTube, FileText, Link } from 'lucide-react';
+import { X, Settings, Key, Save, AlertCircle, CheckCircle, Printer, TestTube, FileText, Link, Monitor, ChefHat, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useStoreSettings } from '../../hooks/useStoreSettings';
 import { useStore } from '../../context/StoreContext';
+import { getDualPrinterSettings, updateDualPrinterSettings } from '../../services/storeSettings';
 
 declare global {
   interface Window {
@@ -9,6 +10,10 @@ declare global {
       printReceipt: (order: any, type: string) => Promise<void>;
       updatePrinterSettings: (port: string, baudRate: number) => Promise<void>;
       testPrinterConnection: (port: string, baudRate: number, printTest?: boolean) => Promise<{ success: boolean; message?: string; error?: string }>;
+      // Dual printer APIs
+      updateDualPrinterSettings: (config: any) => Promise<void>;
+      testDualPrinters: (printTest?: boolean) => Promise<{ success: boolean; results: any }>;
+      scanPrinters: () => Promise<{ success: boolean; printers: any[] }>;
     };
   }
 }
@@ -18,7 +23,22 @@ interface SettingsDialogProps {
   onClose: () => void;
 }
 
-type TabType = 'api' | 'printer';
+type TabType = 'api' | 'printer' | 'dual-printer';
+
+interface PrinterConfig {
+  port: string;
+  baudRate: number;
+  type: 'thermal' | 'impact';
+  name?: string;
+}
+
+interface PrinterSettings {
+  enableDualPrinting: boolean;
+  customerReceiptEnabled: boolean;
+  kitchenReceiptEnabled: boolean;
+  autoCutEnabled: boolean;
+  printDelay: number;
+}
 
 export const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
   const { currentStore } = useStore();
@@ -28,18 +48,62 @@ export const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
   const [geoapifyApiKey, setGeoapifyApiKey] = useState('');
   const [printerPort, setPrinterPort] = useState('COM6');
   const [printerBaudRate, setPrinterBaudRate] = useState(38400);
+  
+  // Dual printer states
+  const [isDualMode, setIsDualMode] = useState(false);
+  const [frontPrinter, setFrontPrinter] = useState<PrinterConfig>({
+    port: 'COM6',
+    baudRate: 38400,
+    type: 'thermal',
+    name: 'Front Receipt Printer'
+  });
+  const [kitchenPrinter, setKitchenPrinter] = useState<PrinterConfig>({
+    port: 'COM7',
+    baudRate: 38400,
+    type: 'impact',
+    name: 'Kitchen Order Printer'
+  });
+  const [printerSettings, setPrinterSettings] = useState<PrinterSettings>({
+    enableDualPrinting: false,
+    customerReceiptEnabled: true,
+    kitchenReceiptEnabled: true,
+    autoCutEnabled: true,
+    printDelay: 500
+  });
+  
   const [isSaving, setIsSaving] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [detectedPrinters, setDetectedPrinters] = useState<any[]>([]);
 
   // Load current settings when dialog opens or settings change
   useEffect(() => {
-    if (open && settings) {
-      setGeoapifyApiKey(settings.geoapifyApiKey || '');
-      setPrinterPort(settings.printerPort || 'COM6');
-      setPrinterBaudRate(settings.printerBaudRate || 38400);
+    if (open && currentStore?.id) {
+      loadDualPrinterSettings();
+      if (settings) {
+        setGeoapifyApiKey(settings.geoapifyApiKey || '');
+        setPrinterPort(settings.printerPort || 'COM6');
+        setPrinterBaudRate(settings.printerBaudRate || 38400);
+      }
     }
-  }, [open, settings]);
+  }, [open, settings, currentStore?.id]);
+
+  const loadDualPrinterSettings = async () => {
+    if (!currentStore?.id) return;
+    
+    try {
+      const config = await getDualPrinterSettings(currentStore.id);
+      if (config) {
+        setIsDualMode(config.isDualMode);
+        setFrontPrinter(config.frontPrinter);
+        setKitchenPrinter(config.kitchenPrinter);
+        setPrinterSettings(config.printerSettings);
+      }
+    } catch (error) {
+      console.error('Error loading dual printer settings:', error);
+    }
+  };
 
   // Clear save message after 3 seconds
   useEffect(() => {
@@ -152,6 +216,115 @@ export const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
     }
   };
 
+  // Dual printer handlers
+  const handleSaveDualPrinterSettings = async () => {
+    if (!currentStore?.id) {
+      setSaveMessage({ type: 'error', text: 'No store selected' });
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveMessage(null);
+
+    try {
+      await updateDualPrinterSettings(currentStore.id, {
+        frontPrinter,
+        kitchenPrinter,
+        printerSettings: {
+          ...printerSettings,
+          enableDualPrinting: isDualMode
+        }
+      });
+
+      // Notify electron process about settings change
+      if (window.electronAPI?.updateDualPrinterSettings) {
+        window.electronAPI.updateDualPrinterSettings({
+          frontPrinter,
+          kitchenPrinter,
+          printerSettings: {
+            ...printerSettings,
+            enableDualPrinting: isDualMode
+          }
+        });
+      }
+
+      setSaveMessage({ type: 'success', text: 'Dual printer settings saved successfully' });
+    } catch (err) {
+      console.error('Error saving dual printer settings:', err);
+      setSaveMessage({ type: 'error', text: 'Failed to save dual printer settings' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleTestDualPrinters = async (printTest = false) => {
+    setIsTestingConnection(true);
+    setSaveMessage(null);
+
+    try {
+      if (window.electronAPI?.testDualPrinters) {
+        const result = await window.electronAPI.testDualPrinters(printTest);
+        if (result.success) {
+          setSaveMessage({ 
+            type: 'success', 
+            text: printTest ? 'Test prints sent to both printers!' : 'Both printers connected successfully!' 
+          });
+        } else {
+          setSaveMessage({ 
+            type: 'error', 
+            text: `Test failed - check printer connections and settings` 
+          });
+        }
+      } else {
+        setSaveMessage({ type: 'error', text: 'Dual printer testing not available in browser mode' });
+      }
+    } catch (err) {
+      console.error('Error testing dual printers:', err);
+      setSaveMessage({ type: 'error', text: 'Failed to test dual printers' });
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
+
+  const handleScanPrinters = async () => {
+    setIsScanning(true);
+    setSaveMessage(null);
+
+    try {
+      if (window.electronAPI?.scanPrinters) {
+        const result = await window.electronAPI.scanPrinters();
+        if (result.success) {
+          setDetectedPrinters(result.printers);
+          setSaveMessage({ 
+            type: 'success', 
+            text: `Found ${result.printers.length} printer(s)` 
+          });
+        } else {
+          setSaveMessage({ type: 'error', text: 'Printer scan failed' });
+        }
+      } else {
+        setSaveMessage({ type: 'error', text: 'Printer scanning not available in browser mode' });
+      }
+    } catch (err) {
+      console.error('Error scanning printers:', err);
+      setSaveMessage({ type: 'error', text: 'Failed to scan printers' });
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const updateFrontPrinter = (field: keyof PrinterConfig, value: any) => {
+    setFrontPrinter(prev => ({ ...prev, [field]: value }));
+  };
+
+  const updateKitchenPrinter = (field: keyof PrinterConfig, value: any) => {
+    setKitchenPrinter(prev => ({ ...prev, [field]: value }));
+  };
+
+  const updatePrinterSettings = (field: keyof PrinterSettings, value: any) => {
+    setPrinterSettings(prev => ({ ...prev, [field]: value }));
+  };
+
   const isApiKeyChanged = geoapifyApiKey.trim() !== (settings?.geoapifyApiKey || '');
   const isPrinterSettingsChanged = 
     printerPort.trim() !== (settings?.printerPort || 'COM6') ||
@@ -197,6 +370,17 @@ export const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
             API Configuration
           </button>
           <button
+            onClick={() => setActiveTab('dual-printer')}
+            className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors relative ${
+              activeTab === 'dual-printer'
+                ? 'text-red-600 bg-white border-b-2 border-red-600'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+            }`}
+          >
+            <Printer className="w-4 h-4" />
+            Dual Printer Setup
+          </button>
+          <button
             onClick={() => setActiveTab('printer')}
             className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors relative ${
               activeTab === 'printer'
@@ -204,8 +388,8 @@ export const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
             }`}
           >
-            <Printer className="w-4 h-4" />
-            Printer Settings
+            <Monitor className="w-4 h-4" />
+            Legacy Printer
           </button>
         </div>
 
@@ -303,6 +487,279 @@ export const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
             </div>
           )}
 
+          {/* Dual Printer Configuration Tab */}
+          {activeTab === 'dual-printer' && (
+            <div className="space-y-6">
+              {/* Dual Mode Toggle */}
+              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Printer className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Dual Printer Mode</h3>
+                      <p className="text-sm text-gray-600">Enable separate printers for customer receipts and kitchen orders</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsDualMode(!isDualMode)}
+                    className="flex items-center gap-2"
+                  >
+                    {isDualMode ? (
+                      <ToggleRight className="w-8 h-8 text-green-600" />
+                    ) : (
+                      <ToggleLeft className="w-8 h-8 text-gray-400" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {isDualMode ? 'Enabled' : 'Disabled'}
+                    </span>
+                  </button>
+                </div>
+
+                {isDualMode && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-green-800">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="text-sm font-medium">
+                        Dual printer mode is enabled. Customer receipts will print on the front printer, and kitchen orders will print on the kitchen printer.
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Printer Scan */}
+              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Printer Detection</h3>
+                  <button
+                    onClick={handleScanPrinters}
+                    disabled={isScanning}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+                  >
+                    <TestTube className="w-4 h-4" />
+                    {isScanning ? 'Scanning...' : 'Scan for Printers'}
+                  </button>
+                </div>
+                
+                {detectedPrinters.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600 mb-3">Detected printers:</p>
+                    {detectedPrinters.map((printer, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="font-medium">{printer.path}</p>
+                          <p className="text-sm text-gray-600">{printer.manufacturer} ({printer.type})</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => updateFrontPrinter('port', printer.path)}
+                            className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded"
+                          >
+                            Use as Front
+                          </button>
+                          <button
+                            onClick={() => updateKitchenPrinter('port', printer.path)}
+                            className="px-3 py-1 text-xs bg-orange-100 text-orange-700 rounded"
+                          >
+                            Use as Kitchen
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Front Printer Configuration */}
+              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Front Printer (Customer Receipts)</h3>
+                    <p className="text-sm text-gray-600">Thermal printer for fast, quiet customer receipts</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">Serial Port</label>
+                    <input
+                      type="text"
+                      value={frontPrinter.port}
+                      onChange={(e) => updateFrontPrinter('port', e.target.value.toUpperCase())}
+                      placeholder="COM6"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">Baud Rate</label>
+                    <select
+                      value={frontPrinter.baudRate}
+                      onChange={(e) => updateFrontPrinter('baudRate', Number(e.target.value))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                    >
+                      <option value={9600}>9600 bps</option>
+                      <option value={19200}>19200 bps</option>
+                      <option value={38400}>38400 bps</option>
+                      <option value={57600}>57600 bps</option>
+                      <option value={115200}>115200 bps</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Kitchen Printer Configuration */}
+              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <ChefHat className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Kitchen Printer (Order Tickets)</h3>
+                    <p className="text-sm text-gray-600">Impact printer for multi-copy kitchen orders (white + yellow)</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">Serial Port</label>
+                    <input
+                      type="text"
+                      value={kitchenPrinter.port}
+                      onChange={(e) => updateKitchenPrinter('port', e.target.value.toUpperCase())}
+                      placeholder="COM7"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">Baud Rate</label>
+                    <select
+                      value={kitchenPrinter.baudRate}
+                      onChange={(e) => updateKitchenPrinter('baudRate', Number(e.target.value))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    >
+                      <option value={9600}>9600 bps</option>
+                      <option value={19200}>19200 bps</option>
+                      <option value={38400}>38400 bps</option>
+                      <option value={57600}>57600 bps</option>
+                      <option value={115200}>115200 bps</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Printer Behavior Settings */}
+              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-900 mb-6">Printer Behavior</h3>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Auto Cut Paper</label>
+                      <p className="text-xs text-gray-500">Automatically cut paper after each receipt</p>
+                    </div>
+                    <button
+                      onClick={() => updatePrinterSettings('autoCutEnabled', !printerSettings.autoCutEnabled)}
+                      className="flex items-center gap-2"
+                    >
+                      {printerSettings.autoCutEnabled ? (
+                        <ToggleRight className="w-6 h-6 text-green-600" />
+                      ) : (
+                        <ToggleLeft className="w-6 h-6 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Customer Receipts</label>
+                      <p className="text-xs text-gray-500">Print customer receipts on front printer</p>
+                    </div>
+                    <button
+                      onClick={() => updatePrinterSettings('customerReceiptEnabled', !printerSettings.customerReceiptEnabled)}
+                      className="flex items-center gap-2"
+                    >
+                      {printerSettings.customerReceiptEnabled ? (
+                        <ToggleRight className="w-6 h-6 text-green-600" />
+                      ) : (
+                        <ToggleLeft className="w-6 h-6 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Kitchen Orders</label>
+                      <p className="text-xs text-gray-500">Print kitchen orders on kitchen printer</p>
+                    </div>
+                    <button
+                      onClick={() => updatePrinterSettings('kitchenReceiptEnabled', !printerSettings.kitchenReceiptEnabled)}
+                      className="flex items-center gap-2"
+                    >
+                      {printerSettings.kitchenReceiptEnabled ? (
+                        <ToggleRight className="w-6 h-6 text-green-600" />
+                      ) : (
+                        <ToggleLeft className="w-6 h-6 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Print Delay (ms)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="5000"
+                      step="100"
+                      value={printerSettings.printDelay}
+                      onChange={(e) => updatePrinterSettings('printDelay', Number(e.target.value))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    />
+                    <p className="text-xs text-gray-500 mt-2">Delay between consecutive prints (recommended: 500ms)</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    onClick={() => handleTestDualPrinters(false)}
+                    disabled={isTestingConnection}
+                    className="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                  >
+                    <TestTube className="w-4 h-4" />
+                    {isTestingConnection ? 'Testing...' : 'Test Connections'}
+                  </button>
+
+                  <button
+                    onClick={() => handleTestDualPrinters(true)}
+                    disabled={isTestingConnection}
+                    className="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+                  >
+                    <FileText className="w-4 h-4" />
+                    {isTestingConnection ? 'Testing...' : 'Test Print Both'}
+                  </button>
+
+                  <button
+                    onClick={handleSaveDualPrinterSettings}
+                    disabled={isSaving}
+                    className="flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors"
+                  >
+                    <Save className="w-4 h-4" />
+                    {isSaving ? 'Saving...' : 'Save All Settings'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'printer' && (
             <div className="space-y-6">
               <div className="grid gap-6">
@@ -313,8 +770,8 @@ export const SettingsDialog = ({ open, onClose }: SettingsDialogProps) => {
                       <Printer className="w-5 h-5 text-purple-600" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Thermal Printer Setup</h3>
-                      <p className="text-sm text-gray-600">Configure your receipt printer connection</p>
+                      <h3 className="text-lg font-semibold text-gray-900">Legacy Single Printer Setup</h3>
+                      <p className="text-sm text-gray-600">Configure single printer for both customer and kitchen receipts</p>
                     </div>
                   </div>
                   

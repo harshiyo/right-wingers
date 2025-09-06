@@ -2,6 +2,8 @@ import { app, BrowserWindow, Menu, ipcMain, dialog } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { PrinterService } from './services/printerService.js';
+import { DualPrinterService } from './services/dualPrinterService.js';
+import { SerialPort } from 'serialport';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,8 +16,13 @@ if (process.env.USER_DATA_DIR) {
   console.log(`Using user data directory: ${userDataPath}`);
 }
 
-// Initialize printer service
+// Initialize printer services
 const printerService = new PrinterService();
+const dualPrinterService = new DualPrinterService();
+
+// Track which service is active
+let isDualPrinterMode = false;
+let currentStoreId = null;
 
 // Declare mainWindow in global scope
 let mainWindow;
@@ -33,6 +40,25 @@ printerService.onPrintJobCompleted = (job) => {
 
 printerService.onPrintJobFailed = (job, error) => {
   // Silent failure
+};
+
+// Set up dual printer event handlers
+dualPrinterService.onPaperStatusChanged = (status) => {
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('dual-paper-status-changed', status);
+  }
+};
+
+dualPrinterService.onPrintJobCompleted = (job) => {
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('dual-print-job-completed', job);
+  }
+};
+
+dualPrinterService.onPrintJobFailed = (job, error) => {
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('dual-print-job-failed', { job, error: error.message });
+  }
 };
 
 function createWindow() {
@@ -191,6 +217,258 @@ function createWindow() {
         success: false, 
         message: `Connection test failed: ${errorMessage}` 
       };
+    }
+  });
+
+  // Dual Printer IPC Handlers
+  ipcMain.handle('update-dual-printer-settings', async (event, config) => {
+    try {
+      console.log('🔧 Updating dual printer configuration');
+      
+      // Update dual printer service with new settings
+      dualPrinterService.updateConfiguration(config);
+      
+      // Set the mode flag
+      isDualPrinterMode = config.printerSettings?.enableDualPrinting || false;
+      
+      return { success: true, message: 'Dual printer settings updated successfully' };
+    } catch (error) {
+      console.error('Error updating dual printer settings:', error);
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle('test-dual-printers', async (event, printTest = false) => {
+    try {
+      console.log(`🧪 Testing dual printers${printTest ? ' (with test prints)' : ''}`);
+      
+      const result = await dualPrinterService.testAllPrinters(printTest);
+      
+      return result;
+    } catch (error) {
+      console.error('Error testing dual printers:', error);
+      return { 
+        success: false, 
+        results: {
+          front: { success: false, error: error.message },
+          kitchen: { success: false, error: error.message }
+        }
+      };
+    }
+  });
+
+  ipcMain.handle('scan-printers', async () => {
+    try {
+      console.log('🔍 Scanning for printers...');
+      
+      const ports = await SerialPort.list();
+      
+      // Printer type detection patterns
+      const PRINTER_PATTERNS = {
+        thermal: {
+          manufacturers: ['FTDI', 'Silicon Labs', 'Prolific', 'WCH.CN'],
+          description: 'Thermal Receipt Printer'
+        },
+        impact: {
+          manufacturers: ['Seiko Epson', 'EPSON', 'Star Micronics', 'Citizen'],
+          description: 'Impact/Dot Matrix Printer'
+        }
+      };
+
+      const detectedPrinters = ports.map(port => {
+        let type = 'unknown';
+        let confidence = 'low';
+        
+        if (port.manufacturer) {
+          const manufacturer = port.manufacturer.toLowerCase();
+          
+          // Check for thermal printer patterns
+          if (PRINTER_PATTERNS.thermal.manufacturers.some(m => 
+            manufacturer.includes(m.toLowerCase()))) {
+            type = 'thermal';
+            confidence = 'high';
+          }
+          
+          // Check for impact printer patterns
+          if (PRINTER_PATTERNS.impact.manufacturers.some(m => 
+            manufacturer.includes(m.toLowerCase()))) {
+            type = 'impact';
+            confidence = 'high';
+          }
+          
+          // Check for Prolific (often used with thermal printers)
+          if (manufacturer.includes('prolific')) {
+            type = 'thermal';
+            confidence = 'medium';
+          }
+        }
+        
+        return {
+          path: port.path,
+          manufacturer: port.manufacturer || 'Unknown',
+          productId: port.productId,
+          vendorId: port.vendorId,
+          type,
+          confidence,
+          description: PRINTER_PATTERNS[type]?.description || 'Unknown Device'
+        };
+      });
+      
+      console.log(`📡 Found ${detectedPrinters.length} potential printers`);
+      
+      return { 
+        success: true, 
+        printers: detectedPrinters
+      };
+    } catch (error) {
+      console.error('Error scanning printers:', error);
+      return { 
+        success: false, 
+        printers: [],
+        error: error.message
+      };
+    }
+  });
+
+  ipcMain.handle('print-receipt-dual', async (event, order, type, showPreview = false) => {
+    try {
+      console.log(`🖨️ Print request received: ${type}, Preview: ${showPreview}, Kitchen Only: ${order._kitchenOnly || false}`);
+      console.log(`🔧 Dual printer mode: ${isDualPrinterMode ? 'Enabled' : 'Disabled'}`);
+      
+      // Use dual printer service if enabled, otherwise fall back to single printer
+      if (isDualPrinterMode) {
+        console.log('🖨️ Using dual printer mode');
+        
+        if (showPreview) {
+          // Show previews based on what would actually print
+          const isKitchenOnly = order._kitchenOnly === true;
+          
+          if (!isKitchenOnly) {
+            const customerLines = dualPrinterService.receiptRenderer.renderReceipt(order, type);
+            showReceiptPreview(customerLines, 'Customer Receipt (Front Printer)');
+          }
+          
+          const kitchenLines = dualPrinterService.kitchenReceiptRenderer.renderKitchenReceipt(order, type);
+          showReceiptPreview(kitchenLines, `Kitchen Receipt (${isDualPrinterMode ? 'Kitchen Printer' : 'Front Printer'})`);
+          
+          return { success: true, mode: 'preview' };
+        }
+        
+        const result = await dualPrinterService.printReceipt(order, type);
+        console.log(`✅ Dual printer result:`, result);
+        return { success: true, mode: 'dual', ...result };
+      } else {
+        console.log('🖨️ Using single printer mode (legacy)');
+        
+        if (showPreview) {
+          const isKitchenOnly = order._kitchenOnly === true;
+          
+          if (!isKitchenOnly) {
+            const customerLines = printerService.receiptRenderer.renderReceipt(order, type);
+            showReceiptPreview(customerLines, 'Customer Receipt');
+          }
+          
+          const kitchenLines = printerService.kitchenReceiptRenderer.renderKitchenReceipt(order, type);
+          showReceiptPreview(kitchenLines, 'Kitchen Receipt');
+          
+          return { success: true, mode: 'preview' };
+        }
+        
+        const result = await printerService.printReceipt(order, type);
+        return { success: true, mode: 'single', ...result };
+      }
+    } catch (error) {
+      console.error('❌ Print error:', error);
+      
+      // Show error dialog
+      dialog.showErrorBox('Print Error', `Failed to print receipts: ${error.message}`);
+      
+      // Show fallback previews based on what was requested
+      const isKitchenOnly = order._kitchenOnly === true;
+      
+      if (!isKitchenOnly) {
+        const customerLines = printerService.receiptRenderer.renderReceipt(order, type);
+        showReceiptPreview(customerLines, 'Customer Receipt (Fallback)');
+      }
+      
+      const kitchenLines = printerService.kitchenReceiptRenderer.renderKitchenReceipt(order, type);
+      showReceiptPreview(kitchenLines, 'Kitchen Receipt (Fallback)');
+      
+      return { success: false, mode: 'fallback', error: error.message };
+    }
+  });
+
+  ipcMain.handle('get-dual-printer-status', async () => {
+    try {
+      return {
+        isDualMode: isDualPrinterMode,
+        frontPrinter: {
+          connected: dualPrinterService.frontPrinter.port?.isOpen || false,
+          port: dualPrinterService.frontPrinter.config.port
+        },
+        kitchenPrinter: {
+          connected: dualPrinterService.kitchenPrinter.port?.isOpen || false,
+          port: dualPrinterService.kitchenPrinter.config.port
+        },
+        pendingJobs: dualPrinterService.getPendingQueue()
+      };
+    } catch (error) {
+      return {
+        isDualMode: false,
+        error: error.message
+      };
+    }
+  });
+
+  // Handler to load dual printer settings from Firebase
+  ipcMain.handle('load-dual-printer-settings', async (event, storeId, settings) => {
+    try {
+      console.log(`🔄 Loading dual printer settings for store: ${storeId}`);
+      
+      // Update current store
+      currentStoreId = storeId;
+      
+      if (settings) {
+        // Extract dual printer configuration
+        const config = {
+          frontPrinter: settings.frontPrinter || { 
+            port: settings.printerPort || 'COM6', 
+            baudRate: settings.printerBaudRate || 38400, 
+            type: 'thermal' 
+          },
+          kitchenPrinter: settings.kitchenPrinter || { 
+            port: 'COM7', 
+            baudRate: 38400, 
+            type: 'impact' 
+          },
+          printerSettings: {
+            enableDualPrinting: settings.printerSettings?.enableDualPrinting || false,
+            customerReceiptEnabled: settings.printerSettings?.customerReceiptEnabled ?? true,
+            kitchenReceiptEnabled: settings.printerSettings?.kitchenReceiptEnabled ?? true,
+            autoCutEnabled: settings.printerSettings?.autoCutEnabled ?? true,
+            printDelay: settings.printerSettings?.printDelay || 500
+          }
+        };
+        
+        // Update dual printer service configuration
+        dualPrinterService.updateConfiguration(config);
+        
+        // Update the mode flag
+        isDualPrinterMode = config.printerSettings.enableDualPrinting;
+        
+        console.log(`✅ Dual printer settings loaded: ${isDualPrinterMode ? 'Enabled' : 'Disabled'}`);
+        console.log(`📄 Front printer: ${config.frontPrinter.port} (${config.frontPrinter.type})`);
+        console.log(`🍳 Kitchen printer: ${config.kitchenPrinter.port} (${config.kitchenPrinter.type})`);
+        
+        return { success: true, isDualMode: isDualPrinterMode };
+      } else {
+        console.log('⚠️ No settings found, using defaults');
+        isDualPrinterMode = false;
+        return { success: true, isDualMode: false };
+      }
+    } catch (error) {
+      console.error('❌ Error loading dual printer settings:', error);
+      return { success: false, error: error.message };
     }
   });
 
@@ -471,8 +749,9 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
-  // Cleanup printer service
+  // Cleanup printer services
   printerService.cleanup();
+  dualPrinterService.cleanup();
 });
 
 app.on('activate', () => {

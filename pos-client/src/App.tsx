@@ -1,3 +1,4 @@
+import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import MenuPage from './pages/MenuPage';
 import CheckoutPage from './pages/CheckoutPage';
@@ -13,6 +14,7 @@ import { NotificationsContainer } from './components/NotificationsContainer';
 import ErrorBoundary from './components/ErrorBoundary';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { useMenuCache } from './hooks/useMenuCache';
+import { useStoreSettings } from './hooks/useStoreSettings';
 import { MenuTriggeredDailyReport } from './components/layout/MenuTriggeredDailyReport';
 import { MenuTriggeredCustomReport } from './components/layout/MenuTriggeredCustomReport';
 import { PrintQueueIndicator } from './components/PrintQueueIndicator';
@@ -25,6 +27,20 @@ function AppContent() {
   
   // Cache menu data for the current store
   const { error: cacheError } = useMenuCache(currentStore?.id || '');
+  
+  // Load store settings (including dual printer settings) automatically
+  const { settings, isLoading: settingsLoading } = useStoreSettings();
+  
+  // Debug logging for settings loading
+  React.useEffect(() => {
+    if (settings && currentStore) {
+      console.log(`🔧 App settings loaded for store ${currentStore.id}:`, {
+        enableDualPrinting: settings.printerSettings?.enableDualPrinting,
+        frontPrinter: settings.frontPrinter?.port,
+        kitchenPrinter: settings.kitchenPrinter?.port
+      });
+    }
+  }, [settings, currentStore]);
 
   return (
     <div className="h-screen flex flex-col bg-gray-100">

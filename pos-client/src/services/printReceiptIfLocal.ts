@@ -3,7 +3,11 @@ import { Order } from './types';
 declare global {
   interface Window {
     electronAPI?: {
-      printReceipt: (order: Order, type: string) => Promise<void>;
+      // Legacy single printer API
+      printReceipt: (order: any, type: string) => Promise<void>;
+      // New dual printer API
+      printReceiptDual: (order: any, type: string, showPreview?: boolean) => Promise<{ success: boolean; mode: string; }>;
+      getDualPrinterStatus: () => Promise<{ isDualMode: boolean; error?: string; }>;
     };
   }
 }
@@ -18,17 +22,49 @@ export async function printReceiptIfLocal(
     return false;
   }
 
-  if (!window.electronAPI || typeof window.electronAPI.printReceipt !== 'function') {
-    console.error('Electron printReceipt API not available');
+  if (!window.electronAPI) {
+    console.error('Electron API not available');
     return false;
   }
 
   try {
-    const success = await window.electronAPI.printReceipt(order, type);
-    if (!success) {
-      console.warn('Receipt fallback preview was shown instead of actual print');
+    // Check if dual printer mode is enabled
+    let isDualMode = false;
+    
+    if (typeof window.electronAPI.getDualPrinterStatus === 'function') {
+      try {
+        const status = await window.electronAPI.getDualPrinterStatus();
+        isDualMode = status.isDualMode;
+        console.log(`🖨️ Printer mode: ${isDualMode ? 'Dual' : 'Single'}`);
+      } catch (err) {
+        console.warn('Could not get dual printer status, falling back to single printer mode');
+      }
     }
-    return true;
+
+    // Use appropriate API based on mode
+    if (isDualMode && typeof window.electronAPI.printReceiptDual === 'function') {
+      console.log('📄 Using dual printer API');
+      const result = await window.electronAPI.printReceiptDual(order, type, false);
+      
+      if (result.success) {
+        console.log(`✅ Dual print completed in ${result.mode} mode`);
+        return true;
+      } else {
+        console.warn('Dual printer failed, falling back to single printer');
+        // Fall through to legacy API
+      }
+    }
+
+    // Fallback to legacy single printer API
+    if (typeof window.electronAPI.printReceipt === 'function') {
+      console.log('📄 Using legacy single printer API');
+      await window.electronAPI.printReceipt(order, type);
+      return true;
+    } else {
+      console.error('No printer API available');
+      return false;
+    }
+    
   } catch (err) {
     console.error('Failed to print receipt:', err);
     return false;

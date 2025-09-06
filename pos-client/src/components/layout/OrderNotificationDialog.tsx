@@ -1,15 +1,25 @@
 // ✅ Redesigned Order Notification Dialog Component
 import { useState, useEffect } from 'react';
-import { Clock, Package, CheckCircle, ChevronDown, X, Printer, Phone } from 'lucide-react';
-import { collection, query, where, onSnapshot, orderBy, updateDoc, doc, getDoc } from 'firebase/firestore';
+import { Clock, Package, CheckCircle, X, Printer, Phone } from 'lucide-react';
+import { collection, query, where, onSnapshot, orderBy, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useStore } from '../../context/StoreContext';
-import { cn } from '../../utils/cn';
 import { useCart } from '../../context/CartContext';
 import { useNavigate } from 'react-router-dom';
-import { getPizzaInstructionLabels, getWingInstructionLabels } from '../../utils/cartHelpers';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { findCustomerByPhone } from '../../data/customers';
+
+declare global {
+  interface Window {
+    electronAPI?: {
+      // Legacy single printer API
+      printReceipt: (order: any, type: string) => Promise<void>;
+      // New dual printer API
+      printReceiptDual: (order: any, type: string, showPreview?: boolean) => Promise<{ success: boolean; mode: string; }>;
+      getDualPrinterStatus: () => Promise<{ isDualMode: boolean; error?: string; }>;
+    };
+  }
+}
 
 interface OrderNotificationDialogProps {
   open: boolean;
@@ -523,8 +533,28 @@ export const OrderNotificationDialog = ({ open, onClose }: OrderNotificationDial
                             // Include order note if present
                             orderNote: order.orderNote,
                           };
-                          if (window.electronAPI && typeof window.electronAPI.printReceipt === 'function') {
-                            await window.electronAPI.printReceipt(orderForPrint, 'reprint');
+                          // Try dual printer API first, fallback to legacy
+                          if (window.electronAPI) {
+                            if (typeof window.electronAPI.printReceiptDual === 'function') {
+                              try {
+                                const result = await window.electronAPI.printReceiptDual(orderForPrint, 'reprint', false);
+                                if (!result.success) {
+                                  console.warn('Dual printer reprint failed, trying legacy API');
+                                  if (typeof window.electronAPI.printReceipt === 'function') {
+                                    await window.electronAPI.printReceipt(orderForPrint, 'reprint');
+                                  }
+                                }
+                              } catch (err) {
+                                console.error('Dual printer reprint error:', err);
+                                if (typeof window.electronAPI.printReceipt === 'function') {
+                                  await window.electronAPI.printReceipt(orderForPrint, 'reprint');
+                                }
+                              }
+                            } else if (typeof window.electronAPI.printReceipt === 'function') {
+                              await window.electronAPI.printReceipt(orderForPrint, 'reprint');
+                            } else {
+                              alert('Reprint not available in browser mode.');
+                            }
                           } else {
                             alert('Reprint not available in browser mode.');
                           }

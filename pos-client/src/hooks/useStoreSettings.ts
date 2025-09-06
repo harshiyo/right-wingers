@@ -22,6 +22,20 @@ export const useStoreSettings = () => {
       try {
         const storeSettings = await getStoreSettings(currentStore.id);
         setSettings(storeSettings);
+        
+        // Load dual printer settings into Electron
+        if (window.electronAPI && typeof (window.electronAPI as any).loadDualPrinterSettings === 'function') {
+          try {
+            const result = await (window.electronAPI as any).loadDualPrinterSettings(currentStore.id, storeSettings);
+            if (result.success) {
+              console.log(`🔄 Dual printer settings loaded for ${currentStore.id}: ${result.isDualMode ? 'Enabled' : 'Disabled'}`);
+            } else {
+              console.warn('Failed to load dual printer settings into Electron:', result.error);
+            }
+          } catch (electronErr) {
+            console.warn('Error loading dual printer settings into Electron:', electronErr);
+          }
+        }
       } catch (err) {
         console.error('Error loading store settings:', err);
         setError('Failed to load store settings');
